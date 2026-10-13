@@ -133,12 +133,12 @@ jobs:
         run: |
           name=rustyprint-${{ needs.version.outputs.version }}-${{ matrix.target }}
           mkdir -p "dist/$name"
-          cp README.md "dist/$name/"
+          cp README.md LICENSE-MIT LICENSE-APACHE "dist/$name/"
           cp fonts/OFL.txt "dist/$name/OFL.txt"
           # The native library, with its header and README.
           native=rustyprint-native-${{ needs.version.outputs.version }}-${{ matrix.target }}
           mkdir -p "dist/$native/include"
-          cp crates/rustyprint-ffi/README.md "dist/$native/"
+          cp crates/rustyprint-ffi/README.md LICENSE-MIT LICENSE-APACHE "dist/$native/"
           cp crates/rustyprint-ffi/include/rustyprint.h "dist/$native/include/"
           cp fonts/OFL.txt "dist/$native/OFL.txt"
           release="target/${{ matrix.target }}/release"
@@ -205,6 +205,8 @@ jobs:
           PRERELEASE: ${{ needs.version.outputs.prerelease }}
         run: |
           chmod +x docker/bin/*/rustyprint-server
+          mkdir -p docker/licenses
+          cp LICENSE-MIT LICENSE-APACHE fonts/OFL.txt docker/licenses/
           image="ghcr.io/$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')/rustyprint-server"
           tags="$image:$VERSION"
           if [ "$PRERELEASE" = false ]; then tags="$tags,$image:latest"; fi
@@ -226,6 +228,7 @@ jobs:
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.version=${{ needs.version.outputs.version }}
+            org.opencontainers.image.licenses=MIT OR Apache-2.0
             org.opencontainers.image.description=HTTP service that renders HTML and CSS to PDF
 
   gems:

@@ -133,6 +133,8 @@ jobs:
           cargo zigbuild --release --locked -p rustyprint-server --target x86_64-unknown-linux-musl
           mkdir -p docker/bin/amd64
           cp target/x86_64-unknown-linux-musl/release/rustyprint-server docker/bin/amd64/
+          mkdir -p docker/licenses
+          cp LICENSE-MIT LICENSE-APACHE fonts/OFL.txt docker/licenses/
       - name: Build the image
         run: docker build -f docker/server.Dockerfile -t rustyprint-server:ci docker
       - name: Render through the image

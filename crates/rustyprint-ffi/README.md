@@ -88,3 +88,7 @@ cl hello.c /I include rustyprint_ffi.dll.lib
 The header is generated from [src/lib.rs](src/lib.rs) by cbindgen. After changing the ABI, regenerate it with `cargo run -p rustyprint-ffi --example header`; a test fails while it is out of date. `cargo test -p rustyprint-ffi` also builds [tests/smoke.c](tests/smoke.c) with the platform's C compiler and runs it.
 
 This is the only crate allowed `unsafe` code, so it sets its own lints instead of the workspace's. Every `unsafe` block says why it is sound.
+
+## License
+
+MIT or Apache-2.0, at your option ([LICENSE-MIT](https://github.com/vryan95/rustyprint/blob/master/LICENSE-MIT), [LICENSE-APACHE](https://github.com/vryan95/rustyprint/blob/master/LICENSE-APACHE)). The fonts built into the native library are under the SIL Open Font License ([OFL.txt](https://github.com/vryan95/rustyprint/blob/master/fonts/OFL.txt)). The release archive carries all three.

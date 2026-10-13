@@ -6,6 +6,9 @@ require "rspec/core/rake_task"
 
 REPO = File.expand_path("../..", __dir__)
 NATIVE = File.expand_path("lib/rustyprint/native", __dir__)
+# The licenses a gem carries, by their name in the gem: rustyprint's, and the bundled fonts'.
+LICENSES = { "LICENSE-MIT" => "LICENSE-MIT", "LICENSE-APACHE" => "LICENSE-APACHE",
+             "OFL.txt" => "fonts/OFL.txt" }.freeze
 
 def library_name
   case RbConfig::CONFIG["host_os"]
@@ -36,10 +39,13 @@ task :native do
   FileUtils.mkdir_p(NATIVE)
   FileUtils.cp(library, NATIVE)
   spec.files += Dir["lib/rustyprint/native/*"]
+  LICENSES.each { |name, path| FileUtils.cp(File.join(REPO, path), name) }
+  spec.files += LICENSES.keys
   FileUtils.mkdir_p("pkg")
   FileUtils.mv(Gem::Package.build(spec), "pkg")
 ensure
   FileUtils.rm_rf(NATIVE)
+  FileUtils.rm_f(LICENSES.keys)
 end
 
 task default: :spec

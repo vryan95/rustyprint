@@ -14,10 +14,14 @@
     <RepositoryUrl>https://github.com/vryan95/rustyprint</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>MIT OR Apache-2.0</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <!-- rustyprint's licenses, and the license of the fonts built into the native library. -->
+    <None Include="$(RustyprintRepoRoot)LICENSE-MIT;$(RustyprintRepoRoot)LICENSE-APACHE;$(RustyprintRepoRoot)fonts/OFL.txt"
+          Pack="true" PackagePath="/" Visible="false" />
     <InternalsVisibleTo Include="Rustyprint.Tests" />
   </ItemGroup>
 

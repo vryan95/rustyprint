@@ -2,3 +2,6 @@
 /pkg/
 /Gemfile.lock
 /.bundle/
+/LICENSE-MIT
+/LICENSE-APACHE
+/OFL.txt

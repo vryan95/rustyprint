@@ -94,3 +94,7 @@ bundle exec rake compile  # only builds the library, into lib/rustyprint/native
 ```
 
 `RUSTYPRINT_LIBRARY` points the gem at a library somewhere else. `rake native PLATFORM=x86_64-linux-gnu LIBRARY=path` builds a platform gem around a library, as the release workflow does for every platform.
+
+## License
+
+MIT or Apache-2.0, at your option ([LICENSE-MIT](https://github.com/vryan95/rustyprint/blob/master/LICENSE-MIT), [LICENSE-APACHE](https://github.com/vryan95/rustyprint/blob/master/LICENSE-APACHE)). The fonts built into the native library are under the SIL Open Font License ([OFL.txt](https://github.com/vryan95/rustyprint/blob/master/fonts/OFL.txt)). The gem carries all three.
