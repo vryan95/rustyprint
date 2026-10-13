@@ -4,8 +4,9 @@ require "cgi"
 
 module Rustyprint
   # Finds the files an HTML document refers to, in its tags, its style attributes and blocks,
-  # and the stylesheets it loads, and fetches each once, for Rustyprint.render's assets.
+  # and the stylesheets it loads, and fetches each once, for {Rustyprint.render}'s assets.
   #
+  # @example
   #   collector = AssetCollector.new { |path| File.binread("public#{path}") if File.file?("public#{path}") }
   #   collector.collect(html) # => { "assets/app-1a2b.css" => "...", "images/logo.png" => "..." }
   #
@@ -20,12 +21,20 @@ module Rustyprint
     CSS_URL = /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)\s]*))\s*\)|@import\s+(?:"([^"]*)"|'([^']*)')/i
     URL_ATTRIBUTES = %w[src poster data].freeze
     STYLESHEET = /\A\s*(\S+\s+)*stylesheet(\s+\S+)*\s*\z/i
+    private_constant :TAG, :ATTRIBUTE, :STYLE_BLOCK, :CSS_COMMENT, :CSS_URL, :URL_ATTRIBUTES, :STYLESHEET
 
+    # @yieldparam path [String] a root-relative path the document uses, such as
+    #   `"/assets/app-1a2b.css"`
+    # @yieldreturn [String, nil] the file's contents, or nil if there is none
     def initialize(&fetch)
       @fetch = fetch
     end
 
-    # The files the document refers to, by the path it uses for each.
+    # The files the document refers to.
+    #
+    # @param html [String] the document
+    # @return [Hash{String => String}] each file's contents, by the path the document uses for it,
+    #   without its leading slash
     def collect(html)
       @assets = {}
       @seen = {}

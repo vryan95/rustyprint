@@ -24,7 +24,7 @@ options.Assets.Add("invoice.css", File.ReadAllText("invoice.css"));
 
 RenderOutput output = await PdfRenderer.RenderAsync(html, options);
 File.WriteAllBytes("invoice.pdf", output.Pdf);
-// output.Warnings: ["invoice.css:12: unknown property colr"]
+// output.Warnings: ["invoice.css:12: unsupported property `colr`"]
 ```
 
 `PdfRenderer.Render` renders on the calling thread, and `RenderAsync` on the thread pool. Both return a `RenderOutput` with `Pdf`, the PDF's bytes, and `Warnings`, problems found in the document's CSS and assets. `RenderAsync` copies the options and assets when it is called. Its cancellation token stops a render that has not started yet. To bound one that has, set `Limits.Timeout`.

@@ -443,3 +443,142 @@ fn invalid_configuration() {
         );
     }
 }
+
+// The API reference, README.md, kept in step with what the server does.
+
+const REFERENCE: &str = include_str!("../README.md");
+
+fn documents(text: &str) -> bool {
+    REFERENCE.contains(text)
+}
+
+#[test]
+fn the_reference_lists_every_route() {
+    for route in ["`POST /v1/pdf`", "`GET /healthz`", "`GET /metrics`"] {
+        assert!(documents(route), "README.md does not document {route}");
+    }
+}
+
+/// Each error a request can cause is a row of the reference's error table: its status, then its
+/// `error`.
+#[tokio::test]
+async fn the_reference_lists_every_error() {
+    let small = || config(&[("RUSTYPRINT_MAX_BODY_BYTES", "1000")]);
+    let cases = [
+        (
+            config(&[]),
+            Request::post("/v1/pdf")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from("{not json"))
+                .unwrap(),
+        ),
+        (
+            config(&[]),
+            json(serde_json::json!({ "html": "x", "options": { "page_size": "B9" } })),
+        ),
+        (
+            small(),
+            json(serde_json::json!({ "html": "<p>x</p>".repeat(500) })),
+        ),
+        (
+            config(&[]),
+            Request::post("/v1/pdf")
+                .header(header::CONTENT_TYPE, "text/plain")
+                .body(Body::from("<p>x</p>"))
+                .unwrap(),
+        ),
+        (
+            config(&[]),
+            json(serde_json::json!({
+                "html": "<p>Line of text.</p>".repeat(300),
+                "options": { "limits": { "max_pages": 1 } }
+            })),
+        ),
+        (
+            config(&[]),
+            json(serde_json::json!({
+                "html": "<p>Line of text.</p>".repeat(2000),
+                "options": { "limits": { "timeout_ms": 1 } }
+            })),
+        ),
+        (
+            config(&[]),
+            json(serde_json::json!({ "html": "<!--rustyprint:panic-->" })),
+        ),
+    ];
+    for (config, request) in cases {
+        let (status, _, body) = send(config, request).await;
+        let row = format!("| {} | `{}` |", status.as_u16(), error_kind(&body).0);
+        assert!(documents(&row), "README.md has no error row `{row}`");
+    }
+    // While the server shuts down; no request can cause it.
+    assert!(documents("| 503 | `unavailable` |"));
+}
+
+#[tokio::test]
+async fn the_reference_lists_every_response_header() {
+    let request = json(serde_json::json!({ "html": "<style>p { colr: blue }</style><p>x</p>" }));
+    let (_, response, _) = send(config(&[]), request).await;
+    let reference = REFERENCE.to_ascii_lowercase();
+    for name in response.headers().keys() {
+        if name.as_str().starts_with("x-rustyprint-") {
+            assert!(
+                reference.contains(&format!("`{name}`")),
+                "README.md does not document the {name} header"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn the_reference_lists_every_metric() {
+    let app = app(config(&[]));
+    let request = json(serde_json::json!({ "html": "<p>x</p>" }));
+    app.clone().oneshot(request).await.unwrap();
+    let response = app
+        .oneshot(Request::get("/metrics").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let text = response.into_body().collect().await.unwrap().to_bytes();
+    let text = String::from_utf8(text.to_vec()).unwrap();
+    let metrics: Vec<&str> = text
+        .lines()
+        .filter_map(|line| line.strip_prefix("# TYPE "))
+        .filter_map(|line| line.split(' ').next())
+        .collect();
+    assert!(metrics.len() >= 4, "{text}");
+    for metric in metrics {
+        assert!(
+            documents(&format!("`{metric}`")),
+            "README.md does not document {metric}"
+        );
+    }
+}
+
+#[test]
+fn the_reference_lists_every_setting() {
+    let source = concat!(
+        include_str!("../src/config.rs"),
+        include_str!("../src/main.rs")
+    );
+    let mut settings: Vec<&str> = source
+        .match_indices("RUSTYPRINT_")
+        .map(|(start, _)| {
+            let rest = &source[start..];
+            let end = rest
+                .find(|c: char| !(c.is_ascii_uppercase() || c == '_'))
+                .unwrap_or(rest.len());
+            &rest[..end]
+        })
+        .collect();
+    settings.push("RUST_LOG");
+    settings.sort_unstable();
+    settings.dedup();
+    assert!(settings.len() >= 8, "{settings:?}");
+    for setting in settings {
+        assert!(
+            documents(&format!("| `{setting}` |")),
+            "README.md does not document {setting}"
+        );
+    }
+}

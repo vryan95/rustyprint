@@ -13,6 +13,7 @@ Gem::Specification.new do |spec|
   spec.licenses = ["MIT", "Apache-2.0"]
   spec.metadata = {
     "source_code_uri" => "https://github.com/vryan95/rustyprint/tree/master/bindings/ruby",
+    "documentation_uri" => "https://rubydoc.info/gems/rustyprint",
     "rubygems_mfa_required" => "true"
   }
 
@@ -22,7 +23,8 @@ Gem::Specification.new do |spec|
 
   # Platform gems add the native library, lib/rustyprint/native/, and the license files (see
   # `rake native`).
-  spec.files = Dir["lib/**/*.rb", "README.md"]
+  # .yardopts tells rubydoc.info how to build the API documentation.
+  spec.files = Dir["lib/**/*.rb", "README.md", ".yardopts"]
   spec.require_paths = ["lib"]
 
   spec.add_dependency "ffi", "~> 1.17"

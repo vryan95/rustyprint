@@ -2,6 +2,8 @@
 /pkg/
 /Gemfile.lock
 /.bundle/
+/.yardoc/
+/doc/
 /LICENSE-MIT
 /LICENSE-APACHE
 /OFL.txt

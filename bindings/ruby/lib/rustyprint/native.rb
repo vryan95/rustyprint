@@ -4,6 +4,8 @@ require "ffi"
 
 module Rustyprint
   # The native library's C ABI (crates/rustyprint-ffi/include/rustyprint.h).
+  #
+  # @private
   module Native
     extend FFI::Library
 

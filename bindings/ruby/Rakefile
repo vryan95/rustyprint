@@ -48,4 +48,12 @@ ensure
   FileUtils.rm_f(LICENSES.keys)
 end
 
-task default: :spec
+desc "Fail unless every public class, module, method and constant has documentation"
+task :docs do
+  stats = IO.popen(%w[yard stats --list-undoc], &:read)
+  abort "yard stats failed" unless $?.success?
+  abort stats unless stats.include?("100.00% documented")
+  puts stats.lines.grep(/documented/)
+end
+
+task default: %i[spec docs]
