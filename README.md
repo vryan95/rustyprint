@@ -311,4 +311,11 @@ The fixture suite has one HTML file in [tests/fixtures/](tests/fixtures/) for ev
 
 ## License
 
-rustyprint does not have a license yet. The bundled fonts are under the SIL Open Font License.
+rustyprint is licensed under either of
+
+- the Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE)), or
+- the MIT license ([LICENSE-MIT](LICENSE-MIT)),
+
+at your option. Unless you say otherwise, any contribution you submit for inclusion in rustyprint is licensed as above, without any additional terms or conditions.
+
+The bundled Noto fonts are under the SIL Open Font License ([fonts/OFL.txt](fonts/OFL.txt)). Every package and archive carries the three licenses.

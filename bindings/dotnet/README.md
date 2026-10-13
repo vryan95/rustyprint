@@ -87,3 +87,7 @@ dotnet pack   # a package with the native library for this platform
 ```
 
 The release workflow packs the native libraries of every platform, with `-p:RustyprintNativeDir=<dir>` naming a directory that holds `runtimes/<rid>/native/<library>` for each.
+
+## License
+
+MIT or Apache-2.0, at your option ([LICENSE-MIT](https://github.com/vryan95/rustyprint/blob/master/LICENSE-MIT), [LICENSE-APACHE](https://github.com/vryan95/rustyprint/blob/master/LICENSE-APACHE)). The fonts built into the native library are under the SIL Open Font License ([OFL.txt](https://github.com/vryan95/rustyprint/blob/master/fonts/OFL.txt)). The package carries all three.
