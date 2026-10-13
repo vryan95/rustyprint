@@ -292,9 +292,10 @@ jobs:
     if: always()
     needs: [changes, checks, test, dependencies, image, ruby, ruby-demo, dotnet, dotnet-demo]
     runs-on: ubuntu-latest
-    # To read the conclusion of every job in the run.
+    # To read the conclusion of every job in the run: the run's check suite, then its check runs.
     permissions:
       actions: read
+      checks: read
     steps:
       - name: Every job passed
         run: |
@@ -303,17 +304,22 @@ jobs:
             exit 1
           fi
       # needs.*.result counts a matrix job as passed when one of its runs was cancelled, as
-      # happens when no runner picks it up, so each run's own conclusion is checked too. Called
-      # from the release workflow, CI's jobs are named "CI / <job>" among the release's own, and
-      # only those with this job's prefix are checked.
+      # happens when no runner picks it up, so each run's own conclusion is checked too, from the
+      # run's check runs: the API's list of a run's jobs fails with server errors on some runs.
+      # Called from the release workflow, CI's jobs are named "CI / <job>" among the release's
+      # own, and only those with this job's prefix are checked.
       - name: Every run of every job passed
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          read_jobs() {
+            suite=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .check_suite_id) &&
+              gh api --paginate "repos/$GITHUB_REPOSITORY/check-suites/$suite/check-runs?filter=latest&per_page=100" \
+                --jq '.check_runs[] | [.name, .conclusion // .status] | @tsv'
+          }
           # The API now and then answers with a server error, so it is asked up to three times.
           for attempt in 1 2 3; do
-            if jobs=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?filter=latest&per_page=100" \
-              --jq '.jobs[] | [.name, .conclusion // .status] | @tsv'); then
+            if jobs=$(read_jobs); then
               break
             fi
             if [ "$attempt" = 3 ]; then

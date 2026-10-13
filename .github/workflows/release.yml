@@ -47,9 +47,10 @@ jobs:
     name: CI
     uses: ./.github/workflows/ci.yml
     # A called workflow gets no more than these; CI's `changes` job reads pull requests, and its
-    # `result` job the run's jobs.
+    # `result` job the run's check runs.
     permissions:
       actions: read
+      checks: read
       contents: read
       pull-requests: read
 
