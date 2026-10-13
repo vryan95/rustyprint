@@ -12,7 +12,7 @@ When you start a milestone, set its status to `partial`. When you finish it, set
 
 ## Commands
 
-CI (`.github/workflows/ci.yml`) runs these on every push to `master` and every pull request. For now work is pushed straight to `master`, so run them before pushing:
+CI (`.github/workflows/ci.yml`) runs these on every push to `master` and every pull request. `master` is protected: work goes on a branch and arrives through a pull request, which merges only when the `CI result` check passes. Run these before pushing a branch:
 
 - `cargo test --workspace` runs every test, including the fixture suite: one HTML fixture in `tests/fixtures/` per tracker row. CI runs it on Linux, Windows and macOS.
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
@@ -35,9 +35,9 @@ Nightly (`.github/workflows/nightly.yml`):
 
 ## Releasing
 
-Every crate shares the workspace version in `Cargo.toml`. To release, set `version` under `[workspace.package]`, commit, and push a tag `v<version>`. `.github/workflows/release.yml` checks the tag against the version, runs CI, builds the CLI for every platform and publishes a GitHub Release. Run it by hand from the Actions tab for a dry run, which builds the archives without a release.
+Every crate shares the workspace version in `Cargo.toml`. To release, set `version` under `[workspace.package]` in a pull request, and once it has merged, tag the merge on `master` `v<version>` and push the tag. `.github/workflows/release.yml` checks the tag against the version, runs CI, builds the CLI for every platform and publishes a GitHub Release. Run it by hand from the Actions tab for a dry run, which builds the archives without a release.
 
 ## Working agreements
 
 - Write a milestone's tests first, then implement until they pass.
-- Only stage or commit when asked.
+- Only stage, commit, push or open a pull request when asked.
