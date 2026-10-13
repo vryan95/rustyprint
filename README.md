@@ -10,18 +10,18 @@ rustyprint turns HTML and CSS into PDF. It is written in Rust with a layout engi
 
 The trackers ([html-elements.md](html-elements.md) and the `css-*.md` files) list the status of every element and CSS feature, with notes on what is missing, and [progress.html](progress.html) summarises them. [plan.md](plan.md) is the plan and records which milestone the work is on.
 
-| Part | Status |
+| Use it as | Get it |
 | --- | --- |
-| Rendering engine | Done |
-| Command-line tool | Done |
-| HTTP service | Done |
-| Native library with a C ABI | Done |
-| Ruby gem | Done |
-| NuGet package | Done |
+| [A command-line tool](#use-the-command-line) | An archive from the [Releases page](https://github.com/vryan95/rustyprint/releases), or `cargo install` |
+| [An HTTP service](#run-the-http-service) | `docker run -p 8080:8080 ghcr.io/vryan95/rustyprint-server` |
+| [A Ruby gem](#use-it-from-ruby) | `gem install rustyprint` |
+| [A NuGet package](#use-it-from-net) | `dotnet add package Rustyprint` |
+| [A Rust library](#use-it-from-rust) | A Git dependency |
+| [A C library](#use-it-from-c) | An archive from the [Releases page](https://github.com/vryan95/rustyprint/releases) |
 
 ## Install
 
-Each release on the repository's Releases page has the program ready to run, for Linux, macOS and Windows on x64 and arm64:
+Each release on the [Releases page](https://github.com/vryan95/rustyprint/releases) has the program ready to run, for Linux, macOS and Windows on x64 and arm64:
 
 | Platform | Archive |
 | --- | --- |
@@ -30,7 +30,7 @@ Each release on the repository's Releases page has the program ready to run, for
 | macOS | `rustyprint-<version>-aarch64-apple-darwin.tar.gz` (Apple silicon), `…-x86_64-apple-darwin.tar.gz` (Intel) |
 | Windows | `rustyprint-<version>-x86_64-pc-windows-msvc.zip`, `…-aarch64-pc-windows-msvc.zip` |
 
-Each archive holds the program, a single file with the fonts it needs built in. `SHA256SUMS` lists the checksums of every archive.
+Each archive holds the program, a single file with the fonts it needs built in, with the README and the licenses. `SHA256SUMS` lists the checksums of every archive.
 
 Or build it from source, with Rust 1.98 or newer ([rustup.rs](https://rustup.rs)):
 
@@ -160,36 +160,17 @@ Problems that do not stop the render, such as unknown CSS or an image that canno
 docker run -p 8080:8080 ghcr.io/vryan95/rustyprint-server:latest
 ```
 
-While the repository is private, so is the image: sign in first with `docker login ghcr.io`, using a GitHub token that can read packages.
-
-Send the HTML as JSON, with the same options as `--options` takes:
+Send the HTML as JSON, with the same options as `--options` takes, or as `multipart/form-data` with the files it refers to:
 
 ```sh
-curl -H 'Content-Type: application/json'   -d '{"html": "<h1>Hello</h1>", "options": {"page_size": "A4", "margin": "15mm"}}'   -o hello.pdf http://localhost:8080/v1/pdf
+curl -H 'Content-Type: application/json' \
+  -d '{"html": "<h1>Hello</h1>", "options": {"page_size": "A4", "margin": "15mm"}}' \
+  -o hello.pdf http://localhost:8080/v1/pdf
+
+curl -F index.html=@invoice.html -F img/logo.png=@brand/logo.png -o invoice.pdf http://localhost:8080/v1/pdf
 ```
 
-or as `multipart/form-data`, with an `index.html` part, an optional `options` part, and a part for each file the document refers to, named by the path the HTML uses:
-
-```sh
-curl -F index.html=@invoice.html -F logo.png=@brand/logo.png   -F 'options={"page_size": "Letter"};type=application/json'   -o invoice.pdf http://localhost:8080/v1/pdf
-```
-
-The response is the PDF. Warnings are in the `X-Rustyprint-Warnings` header, a JSON array, and errors come back as JSON, `{"error": "limit_exceeded", "message": "..."}`, with these statuses: 400 for an invalid request or options, 413 for a body that is too large, 415 for a body that is neither JSON nor multipart, 422 for a document over a limit, 504 when rendering takes longer than the deadline, and 500 for an internal error. `GET /healthz` answers `ok`, and `GET /metrics` gives Prometheus metrics.
-
-Environment variables configure the server, and set what requests may do. Requests can lower the limits but not raise them, and may fetch only from the hosts the server allows.
-
-| Variable | Default | What it sets |
-| --- | --- | --- |
-| `RUSTYPRINT_ADDR` | `0.0.0.0:8080` | The address to listen on |
-| `RUSTYPRINT_CONCURRENCY` | the number of CPUs | How many renders run at once; other requests wait |
-| `RUSTYPRINT_MAX_BODY_BYTES` | `52428800` (50 MB) | The largest request body |
-| `RUSTYPRINT_ALLOWED_HOSTS` | none | Hosts requests may fetch images and stylesheets from, comma-separated, such as `cdn.example.com,*.example.org` |
-| `RUSTYPRINT_ALLOW_HTTP` | `false` | Whether requests may fetch plain `http` URLs from those hosts |
-| `RUSTYPRINT_ASSETS_DIR` | none | A directory of shared files, such as fonts and logos, that relative and root-relative URLs resolve against |
-| `RUSTYPRINT_LIMITS` | the defaults above | The highest limits, as JSON: `{"max_pages": 200, "timeout_ms": 30000}` |
-| `RUST_LOG` | `info` | How much to log |
-
-To build the image yourself, see the comment at the top of [docker/server.Dockerfile](docker/server.Dockerfile). Or run the server without Docker: `cargo run --release -p rustyprint-server`.
+The response is the PDF, with the warnings in its headers. [crates/rustyprint-server/README.md](crates/rustyprint-server/README.md) is the API reference: both request formats, the response headers, the errors, the metrics, and the environment variables that configure the server and set what requests may do.
 
 ## Use it from Ruby
 
@@ -201,7 +182,7 @@ output = Rustyprint.render(html, page_size: "A4", margin: "15mm",
 File.binwrite("invoice.pdf", output.pdf)
 ```
 
-The first release publishes it to rubygems.org. [bindings/ruby/README.md](bindings/ruby/README.md) describes the options, errors and Rails support, and [demos/rails](demos/rails) is a Rails app that uses it.
+Install it with `gem install rustyprint`, or add `gem "rustyprint"` to your Gemfile. [bindings/ruby/README.md](bindings/ruby/README.md) describes the options, errors and Rails support, and [demos/rails](demos/rails) is a Rails app that uses it.
 
 ## Use it from .NET
 
@@ -214,11 +195,18 @@ RenderOutput output = await PdfRenderer.RenderAsync(html, options, cancellationT
 File.WriteAllBytes("invoice.pdf", output.Pdf);
 ```
 
-The first release publishes it to nuget.org. [bindings/dotnet/README.md](bindings/dotnet/README.md) describes the options, errors and use in ASP.NET Core, and [demos/dotnet](demos/dotnet) is an ASP.NET Core app that uses it.
+Install it with `dotnet add package Rustyprint`. [bindings/dotnet/README.md](bindings/dotnet/README.md) describes the options, errors and use in ASP.NET Core, and [demos/dotnet](demos/dotnet) is an ASP.NET Core app that uses it.
 
 ## Use it from Rust
 
-The `rustyprint` crate is the engine itself. It is not on crates.io yet, so depend on it by path or Git:
+The `rustyprint` crate is the engine itself. It is not published on crates.io, so depend on it through Git, at a release's tag:
+
+```toml
+[dependencies]
+rustyprint = { git = "https://github.com/vryan95/rustyprint", tag = "v1.0.0", features = ["serde"] }
+```
+
+The `serde` feature adds `RenderOptions::from_json`, for options as JSON; without it, build `RenderOptions` in code.
 
 ```rust
 use rustyprint::{RenderOptions, render};
@@ -298,7 +286,7 @@ The crates in [crates/](crates/):
 | `rustyprint-ffi` | The native library: a C ABI over `rustyprint` |
 | `rustyprint-tests` | The fixture suite |
 
-The checks CI runs on every push and pull request:
+`master` is protected: changes arrive through pull requests, which merge once CI passes. CI runs these on every pull request, so run them before you push:
 
 ```sh
 cargo test --workspace
@@ -306,6 +294,8 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo fmt --all --check
 cargo deny check
 ```
+
+and, for the packages, `bundle exec rake` in [bindings/ruby](bindings/ruby) (the tests and the documentation check) and `dotnet test` in [bindings/dotnet](bindings/dotnet).
 
 The fixture suite has one HTML file in [tests/fixtures/](tests/fixtures/) for every row of the trackers, with its expectations inside it. After changing a tracker or a milestone in the plan, regenerate the progress page with `cargo run -p rustyprint-tests --bin progress`. [CLAUDE.md](CLAUDE.md) has more about how the work is organised.
 

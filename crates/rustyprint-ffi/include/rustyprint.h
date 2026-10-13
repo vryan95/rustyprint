@@ -141,7 +141,7 @@ const uint8_t *rp_result_pdf(const struct rp_result *result, size_t *len);
 
 /**
  * The render's warnings, as a NUL-terminated JSON array of strings such as
- * `["style.css:3: unknown property colr"]`, with its length in bytes, not counting the NUL,
+ * `` ["style.css:3: unsupported property `colr`"] ``, with its length in bytes, not counting the NUL,
  * stored in `*len` unless `len` is null. `[]` if there are none or the render failed; null
  * only for a null result. The string lives as long as the result.
  *
@@ -149,7 +149,8 @@ const uint8_t *rp_result_pdf(const struct rp_result *result, size_t *len);
  *
  * `result` is null or a live result. `len` is null or writable.
  */
-const char *rp_result_warnings_json(const struct rp_result *result, size_t *len);
+const char *rp_result_warnings_json(const struct rp_result *result,
+                                    size_t *len);
 
 /**
  * Why the render failed, as a NUL-terminated message, with its length in bytes, not counting

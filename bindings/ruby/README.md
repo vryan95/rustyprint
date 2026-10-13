@@ -10,6 +10,8 @@ Ruby 3.2 or newer. Each platform has a gem with the native library built in: Lin
 
 ## Render
 
+The API documentation, built from the gem's doc comments, is at [rubydoc.info/gems/rustyprint](https://rubydoc.info/gems/rustyprint).
+
 ```ruby
 require "rustyprint"
 
@@ -17,7 +19,7 @@ output = Rustyprint.render(html, page_size: "A4", margin: "15mm", title: "Invoic
                                  assets: { "logo.png" => File.binread("logo.png"),
                                            "invoice.css" => Pathname("app/pdf/invoice.css") })
 File.binwrite("invoice.pdf", output.pdf)
-output.warnings # => ["invoice.css:12: unknown property colr"]
+output.warnings # => ["invoice.css:12: unsupported property `colr`"]
 ```
 
 `render` returns a `Rustyprint::Output` with `pdf`, a binary String, and `warnings`, problems found in the document's CSS and assets, as an Array of Strings.
@@ -89,8 +91,9 @@ From this directory, with Rust installed:
 
 ```sh
 bundle install
-bundle exec rake          # builds the native library with Cargo, then runs the specs
+bundle exec rake          # builds the native library with Cargo, runs the specs, then checks the documentation
 bundle exec rake compile  # only builds the library, into lib/rustyprint/native
+bundle exec rake docs     # fails unless every public class, method and constant is documented
 ```
 
 `RUSTYPRINT_LIBRARY` points the gem at a library somewhere else. `rake native PLATFORM=x86_64-linux-gnu LIBRARY=path` builds a platform gem around a library, as the release workflow does for every platform.

@@ -317,7 +317,7 @@ pub unsafe extern "C" fn rp_result_pdf(result: *const RenderResult, len: *mut us
 }
 
 /// The render's warnings, as a NUL-terminated JSON array of strings such as
-/// `["style.css:3: unknown property colr"]`, with its length in bytes, not counting the NUL,
+/// `` ["style.css:3: unsupported property `colr`"] ``, with its length in bytes, not counting the NUL,
 /// stored in `*len` unless `len` is null. `[]` if there are none or the render failed; null
 /// only for a null result. The string lives as long as the result.
 ///

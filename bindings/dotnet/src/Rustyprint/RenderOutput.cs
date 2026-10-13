@@ -18,7 +18,7 @@ public sealed class RenderOutput
 
     /// <summary>
     /// Problems the render worked around, such as an unknown CSS property or a missing image,
-    /// like <c>style.css:3: unknown property colr</c>.
+    /// like <c>style.css:3: unsupported property `colr`</c>.
     /// </summary>
     public IReadOnlyList<string> Warnings { get; }
 }

@@ -4,8 +4,9 @@ require "rack/mock_request"
 require_relative "asset_collector"
 
 module Rustyprint
-  # Renders a controller's view to PDF, for `render pdf:`:
+  # Renders a controller's view to PDF, for `render pdf:`.
   #
+  # @example
   #   format.pdf do
   #     render pdf: "invoice #{@invoice.id}", template: "invoices/show", layout: "pdf",
   #            page_size: "A4", margin: "15mm", disposition: "attachment"
@@ -13,7 +14,7 @@ module Rustyprint
   #
   # The view renders as HTML, unless `formats` says otherwise, with the other options a
   # `render` takes, such as `template`, `layout` and `locals`. The PDF options are those of
-  # Rustyprint.render. `pdf` names the file, with `.pdf` added, and `disposition` is "inline"
+  # {Rustyprint.render}. `pdf` names the file, with `.pdf` added, and `disposition` is "inline"
   # (the default) or "attachment".
   #
   # The stylesheets, images and fonts the HTML refers to by path, such as those
@@ -21,12 +22,19 @@ module Rustyprint
   # app's asset pipeline. `assets` adds files of your own, by the path the HTML uses. Each
   # render is instrumented as "render.rustyprint", with the asset paths and warnings.
   class PdfRenderer
+    # The options of `render pdf:` that go to {Rustyprint.render}; the others go to the view.
     PDF_OPTIONS = %i[page_size landscape margin title stylesheet remote limits].freeze
 
+    # @param controller [ActionController::Base] the controller whose view to render
     def initialize(controller)
       @controller = controller
     end
 
+    # Renders the view to PDF and sets the response's content type and disposition.
+    #
+    # @param name [String, Symbol] the file name, with `.pdf` added if it lacks it
+    # @param options [Hash] the options of `render pdf:`
+    # @return [String] the PDF, for the response's body
     def render(name, options)
       view = options.except(:pdf, :assets, :disposition, *PDF_OPTIONS)
       view[:formats] ||= [:html]
