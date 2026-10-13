@@ -16,7 +16,8 @@ The trackers ([html-elements.md](html-elements.md) and the `css-*.md` files) lis
 | Command-line tool | Done |
 | HTTP service | Done |
 | Native library with a C ABI | Done |
-| Ruby gem and NuGet package | Planned |
+| Ruby gem | Done |
+| NuGet package | Done |
 
 ## Install
 
@@ -96,7 +97,7 @@ Run `rustyprint --help` for the full list.
 
 ### Options as JSON
 
-`--options` takes the same JSON options the HTTP service and the Ruby and .NET packages will take. [schema/render-options.schema.json](schema/render-options.schema.json) describes every field. All fields are optional:
+`--options` takes the same JSON options the HTTP service and the Ruby and .NET packages take. [schema/render-options.schema.json](schema/render-options.schema.json) describes every field. All fields are optional:
 
 ```json
 {
@@ -190,6 +191,31 @@ Environment variables configure the server, and set what requests may do. Reques
 
 To build the image yourself, see the comment at the top of [docker/server.Dockerfile](docker/server.Dockerfile). Or run the server without Docker: `cargo run --release -p rustyprint-server`.
 
+## Use it from Ruby
+
+The `rustyprint` gem, for Ruby 3.2 and newer, with the native library built into a gem for each platform. In Rails it adds `render pdf:` to controllers.
+
+```ruby
+output = Rustyprint.render(html, page_size: "A4", margin: "15mm",
+                                 assets: { "logo.png" => Pathname("app/assets/images/logo.png") })
+File.binwrite("invoice.pdf", output.pdf)
+```
+
+The first release publishes it to rubygems.org. [bindings/ruby/README.md](bindings/ruby/README.md) describes the options, errors and Rails support, and [demos/rails](demos/rails) is a Rails app that uses it.
+
+## Use it from .NET
+
+The `Rustyprint` NuGet package, for .NET 8 and newer, with the native library for every platform inside it.
+
+```csharp
+var options = new RenderOptions { PageSize = PageSize.A4, Margin = "15mm" };
+options.Assets.AddFile("logo.png", "wwwroot/logo.png");
+RenderOutput output = await PdfRenderer.RenderAsync(html, options, cancellationToken);
+File.WriteAllBytes("invoice.pdf", output.Pdf);
+```
+
+The first release publishes it to nuget.org. [bindings/dotnet/README.md](bindings/dotnet/README.md) describes the options, errors and use in ASP.NET Core, and [demos/dotnet](demos/dotnet) is an ASP.NET Core app that uses it.
+
 ## Use it from Rust
 
 The `rustyprint` crate is the engine itself. It is not on crates.io yet, so depend on it by path or Git:
@@ -209,7 +235,7 @@ for warning in &output.warnings {
 
 ## Use it from C
 
-`rustyprint-ffi` is rustyprint as a shared library with a C ABI, for C and any language that can call C; the Ruby gem and the NuGet package will be built on it. Each release has it for every platform as `rustyprint-native-<version>-<target>.tar.gz` (`.zip` for Windows), with the header, or build it with `cargo build --release -p rustyprint-ffi`.
+`rustyprint-ffi` is rustyprint as a shared library with a C ABI, for C and any language that can call C; the Ruby gem and the NuGet package are built on it. Each release has it for every platform as `rustyprint-native-<version>-<target>.tar.gz` (`.zip` for Windows), with the header, or build it with `cargo build --release -p rustyprint-ffi`.
 
 ```c
 rp_request *request = rp_request_new(options_json, strlen(options_json));

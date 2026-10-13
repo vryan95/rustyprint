@@ -1,5 +1,5 @@
 # Checks every pull request and every push to master. Once master is protected (plan.md,
-# milestone 28), pull requests merge only when the `CI result` check passes.
+# milestone 27), pull requests merge only when the `CI result` check passes.
 name: CI
 
 on:

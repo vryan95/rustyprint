@@ -269,7 +269,7 @@ The repository is on GitHub, and GitHub Actions runs every check. `.github/workf
 - **Dependencies:** `cargo deny` (configured in `deny.toml`) for licences, security advisories, banned crates and crate sources. Unmaintained crates fail it too, except the known ones it lists with the reason for each.
 - **Speed:** `Swatinem/rust-cache` caches builds, and a newer run on the same branch cancels an older one.
 
-Until milestone 28, work is pushed straight to `master`, and CI checks every push. From milestone 28, `master` is protected: pull requests merge only when the `CI result` check passes, a job that passes only when every other CI job did, so jobs can be added without changing the protection rule.
+Until milestone 27, work is pushed straight to `master`, and CI checks every push. From milestone 27, `master` is protected: pull requests merge only when the `CI result` check passes, a job that passes only when every other CI job did, so jobs can be added without changing the protection rule.
 
 `.github/workflows/nightly.yml` runs what takes too long for every pull request, each night and on demand:
 
@@ -345,9 +345,9 @@ The **Status** column is where the work stands: `todo` (not started), `partial` 
 | 23 | **HTTP service** | done | axum server, JSON and multipart APIs, limits, metrics, warnings; its image built in CI and published to GitHub Container Registry on release. |
 | 24 | **Native library** | done | `rustyprint-ffi` with its C ABI and generated header, a C smoke test, built for every platform in CI and attached to releases. |
 | 25 | **Ruby gem** | done | `rustyprint` gem on `ffi`, releasing the GVL during renders, with a prebuilt gem for every platform; tested in CI and published to rubygems.org on release. `render pdf:` for Rails controllers. The shared sample documents, and a Ruby demo: a Rails app that renders an ERB invoice view as a PDF through `respond_to` and `render pdf:`, with the samples next to the browser's rendering, an HTML playground and a rake task that renders every sample. |
-| 26 | **.NET package** | partial | `Rustyprint` NuGet package with sync and async rendering, typed options and exceptions, native libraries for every platform; tested in CI and published to nuget.org on release. A .NET demo: an ASP.NET Core app with the samples and an HTML playground, and a console command that renders every sample. |
-| 27 | **First release** | todo | The determinism test across every front end, documentation for each package, and version 1.0.0 released through the pipeline. |
-| 28 | **Protected master** | todo | `master` protected on GitHub: changes arrive through pull requests, which merge only when the `CI result` check passes. Work moves from pushing to `master` to branches and pull requests. |
+| 26 | **.NET package** | done | `Rustyprint` NuGet package with sync and async rendering, typed options and exceptions, native libraries for every platform; tested in CI and published to nuget.org on release. A .NET demo: an ASP.NET Core app with the samples and an HTML playground, and a console command that renders every sample. |
+| 27 | **Protected master** | todo | `master` protected on GitHub: changes arrive through pull requests, which merge only when the `CI result` check passes. Work moves from pushing to `master` to branches and pull requests. |
+| 28 | **First release** | todo | The determinism test across every front end, documentation for each package, and version 1.0.0 released through the pipeline. |
 
 ## 9. Open questions
 
