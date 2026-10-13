@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Child combinator</title>
+<style>
+div > p { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<div><p id=yes></p><section><p id=no></p></section></div>
+</body>
+</html>

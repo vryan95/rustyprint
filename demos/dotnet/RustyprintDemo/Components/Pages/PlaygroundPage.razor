@@ -1,0 +1,59 @@
+@using RustyprintDemo.Playground
+
+<Shell Title="Playground · rustyprint">
+  <ChildContent>
+    <section class="intro">
+      <h1>Playground</h1>
+      <p>
+        Edit the HTML and CSS and choose the page options. The PDF renders as you type, with
+        <code>PdfRenderer.RenderAsync(html, new RenderOptions { Stylesheet = css, … })</code>. Images can be given as
+        <code>data:</code> URLs.
+      </p>
+    </section>
+
+    <form class="playground" method="post" action="/playground" data-playground>
+      <AntiforgeryToken />
+      <div class="editors">
+        <label>
+          <span>HTML</span>
+          <textarea name="html" spellcheck="false" rows="14">@Html</textarea>
+        </label>
+        <label>
+          <span>CSS</span>
+          <textarea name="css" spellcheck="false" rows="12">@Css</textarea>
+        </label>
+        <div class="options">
+          <label>
+            <span>Page size</span>
+            <select name="page_size">
+              @foreach (var size in PlaygroundEndpoints.PageSizes)
+              {
+                <option selected="@(size == "A4")">@size</option>
+              }
+            </select>
+          </label>
+          <label><span>Margin</span><input type="text" name="margin" placeholder="2cm"></label>
+          <label class="check"><input type="checkbox" name="landscape" value="1"> Landscape</label>
+          <button type="submit" class="button">Render</button>
+          <p class="hint">An <code>@@page</code> rule in the CSS that sets <code>size</code> or <code>margin</code> takes precedence over these options.</p>
+        </div>
+      </div>
+
+      <div class="result">
+        <p class="status" data-status aria-live="polite">Rendering…</p>
+        <ul class="warnings" data-warnings hidden></ul>
+        <iframe class="preview" data-preview title="The rendered PDF"></iframe>
+      </div>
+    </form>
+  </ChildContent>
+
+  <Scripts>
+    <script src="/playground.js"></script>
+  </Scripts>
+</Shell>
+
+@code {
+    [Parameter, EditorRequired] public string Html { get; set; } = "";
+
+    [Parameter, EditorRequired] public string Css { get; set; } = "";
+}

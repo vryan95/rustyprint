@@ -1,0 +1,299 @@
+# Checks every pull request and every push to master. Once master is protected (plan.md,
+# milestone 28), pull requests merge only when the `CI result` check passes.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+  # The release workflow runs it before publishing.
+  workflow_call:
+
+# A newer run on the same branch or pull request cancels the older one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # The workspace's `rust-version`; the `checks` job fails if they differ.
+  RUST_TOOLCHAIN: "1.98"
+
+jobs:
+  # Which parts changed. Pull requests run the jobs of the parts they change; pushes to master
+  # and the release workflow run everything.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      ruby: ${{ github.event_name != 'pull_request' || steps.filter.outputs.ruby == 'true' }}
+      dotnet: ${{ github.event_name != 'pull_request' || steps.filter.outputs.dotnet == 'true' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            ruby:
+              - crates/**
+              - Cargo.*
+              - schema/**
+              - bindings/ruby/**
+              - demos/samples/**
+              - demos/rails/**
+              - .github/workflows/ci.yml
+            dotnet:
+              - crates/**
+              - Cargo.*
+              - schema/**
+              - bindings/dotnet/**
+              - demos/samples/**
+              - demos/dotnet/**
+              - .github/workflows/ci.yml
+
+  checks:
+    name: Formatting, lints and toolchain
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Toolchain matches the workspace's rust-version
+        run: |
+          workspace=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+          if [ "$workspace" != "$RUST_TOOLCHAIN" ]; then
+            echo "::error::Cargo.toml has rust-version $workspace, but CI uses $RUST_TOOLCHAIN"
+            exit 1
+          fi
+          pinned=$(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml)
+          if [ "$pinned" != "$RUST_TOOLCHAIN" ]; then
+            echo "::error::rust-toolchain.toml pins $pinned, but CI uses $RUST_TOOLCHAIN"
+            exit 1
+          fi
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+  test:
+    name: Tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+      # Includes the fixture suite, which also checks that progress.html is up to date and
+      # that the milestone statuses in plan.md agree with the trackers, and the native library's
+      # C smoke test, built with the runner's C compiler.
+      - run: cargo test --workspace --locked
+
+  dependencies:
+    name: Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories bans licenses sources
+
+  image:
+    name: Server image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: musl
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: "0.14.1"
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+      - name: Build the server
+        run: |
+          cargo zigbuild --release --locked -p rustyprint-server --target x86_64-unknown-linux-musl
+          mkdir -p docker/bin/amd64
+          cp target/x86_64-unknown-linux-musl/release/rustyprint-server docker/bin/amd64/
+      - name: Build the image
+        run: docker build -f docker/server.Dockerfile -t rustyprint-server:ci docker
+      - name: Render through the image
+        run: |
+          docker run -d --name server -p 8080:8080 rustyprint-server:ci
+          for _ in $(seq 1 50); do curl -sf localhost:8080/healthz && break; sleep 0.2; done
+          curl -sf -H 'Content-Type: application/json' -d '{"html": "<h1>Hello</h1>"}'             -o hello.pdf localhost:8080/v1/pdf
+          head -c 5 hello.pdf | grep -q '%PDF-'
+          docker stop server
+          docker logs server
+
+  ruby:
+    name: Ruby gem (${{ matrix.os }}, Ruby ${{ matrix.ruby }})
+    needs: changes
+    if: needs.changes.outputs.ruby == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest and newest Ruby the gem supports on Linux, and the newest elsewhere.
+          - { os: ubuntu-latest, ruby: "3.2" }
+          - { os: ubuntu-latest, ruby: "4.0" }
+          - { os: macos-latest, ruby: "4.0" }
+          - { os: windows-latest, ruby: "4.0" }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: bindings/ruby
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ffi
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+          working-directory: bindings/ruby
+      # Builds the native library with Cargo, then runs the specs against it.
+      - run: bundle exec rake
+
+  ruby-demo:
+    name: Ruby demo
+    needs: changes
+    if: needs.changes.outputs.ruby == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: demos/rails
+    env:
+      RUSTYPRINT_LIBRARY: ${{ github.workspace }}/target/release/librustyprint_ffi.so
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ffi
+      - name: Build the native library
+        run: cargo build --release --locked -p rustyprint-ffi
+      # The Ruby version from the demo's .ruby-version.
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: demos/rails
+      - name: Test the demo
+        run: bin/rails test
+      - name: Render every sample from the command line
+        run: bin/rails samples:render
+      - name: Render every sample and invoice through the server
+        run: |
+          bin/rails server -p 3000 > log/server.log 2>&1 &
+          for _ in $(seq 1 60); do curl -sf -o /dev/null localhost:3000/up && break; sleep 1; done
+          for path in /samples/invoice.pdf /samples/report.pdf /samples/letter.pdf \
+                      /invoices/2026-0412.pdf /invoices/2026-0413.pdf; do
+            curl -sf -o out.pdf "localhost:3000$path" && head -c 5 out.pdf | grep -q '%PDF-' \
+              || { echo "::error::$path did not render"; cat log/server.log; exit 1; }
+            echo "$path: $(wc -c < out.pdf) bytes"
+          done
+
+  dotnet:
+    name: .NET package (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.dotnet == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: bindings/dotnet
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ffi
+      # The tests run on the oldest .NET the package supports and the newest.
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - run: dotnet format Rustyprint.slnx --verify-no-changes
+      # Builds the native library with Cargo, then runs the tests against it.
+      - run: dotnet test
+      - run: dotnet pack src/Rustyprint -c Release -o artifacts
+
+  dotnet-demo:
+    name: .NET demo
+    needs: changes
+    if: needs.changes.outputs.dotnet == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: demos/dotnet
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ffi
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet format RustyprintDemo.slnx --verify-no-changes
+      - name: Test the demo
+        run: dotnet test
+      - name: Render every sample from the command line
+        run: dotnet run --project RustyprintDemo --no-build -- render-samples
+      - name: Render every sample and invoice through the server
+        run: |
+          dotnet run --project RustyprintDemo --no-build --urls http://localhost:5000 > server.log 2>&1 &
+          for _ in $(seq 1 60); do curl -sf -o /dev/null localhost:5000/up && break; sleep 1; done
+          for path in /samples/invoice.pdf /samples/report.pdf /samples/letter.pdf \
+                      /invoices/2026-0412.pdf /invoices/2026-0413.pdf; do
+            curl -sf -o out.pdf "localhost:5000$path" && head -c 5 out.pdf | grep -q '%PDF-' \
+              || { echo "::error::$path did not render"; cat server.log; exit 1; }
+            echo "$path: $(wc -c < out.pdf) bytes"
+          done
+
+  # One check for branch protection to require, so adding or renaming jobs does not mean
+  # changing the protection rule.
+  result:
+    name: CI result
+    if: always()
+    needs: [changes, checks, test, dependencies, image, ruby, ruby-demo, dotnet, dotnet-demo]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every job passed
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "::error::A CI job failed or was cancelled"
+            exit 1
+          fi

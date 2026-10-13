@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-border-source</title>
+<style>
+body { margin: 0 }
+div { width: 10px; height: 10px; border: 10px solid; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-border-source: url("assets/frame.png"); layout-paint: "group(mask)"; layout-mask: "15 15 255, 5 5 255" }
+#b { mask-border-source: none; layout-paint: "!group" }
+</script>
+</head>
+<body>
+<div id=a style="mask-border-source: url(assets/frame.png); mask-border-slice: 10 fill; mask-border-width: 10px"></div>
+<div id=b></div>
+</body>
+</html>

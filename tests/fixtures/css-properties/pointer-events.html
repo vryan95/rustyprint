@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>pointer-events</title>
+<style>
+body { font-size: 10px }
+#a { pointer-events: none }
+#b { pointer-events: visiblePainted }
+#c { pointer-events: all }
+#bad { pointer-events: ink }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { pointer-events: none }
+#b { pointer-events: visiblepainted }
+#c { pointer-events: all }
+html { pointer-events: auto }
+warning: invalid value for `pointer-events`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@page</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page { margin: 50px }
+@page :first { margin-top: 100px }
+@page wide { size: 600px 400px; margin: 10px }
+@media print { @page wide { margin-left: 20px } }
+#c { page: wide }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-page: 1; layout-page-x: 50; layout-page-y: 100 }
+#b { layout-page: 2; layout-page-y: 50 }
+#c { layout-page: 3; layout-page-x: 20; layout-page-y: 10 }
+html { layout-page-sizes: "794x1123 794x1123 600x400" }
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b class=next>b</p><p id=c>c</p>
+</body>
+</html>

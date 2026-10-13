@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-template-areas</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-template-areas: "h h" "s m"; grid-template-columns: 100px 200px; grid-template-rows: 10px 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#g { grid-template-areas: "h h" "s m" }
+#h { layout-x: 0px; layout-y: 0px; layout-width: 300px; layout-height: 10px }
+#s { layout-x: 0px; layout-y: 10px; layout-width: 100px; layout-height: 20px }
+#m { layout-x: 100px; layout-y: 10px; layout-width: 200px }
+#d { grid-template-areas: "a . ." "a b b" }
+#e { grid-template-areas: none }
+#f { layout-y: 60px; layout-height: 0px }
+#x { layout-x: 0px; layout-y: 60px; layout-width: 300px }
+warning: invalid value for `grid-template-areas`
+</script>
+</head>
+<body>
+<div class=g id=g><div id=m style="grid-area: m"></div><div id=s style="grid-area: s"></div><div id=h style="grid-area: h"></div></div>
+<div id=d style="grid-template-areas: 'a ... .' 'a b b'"></div>
+<div id=e style="grid-template-areas: 'a b a'"></div>
+<div class=g style="grid-template-areas: 'x y'"><div id=f style="grid-row: s-start"></div></div>
+<div class=g style="grid-template-areas: 'x'; grid-template-columns: none; grid-template-rows: none"><div id=x style="grid-area: x"></div></div>
+</body>
+</html>

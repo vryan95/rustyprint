@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-auto-flow: row; grid-auto-rows: 25px; grid-template-columns: 100px 100px; grid-template-rows: none }
+#a3 { layout-x: 0px; layout-y: 25px; layout-height: 25px }
+#b { grid-template-rows: 30px; grid-auto-flow: column dense; grid-auto-columns: 50px; grid-template-columns: none }
+#b2 { layout-x: 50px; layout-y: 50px; layout-width: 50px }
+#c { grid-template-areas: "x"; grid-template-rows: 10px; grid-auto-rows: auto; grid-auto-flow: row }
+</script>
+</head>
+<body>
+<div class=g id=a style="grid: auto-flow 25px / 100px 100px"><div></div><div></div><div id=a3></div></div>
+<div class=g id=b style="grid: 30px / auto-flow dense 50px"><div></div><div id=b2></div></div>
+<div class=g id=c style="grid-auto-rows: 5px; grid: 'x' 10px"></div>
+</body>
+</html>

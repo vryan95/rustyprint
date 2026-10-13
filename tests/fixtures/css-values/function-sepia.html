@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-sepia</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { filter: sepia(1); layout-paint: "rect(#ffffef)" }
+#b { filter: sepia(0); layout-paint: "rect(#ffffff)" }
+</script>
+</head>
+<body>
+<div id=a style="background: white; filter: sepia(1)"></div>
+<div id=b style="background: white; filter: sepia(0)"></div>
+</body>
+</html>

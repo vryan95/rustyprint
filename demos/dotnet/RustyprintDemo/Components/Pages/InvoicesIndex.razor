@@ -1,0 +1,35 @@
+<Shell Title="Invoices · rustyprint">
+  <section class="intro">
+    <h1>Invoices from a Razor component</h1>
+    <p>
+      These invoices are a Razor component filled from data in the app. The <code>.pdf</code>
+      endpoint renders the component to HTML with <code>HtmlRenderer</code> and passes it to rustyprint
+      with the stylesheet and logo it links to, read from the app's static files.
+    </p>
+  </section>
+
+  <div class="sample-grid">
+    @foreach (var invoice in Invoices)
+    {
+      <article class="sample-card">
+        <h2><a href="/invoices/@invoice.Id">Invoice @invoice.Id</a></h2>
+        <p>@invoice.Customer.Name · @invoice.Lines.Count @(invoice.Lines.Count == 1 ? "line" : "lines") · @Invoice.Euros(invoice.Total)</p>
+        <div class="actions">
+          <a href="/invoices/@(invoice.Id).pdf" class="button" target="_blank">Open PDF</a>
+          <a href="/invoices/@invoice.Id" class="button secondary">View HTML</a>
+        </div>
+      </article>
+    }
+  </div>
+
+  <section class="source">
+    <h2>The endpoints</h2>
+    <pre><code>@Source</code></pre>
+  </section>
+</Shell>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Invoice> Invoices { get; set; } = [];
+
+    [Parameter, EditorRequired] public string Source { get; set; } = "";
+}

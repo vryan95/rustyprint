@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>caret-animation</title>
+<style>
+body { font-size: 10px }
+#a { caret-animation: manual }
+#b { caret-animation: auto }
+#bad { caret-animation: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { caret-animation: manual }
+#b { caret-animation: auto }
+html { caret-animation: auto }
+warning: invalid value for `caret-animation`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

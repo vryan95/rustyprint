@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>line-break</title>
+<style>
+#t { line-break: anywhere; width: 30px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { line-break: anywhere; layout-lines: >2 }
+</script>
+</head>
+<body>
+<div id=t>abcdefghij</div>
+</body>
+</html>

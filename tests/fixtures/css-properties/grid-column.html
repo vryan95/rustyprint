@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-column</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-template-columns: repeat(3, 100px) }
+.g > div { height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-column-start: span 2; grid-column-end: -1; layout-x: 100px; layout-width: 200px }
+#b { grid-column-start: x; grid-column-end: x }
+#c { grid-column-start: 3; grid-column-end: 1; layout-x: 0px; layout-width: 200px }
+</script>
+</head>
+<body>
+<div class=g><div id=a style="grid-column: span 2 / -1"></div></div>
+<div class=g><div id=c style="grid-column: 3 / 1"></div></div>
+<div id=b style="grid-column: x"></div>
+</body>
+</html>

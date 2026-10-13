@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>pad</title>
+<style>
+@counter-style three { system: extends decimal; pad: 3 "0" }
+@counter-style reversed-order { system: extends decimal; pad: "_" 4; suffix: " " }
+@counter-style neg { system: extends decimal; pad: 3 "0"; suffix: " " }
+@counter-style bad { system: extends decimal; pad: -1 "0" }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "007. a" }
+#b { layout-text: "__12 b" }
+#c { layout-text: "1234. c" }
+#d { layout-text: "-05 d" }
+warning: invalid value for `pad`
+</script>
+</head>
+<body>
+<ol start=7><li id=a style="list-style-type: three">a</li></ol>
+<ol start=12><li id=b style="list-style-type: reversed-order">b</li></ol>
+<ol start=1234><li id=c style="list-style-type: three">c</li></ol>
+<ol start=-5><li id=d style="list-style-type: neg">d</li></ol>
+</body>
+</html>

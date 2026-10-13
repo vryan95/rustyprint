@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-grayscale</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { filter: grayscale(1); layout-paint: "rect(#363636)" }
+#b { filter: grayscale(0); layout-paint: "rect(#ff0000)" }
+#c { filter: grayscale(1); layout-paint: "rect(#363636)" }
+</script>
+</head>
+<body>
+<div id=a style="background: red; filter: grayscale(1)"></div>
+<div id=b style="background: red; filter: grayscale(0)"></div>
+<div id=c style="background: red; filter: grayscale(300%)"></div>
+</body>
+</html>

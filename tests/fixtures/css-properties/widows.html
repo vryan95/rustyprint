@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>widows</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+.f { height: 1040px }
+.f ~ .f { break-before: page }
+#u { widows: 1 }
+#v { widows: 3; orphans: 3 }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { widows: 2; layout-page-lines: "3 2" }
+#u { widows: 1; layout-page-lines: "4 1" }
+#v { layout-page-lines: "5" }
+</script>
+</head>
+<body>
+<div class=f></div><p id=t>a<br>b<br>c<br>d<br>e</p><div class=f></div><p id=u>a<br>b<br>c<br>d<br>e</p><div class=f></div><p id=v>a<br>b<br>c<br>d<br>e</p>
+</body>
+</html>

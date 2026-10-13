@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-margin-inline</title>
+<style>
+body { font-size: 10px }
+#a { scroll-margin-inline: 1px 2px }
+#b { direction: rtl; scroll-margin-inline: 1px 2px }
+#bad { scroll-margin-inline: 5% }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-margin-left: 1px; scroll-margin-right: 2px }
+#b { scroll-margin-right: 1px; scroll-margin-left: 2px }
+warning: invalid value for `scroll-margin-inline`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

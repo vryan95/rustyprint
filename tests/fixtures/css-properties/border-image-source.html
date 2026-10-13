@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-image-source</title>
+<style>
+body { margin: 0 }
+div { width: 30px; height: 30px; border: 10px solid; background: #ddd }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { border-image-source: url("assets/frame.png"); layout-image: "0 0 10 10"; layout-paint: "rect(#dddddd) image !polygon" }
+#b { border-image-source: linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255)); layout-paint: "gradient" }
+#c { border-image-source: none; layout-paint: "!image polygon" }
+</script>
+</head>
+<body>
+<div id=a style="border-image-source: url(assets/frame.png)"></div>
+<div id=b style="border-image-source: linear-gradient(red, blue); border-image-slice: 10"></div>
+<div id=c></div>
+</body>
+</html>

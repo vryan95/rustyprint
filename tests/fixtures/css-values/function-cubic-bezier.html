@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>cubic-bezier()</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+div { animation: slide 4s -1s }
+#a { animation-timing-function: cubic-bezier(0, 0, 1, 1) }
+#b { animation-timing-function: cubic-bezier(0.42, 0, 1, 1) }
+#c { animation-timing-function: cubic-bezier(0, 2, 1, -1) }
+#bad { animation-timing-function: cubic-bezier(0, 0, 1.5, 1) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-timing-function: cubic-bezier(0, 0, 1, 1); margin-left: 75px }
+#b { animation-timing-function: cubic-bezier(0.42, 0, 1, 1) }
+#b { layout-x: >80 }
+#c { animation-timing-function: cubic-bezier(0, 2, 1, -1) }
+warning: invalid value for `animation-timing-function`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

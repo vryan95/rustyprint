@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>minmax()</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-auto-rows: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-template-columns: repeat(3, minmax(100px, 1fr)) }
+#a3 { layout-x: 200px; layout-width: 100px }
+#b { grid-template-columns: repeat(2, minmax(50px, 100px)) }
+#b2 { layout-x: 100px; layout-width: 100px }
+#c { grid-template-columns: repeat(2, minmax(200px, 1fr)) }
+#c2 { layout-x: 200px; layout-width: 200px }
+#d { grid-template-columns: minmax(min-content, max-content) auto }
+#d1 { layout-width: 120px }
+#d2 { layout-x: 120px; layout-width: 180px }
+</script>
+</head>
+<body>
+<div class=g id=a style="grid-template-columns: repeat(3, minmax(100px, 1fr))"><div></div><div></div><div id=a3></div></div>
+<div class=g id=b style="grid-template-columns: repeat(2, minmax(50px, 100px))"><div></div><div id=b2></div></div>
+<div class=g id=c style="grid-template-columns: repeat(2, minmax(200px, 1fr))"><div></div><div id=c2></div></div>
+<div class=g id=d style="grid-template-columns: minmax(min-content, max-content) auto"><div id=d1><span style="display: inline-block; width: 60px"></span><span style="display: inline-block; width: 60px"></span></div><div id=d2></div></div>
+</body>
+</html>

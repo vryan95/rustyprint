@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>justify-items</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px; height: 10px }
+.c > div { width: 50px }
+</style>
+<script type="text/x-rustyprint-expect">
+body { justify-items: normal }
+#a { justify-items: legacy center }
+#a1 { justify-items: legacy center }
+#b { justify-items: normal }
+#c { justify-items: safe end }
+#d { justify-items: left }
+#e { justify-items: legacy right }
+#f { justify-items: last baseline }
+#g { justify-items: center; layout-x: 0px }
+#gc { layout-x: 130px; layout-width: 40px }
+#lr { layout-x: 260px }
+#st { layout-width: 300px }
+</script>
+</head>
+<body>
+<div id=a style="justify-items: center legacy"><div id=a1 style="justify-items: legacy"></div></div>
+<div id=b style="justify-items: legacy"></div>
+<div id=c style="justify-items: safe end"></div>
+<div id=d style="justify-items: left"></div>
+<div id=e style="justify-items: legacy right"></div>
+<div id=f style="justify-items: last baseline"></div>
+<div class=c style="justify-items: center"><div id=g style="justify-items: center"></div></div>
+<div style="display: grid; width: 300px; justify-items: center"><div id=gc><span style="display: inline-block; width: 40px; height: 10px"></span></div></div>
+<div style="justify-items: legacy right"><div style="display: grid; width: 300px; justify-items: legacy"><div id=lr><span style="display: inline-block; width: 40px; height: 10px"></span></div></div></div>
+<div style="display: grid; width: 300px; justify-items: stretch"><div id=st></div></div>
+</body>
+</html>

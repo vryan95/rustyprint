@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>object</title>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: 40px; layout-height: 20px; layout-image: "0 0 40 20" }
+#c { layout-text: "Fallback" }
+#e { layout-text: "Alt" }
+warning: could not load image `missing.png`
+</script>
+</head>
+<body>
+<p><object id=a data="assets/photo.png"></object></p>
+<object id=b data="movie.swf" type="application/x-shockwave-flash"><p id=c>Fallback</p></object>
+<p><object id=d data="missing.png"><span id=e>Alt</span></object></p>
+</body>
+</html>

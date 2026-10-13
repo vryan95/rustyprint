@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@layer</title>
+<style>
+@layer base, theme;
+@layer theme { #t { background-color: green } }
+@layer base { #t { background-color: red } }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-color: rgb(0, 128, 0) }
+</script>
+</head>
+<body>
+<p id=t></p>
+</body>
+</html>

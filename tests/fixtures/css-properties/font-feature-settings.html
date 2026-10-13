@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-feature-settings</title>
+<style>
+#t { font-feature-settings: "smcp", "liga" 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { font-feature-settings: "smcp", "liga" 0; layout-width: >#r }
+</script>
+</head>
+<body>
+<div><span id=t>small capitals</span></div>
+<div><span id=r>small capitals</span></div>
+</body>
+</html>

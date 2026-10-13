@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>clip-path</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { clip-path: circle(50%); layout-paint: "clip-path rect(#0000ff) pop" }
+#b { clip-path: inset(5px 5px 5px 5px) padding-box; layout-paint: "clip-path rect pop" }
+#c { clip-path: url("#c"); layout-paint: "!clip-path rect" }
+#d { clip-path: border-box; layout-paint: "clip-path" }
+#e { clip-path: none; layout-paint: "!clip-path" }
+</script>
+</head>
+<body>
+<div id=a style="clip-path: circle(50%)"></div>
+<div id=b style="clip-path: padding-box inset(5px)"></div>
+<div id=c style="clip-path: url(#c)"></div>
+<div id=d style="clip-path: border-box"></div>
+<div id=e></div>
+</body>
+</html>

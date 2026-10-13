@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>timeline-trigger-source</title>
+<style>
+body { font-size: 10px }
+#a { timeline-trigger-source: auto, view() }
+#b { timeline-trigger-source: scroll(self inline) }
+#bad { timeline-trigger-source: scroll(1px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { timeline-trigger-source: auto, view() }
+#b { timeline-trigger-source: scroll(self inline) }
+html { timeline-trigger-source: auto }
+warning: invalid value for `timeline-trigger-source`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

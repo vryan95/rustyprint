@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>type-transform-function</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: translateX(10px) rotate(90deg) scale(2) skewX(10deg); layout-paint: "transform" }
+#b { transform: matrix(1, 0, 0, 1, 0, 0) perspective(none) }
+#c { transform: none }
+warning: invalid value for `transform`
+</script>
+</head>
+<body>
+<div id=a style="transform: translateX(10px) rotate(90deg) scale(2) skewX(10deg)"></div>
+<div id=b style="transform: matrix(1, 0, 0, 1, 0, 0) perspective(none)"></div>
+<div id=c style="transform: scale(1px)"></div>
+</body>
+</html>

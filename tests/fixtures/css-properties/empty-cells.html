@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>empty-cells</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+td { border: 1px solid; background: yellow }
+#h { empty-cells: hide }
+</style>
+<script type="text/x-rustyprint-expect">
+#h { empty-cells: hide }
+#he { paint-items: 0 }
+#hf { paint-items: >1 }
+#se { paint-items: >1 }
+html { empty-cells: show }
+</script>
+</head>
+<body>
+<table id=h><tr><td id=he></td><td id=hf>x</td></tr></table>
+<table><tr><td id=se></td></tr></table>
+</body>
+</html>

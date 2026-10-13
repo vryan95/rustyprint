@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>right</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 200px; height: 100px; padding: 10px; border: 5px solid }
+.cb > div { position: absolute; width: 20px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { right: 10px; layout-x: 195px }
+#b { left: 0px; right: 0px; layout-x: 5px; layout-width: 220px }
+#c { right: 20px; layout-x: -20px }
+#d { layout-x: 0px }
+</script>
+</head>
+<body>
+<div class=cb><div id=a style="right: 10px"></div><div id=b style="left: 0; right: 0; width: auto"></div></div>
+<div id=c style="position: relative; right: 20px">moved</div>
+<div id=d style="position: relative; left: 0; right: 20px">left wins</div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>word-break</title>
+<style>
+#t { word-break: break-all; width: 30px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { word-break: break-all; layout-lines: >1 }
+</script>
+</head>
+<body>
+<div id=t>abcdefghij</div>
+</body>
+</html>

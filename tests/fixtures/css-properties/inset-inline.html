@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>inset-inline</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 200px; height: 100px; padding: 10px; border: 5px solid }
+.cb > div { position: absolute; width: 20px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { left: 10px; right: 10px; layout-x: 15px; layout-width: 200px }
+</script>
+</head>
+<body>
+<div class=cb><div id=a style="inset-inline: 10px; width: auto"></div></div>
+</body>
+</html>

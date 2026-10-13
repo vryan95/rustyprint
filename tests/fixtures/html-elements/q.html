@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>q</title>
+<script type="text/x-rustyprint-expect">
+#t { display: inline; layout-x: 8px; layout-height: >10; layout-text: "“Text”" }
+#n { layout-text: "“a ‘b’”" }
+</script>
+</head>
+<body>
+<div><q id=t>Text</q></div>
+<div id=n><q>a <q>b</q></q></div>
+</body>
+</html>

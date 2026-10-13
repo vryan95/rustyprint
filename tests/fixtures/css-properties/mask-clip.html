@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-clip</title>
+<style>
+body { margin: 0 }
+div { width: 20px; height: 20px; background: blue }
+div { padding: 5px; mask-image: linear-gradient(black, black) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-clip: content-box; layout-mask: "2 2 0, 15 15 255" }
+#b { mask-clip: padding-box; layout-mask: "2 2 255" }
+#c { mask-clip: no-clip }
+#d { mask-clip: border-box }
+</script>
+</head>
+<body>
+<div id=a style="mask-clip: content-box"></div>
+<div id=b style="mask-clip: padding-box"></div>
+<div id=c style="mask-clip: no-clip"></div>
+<div id=d></div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>box-decoration-break</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+.f { height: 1080px }
+.f ~ .f { break-before: page }
+p { orphans: 1; widows: 1 }
+#t, #u { border: 10px solid; padding: 5px }
+#u { box-decoration-break: clone }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { box-decoration-break: slice; layout-page-lines: "1 4" }
+#u { box-decoration-break: clone; layout-page-lines: "5" }
+</script>
+</head>
+<body>
+<div class=f></div><div id=t><p>a<br>b<br>c<br>d<br>e</p></div><div class=f></div><div id=u><p>a<br>b<br>c<br>d<br>e</p></div>
+</body>
+</html>

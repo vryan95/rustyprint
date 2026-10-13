@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-superellipse</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { border-radius: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { corner-top-left-shape: superellipse(2); layout-paint: "path(#0000ff)" }
+#b { corner-top-left-shape: superellipse(infinity); corner-top-right-shape: superellipse(-infinity) }
+#c { corner-top-left-shape: superellipse(0.5) }
+</script>
+</head>
+<body>
+<div id=a style="corner-shape: superellipse(2)"></div>
+<div id=b style="corner-shape: superellipse(infinity) superellipse(-infinity)"></div>
+<div id=c style="corner-top-left-shape: superellipse(calc(1 / 2))"></div>
+</body>
+</html>

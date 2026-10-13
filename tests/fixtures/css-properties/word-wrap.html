@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>word-wrap</title>
+<style>
+#t { word-wrap: break-word; width: 30px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { word-wrap: break-word; overflow-wrap: break-word; layout-lines: >1 }
+</script>
+</head>
+<body>
+<div id=t>abcdefghij</div>
+</body>
+</html>

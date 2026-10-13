@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>hanging-punctuation</title>
+<style>
+#p { hanging-punctuation: first allow-end last }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { hanging-punctuation: first allow-end last }
+#t { layout-x: <#r }
+</script>
+</head>
+<body>
+<div id=p>(<span id=t>x</span>)</div><div>(<span id=r>x</span>)</div>
+</body>
+</html>

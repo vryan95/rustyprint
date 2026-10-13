@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:blank</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page :blank { size: 100px 100px }
+#b { break-before: right }
+</style>
+<script type="text/x-rustyprint-expect">
+#b { layout-page: 3 }
+html { layout-page-sizes: "794x1123 100x100 794x1123" }
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b>b</p>
+</body>
+</html>

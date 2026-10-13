@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>meter</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: inline-block; box-sizing: border-box; layout-width: 80px; layout-height: 16px; paint-items: 3 }
+#b { paint-items: 2 }
+</script>
+</head>
+<body>
+<p><meter id=a value=0.6>60%</meter> <meter id=b value=0 min=0 max=10></meter></p>
+</body>
+</html>

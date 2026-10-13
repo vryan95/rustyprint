@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>timeline-trigger-activation-range-start</title>
+<style>
+body { font-size: 10px }
+#a { timeline-trigger-activation-range-start: entry, 5% }
+#b { timeline-trigger-activation-range-start: normal }
+#bad { timeline-trigger-activation-range-start: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { timeline-trigger-activation-range-start: entry 0%, 5% }
+#b { timeline-trigger-activation-range-start: normal }
+html { timeline-trigger-activation-range-start: normal }
+warning: invalid value for `timeline-trigger-activation-range-start`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

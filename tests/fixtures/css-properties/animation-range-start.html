@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-range-start</title>
+<style>
+body { font-size: 10px }
+#a { animation-range-start: entry-crossing 25%, 10px }
+#b { animation-range-start: cover }
+#bad { animation-range-start: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-range-start: entry-crossing 25%, 10px }
+#b { animation-range-start: cover 0% }
+html { animation-range-start: normal }
+warning: invalid value for `animation-range-start`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

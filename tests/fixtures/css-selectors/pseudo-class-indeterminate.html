@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:indeterminate</title>
+<style>
+:indeterminate { outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { outline-style: dotted }
+#yes2 { outline-style: dotted }
+#no { outline-style: none }
+#no2 { outline-style: none }
+#no3 { outline-style: none }
+</script>
+</head>
+<body>
+<input id=yes type=radio name=a><input id=no type=radio name=b checked>
+<progress id=yes2></progress><progress id=no2 value=0.5></progress>
+<input id=no3 type=checkbox>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>caret</title>
+<style>
+body { font-size: 10px }
+#a { caret: red bar manual }
+#b { caret: block }
+#bad { caret: red blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { caret-color: rgb(255, 0, 0); caret-shape: bar; caret-animation: manual }
+#b { caret-color: auto; caret-shape: block; caret-animation: auto }
+warning: invalid value for `caret`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

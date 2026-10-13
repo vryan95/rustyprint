@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>isolation</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+#a, #b { background: none; height: auto }
+#a > div, #b > div { mix-blend-mode: multiply }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { isolation: isolate; layout-paint: "group group(multiply) rect(#0000ff) /group /group" }
+#b { isolation: auto }
+</script>
+</head>
+<body>
+<div id=a style="isolation: isolate"><div></div></div>
+<div id=b><div></div></div>
+</body>
+</html>

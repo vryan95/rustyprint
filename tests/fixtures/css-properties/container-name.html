@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>container-name</title>
+<style>
+.box { container-type: inline-size; width: 200px }
+#a { container-name: outer }
+#b { container-name: inner other }
+#c { container-name: not }
+@container outer (width > 100px) { .item { width: 5px } }
+@container other { .item { height: 6px } }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { container-name: outer }
+#b { container-name: inner other }
+#item { width: 5px; height: 6px }
+html { container-name: none }
+warning: invalid value for `container-name`
+</script>
+</head>
+<body>
+<div class=box id=a><div class=box id=b><div class=item id=item></div></div></div>
+<div id=c></div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-face-line-gap-override</title>
+<style>
+@font-face { font-family: Plain; src: url(assets/simple.ttf) }
+@font-face { font-family: Over; src: url(assets/simple.ttf); line-gap-override: 50% }
+@font-face { font-family: Normal; src: url(assets/simple.ttf); line-gap-override: normal }
+@font-face { font-family: Bad; src: url(assets/simple.ttf); line-gap-override: -10% }
+div { line-height: normal }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-height: 10px }
+#b { layout-height: 15px }
+#c { layout-height: 10px }
+warning: invalid value for `line-gap-override`
+</script>
+</head>
+<body>
+<div id=a style="font-family: Plain">A</div>
+<div id=b style="font-family: Over">A</div>
+<div id=c style="font-family: Normal">A</div>
+</body>
+</html>

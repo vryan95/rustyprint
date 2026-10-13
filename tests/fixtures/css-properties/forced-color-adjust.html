@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>forced-color-adjust</title>
+<style>
+#t { forced-color-adjust: preserve-parent-image }
+#u { forced-color-adjust: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { forced-color-adjust: preserve-parent-image }
+#u { forced-color-adjust: none }
+html { forced-color-adjust: auto }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+</body>
+</html>

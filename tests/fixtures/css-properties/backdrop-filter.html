@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>backdrop-filter</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+#p { background: red; height: auto; padding: 10px }
+#a { background: none; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { backdrop-filter: grayscale(1) }
+#p { layout-paint: "rect(#ff0000) clip-path group transform rect(#363636) pop /group pop" }
+#b { backdrop-filter: none }
+</script>
+</head>
+<body>
+<div id=p><div id=a style="backdrop-filter: grayscale(1)"></div></div>
+<div id=b></div>
+</body>
+</html>

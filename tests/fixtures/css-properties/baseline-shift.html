@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>baseline-shift</title>
+<style>
+#t { baseline-shift: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { baseline-shift: 10px; layout-y: <#r }
+</script>
+</head>
+<body>
+<div><span id=r>base</span><span id=t>raised</span></div>
+</body>
+</html>

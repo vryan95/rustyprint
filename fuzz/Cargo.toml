@@ -1,0 +1,40 @@
+[package]
+name = "rustyprint-fuzz"
+description = "cargo-fuzz targets for the parsers and the full pipeline"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4.13"
+rustyprint = { path = "../crates/rustyprint" }
+rustyprint-css = { path = "../crates/rustyprint-css" }
+rustyprint-dom = { path = "../crates/rustyprint-dom" }
+
+# A workspace of its own: fuzzing needs a nightly toolchain and is not part of the main build.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "html"
+path = "fuzz_targets/html.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "css"
+path = "fuzz_targets/css.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render"
+path = "fuzz_targets/render.rs"
+test = false
+doc = false
+bench = false

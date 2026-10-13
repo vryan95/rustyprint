@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-template</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-template-areas: "a b" "c d"; grid-template-rows: 20px 30px; grid-template-columns: 100px 1fr }
+#d { layout-x: 100px; layout-y: 20px; layout-width: 200px; layout-height: 30px }
+#b { grid-template-rows: [top] 10px [mid] auto; grid-template-columns: repeat(2, 1fr); grid-template-areas: none }
+#n { grid-template-rows: none; grid-template-columns: none; grid-template-areas: none }
+#l { grid-template-rows: [x] 15px [y z] auto [w] }
+</script>
+</head>
+<body>
+<div class=g id=a style="grid-template: 'a b' 20px 'c d' 30px / 100px 1fr"><div id=d style="grid-area: d"></div></div>
+<div class=g id=b style="grid-template: [top] 10px [mid] auto / repeat(2, 1fr)"></div>
+<div id=n style="grid-template: none"></div>
+<div id=l style="grid-template: [x] 'a' 15px [y] [z] 'b' [w]"></div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:out-of-range</title>
+<style>
+:out-of-range { outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { outline-style: dotted }
+#yes2 { outline-style: dotted }
+#no { outline-style: none }
+#no2 { outline-style: none }
+#no3 { outline-style: none }
+</script>
+</head>
+<body>
+<input id=yes type=number min=1 max=5 value=9><input id=yes2 type=date max=2024-01-01 value=2024-06-01>
+<input id=no type=number min=1 max=5 value=3><input id=no2 type=range value=500>
+<input id=no3 type=number value=9>
+</body>
+</html>

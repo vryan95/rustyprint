@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>accent-color</title>
+<style>
+#b { accent-color: crimson }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { accent-color: auto }
+#b { accent-color: rgb(220, 20, 60) }
+#c { accent-color: rgb(220, 20, 60) }
+#d { accent-color: currentcolor }
+</script>
+</head>
+<body>
+<input id=a type=checkbox checked>
+<div id=b><input id=c type=checkbox checked></div>
+<input id=d type=checkbox checked style="accent-color: currentcolor">
+</body>
+</html>

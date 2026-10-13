@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>textarea</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: inline-block; white-space-collapse: preserve; text-wrap-mode: wrap; font-family: monospace; padding-left: 2px; layout-text: "Line one|line two" }
+#b { layout-text: "Notes" }
+#c { layout-width: >#a; layout-height: >#a }
+#d { text-wrap-mode: nowrap }
+</script>
+</head>
+<body>
+<textarea id=a>Line one
+line two</textarea>
+<textarea id=b placeholder="Notes"></textarea>
+<textarea id=c cols=40 rows=5></textarea>
+<textarea id=d wrap=off></textarea>
+</body>
+</html>

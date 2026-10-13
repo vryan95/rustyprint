@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>hyphenate-limit-chars</title>
+<style>
+#t, #r { hyphens: auto; width: 40px }
+#t { hyphenate-limit-chars: 20 }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { hyphenate-limit-chars: 20; layout-lines: 1 }
+#r { layout-lines: >1 }
+</script>
+</head>
+<body>
+<div id=t>hyphenation</div><div id=r>hyphenation</div>
+</body>
+</html>

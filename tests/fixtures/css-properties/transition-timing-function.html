@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transition-timing-function</title>
+<style>
+body { font-size: 10px }
+#a { transition-timing-function: step-end, steps(3) }
+#b { transition-timing-function: ease-out }
+#bad { transition-timing-function: steps(0) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transition-timing-function: steps(1), steps(3) }
+#b { transition-timing-function: ease-out }
+html { transition-timing-function: ease }
+warning: invalid value for `transition-timing-function`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

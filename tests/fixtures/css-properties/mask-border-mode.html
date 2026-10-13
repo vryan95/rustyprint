@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-border-mode</title>
+<style>
+body { margin: 0 }
+div { width: 10px; height: 10px; border: 10px solid; background: blue }
+div { mask-border: url(assets/frame.png) 10 / 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-border-mode: luminance; layout-mask: "5 5 54, 25 25 255, 5 25 0" }
+#b { mask-border-mode: alpha; layout-mask: "5 25 255" }
+</script>
+</head>
+<body>
+<div id=a style="mask-border-mode: luminance"></div>
+<div id=b></div>
+</body>
+</html>

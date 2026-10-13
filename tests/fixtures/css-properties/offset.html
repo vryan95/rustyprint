@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>offset</title>
+<style>
+body { margin: 0 }
+section { width: 200px; height: 100px }
+div { width: 20px; height: 10px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { offset-position: 10px 20px; offset-path: path("M 0 0 L 100 0"); offset-distance: 50%; offset-rotate: 30deg; offset-anchor: 0% 0% }
+#b { offset-position: normal; offset-path: ray(45deg); offset-distance: 0px; offset-rotate: auto; offset-anchor: auto }
+</script>
+</head>
+<body>
+<div id=a style="offset: 10px 20px path('M 0 0 L 100 0') 50% 30deg / left top"></div>
+<div id=b style="offset: ray(45deg)"></div>
+</body>
+</html>

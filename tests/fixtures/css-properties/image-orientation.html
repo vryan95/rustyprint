@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>image-orientation</title>
+<style>
+#b { image-orientation: none }
+#c { image-orientation: 90deg }
+#d { image-orientation: 180deg flip }
+#e { image-orientation: -90deg }
+#f { image-orientation: flip }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { image-orientation: from-image; layout-width: 20px; layout-height: 40px; layout-image-orientation: 6 }
+#b { image-orientation: none; layout-width: 40px; layout-height: 20px; layout-image-orientation: 1 }
+#c { image-orientation: 90deg; layout-width: 20px; layout-height: 40px; layout-image-orientation: 6 }
+#d { image-orientation: 180deg flip; layout-width: 40px; layout-image-orientation: 4 }
+#e { image-orientation: 270deg; layout-image-orientation: 8 }
+#f { image-orientation: 0deg flip; layout-image-orientation: 2 }
+</script>
+</head>
+<body>
+<p><img id=a src="assets/turned.jpg"><img id=b src="assets/turned.jpg"><img id=c src="assets/photo.png">
+<img id=d src="assets/photo.png"><img id=e src="assets/photo.png"><img id=f src="assets/photo.png"></p>
+</body>
+</html>

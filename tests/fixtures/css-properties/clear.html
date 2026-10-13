@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>clear</title>
+<style>
+body { margin: 0; font-size: 16px; line-height: 20px }
+p { margin: 0 }
+.box { display: flow-root; width: 300px; height: 100px }
+#a { clear: left }
+#b { clear: right }
+#c, #f { clear: both }
+#e { clear: inline-start }
+.l { float: left; width: 50px }
+.r { float: right; width: 50px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { clear: left; layout-y: 50px }
+#b { clear: right; layout-y: 150px }
+#c { clear: both; layout-y: 280px }
+#d { clear: none; layout-y: 350px }
+#e { clear: inline-start; layout-y: 450px }
+#f { clear: both; layout-y: 540px }
+#g { clear: top; layout-y: 600px }
+</script>
+</head>
+<body>
+<div class=box><div class=l style="height: 50px"></div><div id=a>a</div></div>
+<div class=box><div class=r style="height: 50px"></div><div id=b>b</div></div>
+<div class=box><div class=l style="height: 50px"></div><div class=r style="height: 80px"></div><div id=c>c</div></div>
+<div class=box><div class=l style="height: 50px"></div><div id=d style="width: 100px; margin-top: 50px">d</div></div>
+<div class=box dir=rtl><div class=r style="height: 50px"></div><div class=l style="height: 80px"></div><div id=e>e</div></div>
+<div class=box><div class=l style="height: 40px"></div><div class=l id=f style="height: 10px">f</div></div>
+<div class=box><div class=l style="height: 10px"></div><p id=g style="clear: top">g</p></div>
+</body>
+</html>

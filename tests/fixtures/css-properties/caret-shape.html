@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>caret-shape</title>
+<style>
+body { font-size: 10px }
+#a { caret-shape: block }
+#b { caret-shape: underscore }
+#c { caret-shape: bar }
+#bad { caret-shape: circle }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { caret-shape: block }
+#b { caret-shape: underscore }
+#c { caret-shape: bar }
+html { caret-shape: auto }
+warning: invalid value for `caret-shape`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

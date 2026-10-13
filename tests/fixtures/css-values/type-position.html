@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title><position></title>
+<style>
+#a { background-position: right 10px top }
+#b { object-position: center bottom 20% }
+#c { background-image: radial-gradient(at left 25% top 75%, red, blue); width: 100px; height: 100px }
+#d { offset-position: 30px 40% }
+#bad { object-position: left right }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-position-x: right 10px; background-position-y: 0% }
+#b { object-position: 50% bottom 20% }
+#c { layout-gradient: "radial 25 75 0 107 1.00" }
+#d { offset-position: 30px 40% }
+warning: invalid value for `object-position`
+</script>
+</head>
+<body>
+<div id=a></div><img id=b><div id=c></div><div id=d></div><div id=bad></div>
+</body>
+</html>

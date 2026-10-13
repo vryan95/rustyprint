@@ -1,0 +1,28 @@
+<% content_for :title, "Samples · rustyprint" %>
+
+<section class="intro">
+  <h1>Sample documents</h1>
+  <p>
+    Each sample is an HTML page with its own stylesheet, images and fonts. This app passes them to
+    <code>Rustyprint.render</code> as assets and sends back the PDF. Open one to compare the PDF with how
+    your browser shows the same HTML.
+  </p>
+</section>
+
+<div class="sample-grid">
+  <% @samples.each do |sample| %>
+    <article class="sample-card">
+      <h2><%= link_to sample.title, sample_path(sample) %></h2>
+      <p><%= sample.summary %></p>
+      <ul class="features">
+        <% sample.features.each do |feature| %>
+          <li><%= feature %></li>
+        <% end %>
+      </ul>
+      <div class="actions">
+        <%= link_to "Compare", sample_path(sample), class: "button" %>
+        <%= link_to "Open PDF", sample_path(sample, format: :pdf), class: "button secondary", target: "_blank" %>
+      </div>
+    </article>
+  <% end %>
+</div>

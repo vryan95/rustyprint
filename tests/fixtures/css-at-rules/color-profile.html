@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@color-profile</title>
+<style>
+@color-profile --gray { src: url(assets/gray.icc) }
+@color-profile --rgb { src: url(assets/linear-rgb.icc) }
+@color-profile --press { src: url(assets/cmyk.icc) }
+@color-profile wrong { src: url(assets/gray.icc) }
+div { height: 10px }
+#a { color: color(--gray 0.5) }
+#b { color: color(--rgb 0.5 0.5 0.5) }
+#c { background-color: color(--press 1 0 0 0) }
+#d { color: color(--press 0% 0% 0% 100% / 0.5) }
+#e { color: color(--unknown 1 0 0) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { color: rgb(188, 188, 188) }
+#b { color: rgb(188, 188, 188) }
+#c { background-color: rgb(0, 255, 255); layout-paint: "rect(#00ffff)" }
+#d { color: rgba(0, 0, 0, 0.5) }
+#e { color: rgb(0, 0, 0) }
+warning: @color-profile names must start with -- or be device-cmyk
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div>
+</body>
+</html>

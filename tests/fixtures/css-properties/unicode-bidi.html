@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>unicode-bidi</title>
+<style>
+#t { direction: rtl; unicode-bidi: bidi-override }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { unicode-bidi: bidi-override; layout-text: "cba" }
+</script>
+</head>
+<body>
+<div><span id=t>abc</span></div>
+</body>
+</html>

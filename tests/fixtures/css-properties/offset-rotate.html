@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>offset-rotate</title>
+<style>
+body { margin: 0 }
+section { width: 200px; height: 100px }
+div { width: 20px; height: 10px; background: blue }
+div { offset-path: ray(90deg) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { offset-rotate: 30deg }
+#p { layout-paint: "transform(0.866,0.5,-0.5,0.866,93.84,40.67)" }
+#b { offset-rotate: reverse 45deg }
+#c { offset-rotate: auto }
+</script>
+</head>
+<body>
+<section id=p><div id=a style="offset-rotate: 30deg"></div></section>
+<div id=b style="offset-rotate: 45deg reverse"></div>
+<div id=c></div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background-blend-mode</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-blend-mode: multiply; layout-paint: "group rect(#008000) group(multiply) clip gradient pop /group /group" }
+#b { background-blend-mode: normal, screen }
+#c { background-blend-mode: normal; layout-paint: "!group" }
+warning: invalid value for `background-blend-mode`
+</script>
+</head>
+<body>
+<div id=a style="background: linear-gradient(red, blue), green; background-blend-mode: multiply"></div>
+<div id=b style="background-blend-mode: normal, screen"></div>
+<div id=c style="background-blend-mode: plus-lighter"></div>
+</body>
+</html>

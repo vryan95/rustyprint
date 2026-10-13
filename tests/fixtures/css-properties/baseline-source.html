@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>baseline-source</title>
+<style>
+#t, #r { display: inline-block; width: 30px }
+#t { baseline-source: first }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { baseline-source: first; layout-y: >#r }
+</script>
+</head>
+<body>
+<div><span id=t>one two</span> <span id=r>one two</span></div>
+</body>
+</html>

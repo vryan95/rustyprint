@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>repeating-conic-gradient()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background: repeating-conic-gradient(black 0 25%, white 0 50%) 0 0 / 20px 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: repeating-conic-gradient(rgb(0, 0, 0) 0deg, rgb(0, 0, 0) 90deg, rgb(255, 255, 255) 0deg, rgb(255, 255, 255) 180deg); layout-image: "0 0 20 20"; paint-items: >40 }
+</script>
+</head>
+<body>
+<div id=a></div>
+</body>
+</html>

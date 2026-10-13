@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>filter</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { filter: grayscale(1); layout-paint: "rect(#363636)" }
+#b { filter: brightness(0.5); layout-paint: "rect(#808080)" }
+#c { filter: blur(2px); layout-paint: "image !rect" }
+#d { filter: url("#f"); layout-paint: "rect(#ff0000)" }
+#e { filter: drop-shadow(rgb(0, 0, 0) 2px 2px 0px); layout-paint: "rect(#000000) rect(#ff0000)" }
+#f { filter: none }
+warning: invalid value for `filter`
+</script>
+</head>
+<body>
+<div id=a style="background: red; filter: grayscale(100%)"></div>
+<div id=b style="background: white; filter: brightness(50%)"></div>
+<div id=c style="filter: blur(2px)"></div>
+<div id=d style="background: red; filter: url(#f)"></div>
+<div id=e style="background: red; filter: drop-shadow(2px 2px black)"></div>
+<div id=f style="filter: blur(-1px)"></div>
+</body>
+</html>

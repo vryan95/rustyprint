@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@import</title>
+<style>
+@import url(assets/import.css) layer(base);
+@import "assets/import-screen.css" screen;
+#t { margin-top: 1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-color: rgb(0, 128, 0); margin-top: 1px; color: rgb(0, 0, 0) }
+</script>
+</head>
+<body>
+<p id=t></p>
+</body>
+</html>

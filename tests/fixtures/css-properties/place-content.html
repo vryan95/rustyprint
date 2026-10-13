@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>place-content</title>
+<style>
+body { margin: 0 }
+.c { display: flex; flex-wrap: wrap; width: 100px; height: 100px }
+.c > div { width: 40px; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { align-content: center; justify-content: center }
+#a1 { layout-x: 30px; layout-y: 45px }
+#b { align-content: end; justify-content: space-between }
+#b2 { layout-x: 60px; layout-y: 190px }
+#c { align-content: last baseline; justify-content: start }
+#d { align-content: stretch; justify-content: safe flex-end }
+</script>
+</head>
+<body>
+<div class=c id=a style="place-content: center"><div id=a1></div></div>
+<div class=c id=b style="place-content: end space-between"><div></div><div id=b2></div></div>
+<div id=c style="place-content: last baseline"></div>
+<div id=d style="place-content: stretch safe flex-end"></div>
+</body>
+</html>

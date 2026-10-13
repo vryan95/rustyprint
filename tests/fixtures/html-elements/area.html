@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>area</title>
+<style>
+body { margin: 0 }
+img { display: block; border: 5px solid; padding: 5px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: none }
+html { layout-page-link-areas: "#1@10,10,200,100, https://poly.example/@110,20,50,80, https://circle.example/@40,40,40,40" }
+</script>
+</head>
+<body>
+<img src="assets/photo.png" width=200 height=100 usemap="#m">
+<map name=m>
+<area id=a shape=circle coords="50,50,20" href="https://circle.example/">
+<area shape=poly coords="100,10 150,40 120,90" href="https://poly.example/">
+<area shape=rect coords="1,2,3" href="https://bad.example/">
+<area shape=rect coords="0,0,10,10" alt="no link">
+<area shape=star coords="0,0,10,10" href="https://star.example/">
+<area shape=default href="#t">
+</map>
+<p id=t>target</p>
+</body>
+</html>

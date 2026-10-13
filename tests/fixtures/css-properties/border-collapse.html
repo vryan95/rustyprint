@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-collapse</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+#c { border-collapse: collapse; border: 4px solid }
+#c td { border: 2px solid; padding: 0 }
+#c .wide { border-right: 6px double }
+</style>
+<script type="text/x-rustyprint-expect">
+#c { border-collapse: collapse; layout-width: 52px; layout-height: 28px }
+#c1 { layout-x: 2px; layout-width: 23px; layout-height: 24px; border-right-width: 6px }
+#c2 { layout-x: 25px; layout-width: 25px }
+html { border-collapse: separate }
+</script>
+</head>
+<body>
+<table id=c><tr><td id=c1 class=wide style="width: 18px">a</td><td id=c2 style="width: 20px">b</td></tr></table>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-drop-shadow</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { filter: drop-shadow(rgb(255, 0, 0) 2px 2px 2px); layout-paint: "image rect(#0000ff)" }
+#b { filter: drop-shadow(rgba(0, 0, 0, 0.5) 3px 3px 0px); layout-paint: "group(0.502) rect(#000000) /group rect(#0000ff)" }
+</script>
+</head>
+<body>
+<div id=a style="filter: drop-shadow(2px 2px 2px red)"></div>
+<div id=b style="filter: drop-shadow(rgba(0, 0, 0, 0.5) 3px 3px)"></div>
+</body>
+</html>

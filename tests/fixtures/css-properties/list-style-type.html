@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>list-style-type</title>
+<style>
+#a li { list-style-type: upper-roman }
+#b { list-style-type: "-> " }
+#c { list-style-type: none }
+#d { list-style-type: LOWER-ALPHA }
+#e { list-style-type: my-style }
+#f { list-style-type: decimal-leading-zero }
+</style>
+<script type="text/x-rustyprint-expect">
+#b { list-style-type: "-> " }
+#c { list-style-type: none; layout-text: "c" }
+#d { list-style-type: lower-alpha; layout-text: "b. d" }
+#e { list-style-type: my-style; layout-text: "1. e" }
+#f { layout-text: "07. f" }
+#u1 { layout-text: "• u|◦ v|▪ w" }
+#r { layout-text: "IV. r" }
+#b { layout-text: "-> s" }
+</script>
+</head>
+<body>
+<ul><li id=u1>u<ul><li>v<ul><li>w</li></ul></li></ul></li></ul>
+<ol id=a start=4><li id=r>r</li></ol>
+<ol><li id=b>s</li></ol>
+<ul><li id=c>c</li></ul>
+<ol><li>x</li><li id=d>d</li></ol>
+<ol><li id=e>e</li></ol>
+<ol start=7><li id=f>f</li></ol>
+</body>
+</html>

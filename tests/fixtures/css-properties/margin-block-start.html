@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>margin-block-start</title>
+<style>
+#t { writing-mode: vertical-rl; margin-block-start: 5px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-right: 5px; margin-block-start: 5px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

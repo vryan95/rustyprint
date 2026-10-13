@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>field-sizing</title>
+<style>
+
+</style>
+<script type="text/x-rustyprint-expect">
+#a { field-sizing: fixed }
+#b { field-sizing: content; layout-width: <#a }
+#c { field-sizing: content; layout-height: <#d }
+</script>
+</head>
+<body>
+<input id=a value=Hi> <input id=b value=Hi style="field-sizing: content">
+<textarea id=c style="field-sizing: content">x</textarea> <textarea id=d>x</textarea>
+</body>
+</html>

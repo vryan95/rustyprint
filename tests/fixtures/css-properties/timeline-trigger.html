@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>timeline-trigger</title>
+<style>
+body { font-size: 10px }
+#a { timeline-trigger: --t scroll() entry 10% exit 90% / contain }
+#b { timeline-trigger: none }
+#bad { timeline-trigger: --t }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { timeline-trigger-name: --t; timeline-trigger-source: scroll(); timeline-trigger-activation-range-start: entry 10%; timeline-trigger-activation-range-end: exit 90%; timeline-trigger-active-range-start: contain 0%; timeline-trigger-active-range-end: contain 100% }
+#b { timeline-trigger-name: none; timeline-trigger-source: auto }
+warning: invalid value for `timeline-trigger`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

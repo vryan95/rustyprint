@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@property inherits</title>
+<style>
+@property --kept { syntax: '<number>'; inherits: true; initial-value: 0 }
+@property --reset { syntax: '<number>'; inherits: false; initial-value: 0 }
+@property --vague { syntax: '<number>'; inherits: maybe; initial-value: 0 }
+#outer { --kept: 5; --reset: 5; --vague: 5 }
+#inner-unset { --kept: unset; --reset: unset }
+#inner-inherit { --reset: inherit }
+</style>
+<script type="text/x-rustyprint-expect">
+#outer { --kept: 5; --reset: 5 }
+#inner { --kept: 5; --reset: 0; --vague: 5 }
+#inner-unset { --kept: 5; --reset: 0 }
+#inner-inherit { --reset: 5 }
+warning: ignored @property --vague: `inherits` must be `true` or `false`
+</script>
+</head>
+<body>
+<div id=outer><div id=inner></div><div id=inner-unset></div><div id=inner-inherit></div></div>
+</body>
+</html>

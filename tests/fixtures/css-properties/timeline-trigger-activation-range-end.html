@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>timeline-trigger-activation-range-end</title>
+<style>
+body { font-size: 10px }
+#a { timeline-trigger-activation-range-end: normal, exit 50%, 10px }
+#b { timeline-trigger-activation-range-end: cover }
+#bad { timeline-trigger-activation-range-end: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { timeline-trigger-activation-range-end: normal, exit 50%, 10px }
+#b { timeline-trigger-activation-range-end: cover 100% }
+html { timeline-trigger-activation-range-end: normal }
+warning: invalid value for `timeline-trigger-activation-range-end`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

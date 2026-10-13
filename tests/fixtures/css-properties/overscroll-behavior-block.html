@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>overscroll-behavior-block</title>
+<style>
+body { font-size: 10px }
+#a { overscroll-behavior-block: contain }
+#b { writing-mode: vertical-rl; overscroll-behavior-block: none }
+#bad { overscroll-behavior-block: contain none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { overscroll-behavior-block: contain; overscroll-behavior-y: contain; overscroll-behavior-x: auto }
+#b { overscroll-behavior-x: none; overscroll-behavior-y: auto }
+html { overscroll-behavior-block: auto }
+warning: invalid value for `overscroll-behavior-block`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

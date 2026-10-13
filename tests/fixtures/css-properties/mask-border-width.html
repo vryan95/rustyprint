@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-border-width</title>
+<style>
+body { margin: 0 }
+div { width: 10px; height: 10px; border: 10px solid; background: blue }
+div { mask-border: url(assets/frame.png) 10 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-border-width: 5px; layout-mask: "2 2 255, 7 7 0" }
+#b { mask-border-width: 2; layout-mask: "15 15 255" }
+#c { mask-border-width: auto; layout-mask: "5 5 255, 15 15 0" }
+</script>
+</head>
+<body>
+<div id=a style="mask-border-width: 5px"></div>
+<div id=b style="mask-border-width: 2"></div>
+<div id=c></div>
+</body>
+</html>

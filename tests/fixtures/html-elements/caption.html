@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>caption</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#c { display: table-caption; text-align: center; layout-x: 0px; layout-y: 0px; layout-width: 104px; layout-height: 20px }
+#t { layout-height: 44px }
+#tc { layout-y: 22px }
+#b { caption-side: bottom; layout-y: 68px }
+#bc { layout-y: 46px }
+#a { caption-side: bottom; text-align: center }
+#l { text-align: left }
+</script>
+</head>
+<body>
+<table id=t class=p><caption id=c>Caption</caption><tr><td id=tc style="width: 100px">x</td></tr></table>
+<table class=p><caption id=b style="caption-side: bottom">B</caption><tr><td id=bc style="width: 100px">x</td></tr></table>
+<table><caption id=a align=bottom>A</caption><caption id=l align=left>L</caption><tr><td>x</td></tr></table>
+</body>
+</html>

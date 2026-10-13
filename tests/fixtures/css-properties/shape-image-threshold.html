@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>shape-image-threshold</title>
+<style>
+body { margin: 0; font-size: 16px; line-height: 20px }
+p { margin: 0; width: 400px; clear: both }
+.f { float: left; width: 100px; height: 100px }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#f { shape-image-threshold: 0.5 }
+#a { layout-x: >45px }
+#a { layout-x: <55px }
+#g { shape-image-threshold: 1 }
+#b { layout-x: 0px }
+</script>
+</head>
+<body>
+<p><span class=f id=f style="shape-outside: linear-gradient(to right, black, transparent); shape-image-threshold: 0.5"></span><span id=a>Half</span> way through the fade.</p>
+<p><span class=f id=g style="shape-outside: linear-gradient(to right, black, transparent); shape-image-threshold: 2"></span><span id=b>Nothing</span> is above a threshold of one.</p>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-padding-left</title>
+<style>
+body { font-size: 10px }
+#a { scroll-padding-left: 7px }
+#b { scroll-padding-left: 10% }
+#c { scroll-padding-left: auto }
+#bad { scroll-padding-left: -1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-padding-left: 7px }
+#b { scroll-padding-left: 10% }
+#c { scroll-padding-left: auto }
+html { scroll-padding-left: auto }
+warning: invalid value for `scroll-padding-left`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

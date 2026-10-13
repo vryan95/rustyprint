@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transition-property</title>
+<style>
+body { font-size: 10px }
+#a { transition-property: opacity, transform }
+#b { transition-property: none }
+#c { transition-property: all }
+#bad { transition-property: none, opacity }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transition-property: opacity, transform }
+#b { transition-property: none }
+#c { transition-property: all }
+html { transition-property: all }
+warning: invalid value for `transition-property`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

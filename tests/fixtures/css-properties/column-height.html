@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>column-height</title>
+<style>
+body { margin: 0 }
+.m { width: 340px; column-gap: 20px }
+.m > div { height: 10px; break-inside: avoid }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#a { column-height: 20px; layout-height: 46px }
+#a3 { layout-x: 180px; layout-y: 0px }
+#a5 { layout-x: 0px; layout-y: 36px }
+#a6 { layout-x: 180px; layout-y: 36px }
+#b { layout-height: 34px }
+#b5 { layout-x: 0px; layout-y: 70px }
+#n { column-height: auto }
+</script>
+</head>
+<body>
+<div class=m id=a style="column-count: 2; column-height: 20px"><div></div><div></div><div id=a3></div><div></div><div id=a5></div><div id=a6></div></div>
+<div class=m id=b style="column-count: 2; column-height: 20px; row-gap: 4px"><div></div><div></div><div></div><div></div><div id=b5></div><div></div></div>
+<div class=m id=n style="column-count: 2"></div>
+</body>
+</html>

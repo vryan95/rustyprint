@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>target-counter()</title>
+<style>
+@page { size: 400px 300px; margin: 20px }
+body { margin: 0 }
+h2 { counter-increment: chapter; break-before: page }
+.toc a::after { content: " p." target-counter(attr(href url), page) }
+#c::after { content: " ch." target-counter(attr(href), chapter, upper-roman) }
+#d::after { content: " [" target-counter(attr(href url), page) "]" }
+#e::after { content: " of " target-counter(attr(href url), pages) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a::after { content: " p." target-counter(url("#one"), page) }
+#a { layout-text: "One p.2" }
+#b { layout-text: "Two p.3" }
+#c { layout-text: "see ch.II" }
+#d { layout-text: "x [0]" }
+#e { layout-text: "end of 3" }
+html { layout-page-count: 3 }
+</script>
+</head>
+<body>
+<div class=toc><a id=a href="#one">One</a> <a id=b href="#two">Two</a></div>
+<p><a id=c href="#two">see</a> <a id=d href="#nope">x</a> <a id=e href="#one">end</a></p>
+<h2 id=one>One</h2>
+<h2 id=two>Two</h2>
+</body>
+</html>

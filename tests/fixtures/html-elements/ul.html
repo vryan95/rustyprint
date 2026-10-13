@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ul</title>
+<script type="text/x-rustyprint-expect">
+#a { display: block; margin-top: 16px; padding-left: 40px; list-style-type: disc; counter-reset: list-item 0 }
+#c { list-style-type: circle; layout-text: "◦ c" }
+#s { list-style-type: square }
+#a { layout-text: "• a|◦ b" }
+</script>
+</head>
+<body>
+<ul id=a><li>a<ul><li>b</li></ul></li></ul>
+<ul id=c type=circle><li>c</li></ul>
+<ul id=s type=SQUARE><li>s</li></ul>
+</body>
+</html>

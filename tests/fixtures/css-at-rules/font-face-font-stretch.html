@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-face-font-stretch</title>
+<style>
+@font-face { font-family: S; src: url(assets/simple.ttf) }
+@font-face { font-family: S; src: url(assets/narrow.ttf); font-stretch: condensed }
+@font-face { font-family: Range; src: url(assets/var.ttf); font-stretch: 75% 100% }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: 7px }
+#b { layout-width: 3px }
+#c { layout-width: 3px }
+#d { layout-width: 6.75px }
+</script>
+</head>
+<body>
+<p><span id=a style="font-family: S">A</span></p>
+<p><span id=b style="font-family: S; font-stretch: condensed">A</span></p>
+<p><span id=c style="font-family: S; font-stretch: semi-condensed">A</span></p>
+<p><span id=d style="font-family: Range; font-stretch: 50%; font-optical-sizing: none">A</span></p>
+</body>
+</html>

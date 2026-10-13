@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>conic-gradient()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background-image: conic-gradient(red, blue) }
+#b { background-image: conic-gradient(from 90deg at 25% 0, red 90deg, blue 50%) }
+#c { background-image: conic-gradient(red 10px, blue) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: conic-gradient(rgb(255, 0, 0), rgb(0, 0, 255)); layout-image: "0 0 200 100" }
+#b { background-image: conic-gradient(from 90deg at 25% 0px, rgb(255, 0, 0) 90deg, rgb(0, 0, 255) 180deg) }
+#c { background-image: none; layout-image: none }
+warning: invalid value for `background-image`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div>
+</body>
+</html>

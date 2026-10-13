@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-auto-columns</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px }
+.g > div { height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-auto-columns: 80px }
+#a1 { layout-x: 160px; layout-width: 80px }
+#b { grid-auto-columns: 1fr 2fr }
+#b2 { layout-x: 100px; layout-width: 200px }
+#c { grid-auto-columns: auto }
+</script>
+</head>
+<body>
+<div class=g id=a style="grid-auto-columns: 80px"><div id=a1 style="grid-column: 3"></div></div>
+<div class=g id=b style="grid-auto-columns: 1fr 2fr"><div></div><div id=b2 style="grid-column: 2"></div></div>
+<div class=g id=c></div>
+</body>
+</html>

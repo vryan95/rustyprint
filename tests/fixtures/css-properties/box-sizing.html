@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>box-sizing</title>
+<style>
+#t { box-sizing: border-box; width: 100px; padding: 10px; border: 5px solid }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { box-sizing: border-box; layout-width: 100px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

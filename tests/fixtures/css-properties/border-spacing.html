@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-spacing</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+#a { border-spacing: 10px 4px }
+#b { border-spacing: 5px }
+#c { border-spacing: -1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { border-spacing: 10px 4px; layout-width: 40px; layout-height: 28px }
+#a1 { layout-x: 10px; layout-y: 4px }
+#b { border-spacing: 5px }
+#c { border-spacing: 2px }
+warning: invalid value for `border-spacing`
+</script>
+</head>
+<body>
+<table id=a class=p><tr><td id=a1 style="width: 20px">x</td></tr></table>
+<table id=b class=p><tr><td>x</td></tr></table>
+<table id=c><tr><td>x</td></tr></table>
+</body>
+</html>

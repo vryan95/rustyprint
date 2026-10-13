@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>bdi</title>
+<script type="text/x-rustyprint-expect">
+#t { unicode-bidi: isolate }
+#p { layout-text: "a b c d" }
+</script>
+</head>
+<body>
+<div id=p>a <bdi id=t>b c</bdi> d</div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>view-transition-name</title>
+<style>
+body { font-size: 10px }
+#a { view-transition-name: hero }
+#b { view-transition-name: match-element }
+#c { view-transition-name: none }
+#bad { view-transition-name: a b }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { view-transition-name: hero }
+#b { view-transition-name: match-element }
+#c { view-transition-name: none }
+html { view-transition-name: none }
+warning: invalid value for `view-transition-name`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

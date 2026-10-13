@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>alignment-baseline</title>
+<style>
+#t { alignment-baseline: text-top; font-size: 8px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { alignment-baseline: text-top; layout-y: =#r }
+</script>
+</head>
+<body>
+<div><span id=r>Big</span><span id=t>small</span></div>
+</body>
+</html>

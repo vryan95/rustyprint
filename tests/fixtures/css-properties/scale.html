@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scale</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scale: 2 0.5; layout-paint: "transform(2,0,0,0.5,-50,12.5)" }
+#b { scale: 2; layout-paint: "transform(2,0,0,2,-50,-25)" }
+#c { scale: none; layout-paint: "!transform" }
+</script>
+</head>
+<body>
+<div id=a style="scale: 2 50%"></div>
+<div id=b style="scale: 2"></div>
+<div id=c></div>
+</body>
+</html>

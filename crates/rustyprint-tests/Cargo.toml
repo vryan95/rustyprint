@@ -1,0 +1,20 @@
+[package]
+name = "rustyprint-tests"
+description = "Fixture test suite: one test per tracked HTML element and CSS feature"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dev-dependencies]
+libtest-mimic.workspace = true
+rustyprint-css.workspace = true
+rustyprint-dom.workspace = true
+rustyprint-layout.workspace = true
+
+[[test]]
+name = "fixtures"
+harness = false
+
+[lints]
+workspace = true

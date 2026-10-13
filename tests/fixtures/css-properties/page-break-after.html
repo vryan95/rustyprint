@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>page-break-after</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+#t { page-break-after: always }
+#v { page-break-after: avoid }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { break-after: page }
+#u { layout-page: 2 }
+#v { break-after: avoid }
+</script>
+</head>
+<body>
+<p id=t>t</p><p id=u>u</p><p id=v>v</p>
+</body>
+</html>

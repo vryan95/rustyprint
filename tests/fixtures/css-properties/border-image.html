@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-image</title>
+<style>
+body { margin: 0 }
+div { width: 30px; height: 30px; border: 10px solid; background: #ddd }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { border-image-source: url("assets/frame.png"); border-image-slice: 10; border-image-width: 10px; border-image-outset: 0; border-image-repeat: stretch; layout-image: "0 0 30 30" }
+#b { border-image-source: none; border-image-slice: 100%; border-image-width: 1; layout-paint: "!image" }
+#c { border-image-source: none }
+</script>
+</head>
+<body>
+<div id=a style="border-image: url(assets/frame.png) 10 / 10px / 0 stretch"></div>
+<div id=b style="border-image: none"></div>
+<div id=c style="border-image: url(assets/frame.png) 10; border: 2px solid"></div>
+</body>
+</html>

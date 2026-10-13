@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-padding-bottom</title>
+<style>
+body { font-size: 10px }
+#a { scroll-padding-bottom: 7px }
+#b { scroll-padding-bottom: 10% }
+#c { scroll-padding-bottom: auto }
+#bad { scroll-padding-bottom: -1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-padding-bottom: 7px }
+#b { scroll-padding-bottom: 10% }
+#c { scroll-padding-bottom: auto }
+html { scroll-padding-bottom: auto }
+warning: invalid value for `scroll-padding-bottom`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

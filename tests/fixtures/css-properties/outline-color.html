@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>outline-color</title>
+<style>
+#t { outline-color: rgb(0 128 0) }
+#u { outline-color: currentcolor; color: red }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { outline-color: rgb(0, 128, 0) }
+html { outline-color: auto }
+#u { outline-color: currentcolor }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title><overflow></title>
+<style>
+#t { overflow-x: clip; overflow-y: visible }
+#u { overflow: scroll auto }
+#v { overflow-x: hidden }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { overflow-x: clip; overflow-y: visible }
+#u { overflow-x: scroll; overflow-y: auto }
+#v { overflow-x: hidden; overflow-y: auto }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div>
+</body>
+</html>

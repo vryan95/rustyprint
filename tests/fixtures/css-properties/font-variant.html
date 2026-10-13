@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-variant</title>
+<style>
+#t { font-variant: small-caps oldstyle-nums sub }
+#n { font-variant: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { font-variant-caps: small-caps; font-variant-numeric: oldstyle-nums; font-variant-position: sub; font-variant-ligatures: normal }
+#n { font-variant-ligatures: none; font-variant-caps: normal }
+</script>
+</head>
+<body>
+<div id=t></div><div id=n></div>
+</body>
+</html>

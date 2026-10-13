@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>trigger-scope</title>
+<style>
+body { font-size: 10px }
+#a { trigger-scope: all }
+#b { trigger-scope: --a, --b }
+#c { trigger-scope: none }
+#bad { trigger-scope: a }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { trigger-scope: all }
+#b { trigger-scope: --a, --b }
+#c { trigger-scope: none }
+html { trigger-scope: none }
+warning: invalid value for `trigger-scope`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

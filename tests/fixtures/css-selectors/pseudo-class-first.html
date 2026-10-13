@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:first</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page :first { margin-left: 30px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-page-x: 30 }
+#b { layout-page-x: 0 }
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b class=next>b</p>
+</body>
+</html>

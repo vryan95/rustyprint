@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>break-before</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+#a { break-before: page }
+#t { break-before: page }
+#u { break-before: avoid }
+#v { break-before: column }
+#w { break-before: left }
+#x { break-before: recto }
+#y { break-before: sideways }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { break-before: page; layout-page: 1 }
+#t { layout-page: 2 }
+#u { break-before: avoid; layout-page: 2 }
+#v { break-before: column; layout-page: 2 }
+#w { break-before: left; layout-page: 4 }
+#x { break-before: recto; layout-page: 5 }
+html { break-before: auto; layout-page-count: 5 }
+warning: invalid value for `break-before`
+</script>
+</head>
+<body>
+<p id=a>first</p><p id=t>t</p><p id=u>u</p><p id=v>v</p><p id=w>w</p><p id=x>x</p><p id=y>y</p>
+</body>
+</html>

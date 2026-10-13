@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mix-blend-mode</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+#q { position: relative; z-index: 1; background: orange }
+#p { background: none; height: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mix-blend-mode: multiply; layout-paint: "group(multiply) rect(#0000ff) /group" }
+#b { mix-blend-mode: plus-lighter; layout-paint: "group(pluslighter)" }
+#c { mix-blend-mode: normal; layout-paint: "!group" }
+#p { layout-paint: "group rect(#ffa500) group(screen) rect(#0000ff) /group /group" }
+</script>
+</head>
+<body>
+<div id=a style="mix-blend-mode: multiply"></div>
+<div id=b style="mix-blend-mode: plus-lighter"></div>
+<div id=c></div>
+<div id=p><div id=q><div style="mix-blend-mode: screen"></div></div></div>
+</body>
+</html>

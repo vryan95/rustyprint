@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>timeline-scope</title>
+<style>
+body { font-size: 10px }
+#a { timeline-scope: --a, --b }
+#b { timeline-scope: none }
+#bad { timeline-scope: --a, none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { timeline-scope: --a, --b }
+#b { timeline-scope: none }
+html { timeline-scope: none }
+warning: invalid value for `timeline-scope`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

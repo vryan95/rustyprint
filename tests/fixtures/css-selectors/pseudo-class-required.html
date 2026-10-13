@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:required</title>
+<style>
+:required { outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { outline-style: dotted }
+#yes2 { outline-style: dotted }
+#yes3 { outline-style: dotted }
+#no { outline-style: none }
+#no2 { outline-style: none }
+</script>
+</head>
+<body>
+<input id=yes required><input id=no><select id=yes2 required></select>
+<textarea id=yes3 required></textarea><p id=no2 required>p</p>
+</body>
+</html>

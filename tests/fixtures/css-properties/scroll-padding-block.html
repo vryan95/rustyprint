@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-padding-block</title>
+<style>
+body { font-size: 10px }
+#a { scroll-padding-block: 1px 2px }
+#b { scroll-padding-block: 3px }
+#bad { scroll-padding-block: -1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-padding-top: 1px; scroll-padding-bottom: 2px; scroll-padding-block-start: 1px }
+#b { scroll-padding-top: 3px; scroll-padding-bottom: 3px }
+warning: invalid value for `scroll-padding-block`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

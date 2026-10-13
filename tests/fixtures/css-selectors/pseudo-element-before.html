@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>::before</title>
+<style>
+#t::before { background-color: green }
+#u::before { content: "1" }
+#v::before { content: "2"; display: block }
+#w::before { content: "3"; display: inline-block }
+#x::before { display: none; content: "4" }
+</style>
+<script type="text/x-rustyprint-expect">
+#t::before { background-color: rgb(0, 128, 0) }
+#t { background-color: rgba(0, 0, 0, 0); layout-text: "x" }
+#u { layout-text: "1u"; layout-lines: 1 }
+#v { layout-text: "2|v"; layout-lines: 2 }
+#w { layout-text: "3w"; layout-lines: 1 }
+#x { layout-text: "x" }
+</script>
+</head>
+<body>
+<p id=t>x</p><p id=u>u</p><p id=v>v</p><p id=w>w</p><p id=x>x</p>
+</body>
+</html>

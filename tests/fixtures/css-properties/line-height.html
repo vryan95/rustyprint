@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>line-height</title>
+<style>
+#t { line-height: 1.5 }
+#u { font-size: 10px; line-height: 150% }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { line-height: 1.5 }
+#u { line-height: 15px }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+</body>
+</html>

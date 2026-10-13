@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>element()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#src { width: 50px; height: 20px; background: red }
+#a { background: element(#src) no-repeat }
+#b { background: element(#src) 0 0 / 100px 40px no-repeat }
+#c { background-image: element(#missing) }
+#d { background-image: -moz-element(#src) }
+#e { background-image: element(src) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: element(#src); paint-items: 7 }
+#b { paint-items: 7 }
+#c { background-image: element(#missing); paint-items: 0 }
+#d { background-image: element(#src) }
+#e { background-image: none }
+warning: invalid value for `background-image`
+</script>
+</head>
+<body>
+<div id=src></div>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div>
+</body>
+</html>

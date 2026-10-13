@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>break-after</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+#t { break-after: page }
+#v { break-after: right }
+#y { break-after: always }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { break-after: page; layout-page: 1 }
+#u { layout-page: 2 }
+#w { layout-page: 3 }
+#z { layout-page: 4 }
+html { break-after: auto }
+</script>
+</head>
+<body>
+<p id=t>t</p><p id=u>u</p><p id=v>v</p><p id=w>w</p><div id=x><p id=y>last child</p></div><p id=z>z</p>
+</body>
+</html>

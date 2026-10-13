@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>shape-margin</title>
+<style>
+body { margin: 0; font-size: 16px; line-height: 20px }
+p { margin: 0; width: 400px; clear: both }
+.f { float: left; width: 100px; height: 100px }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#f { shape-margin: 10px }
+#a { layout-x: 50px }
+#g { shape-margin: 10% }
+</script>
+</head>
+<body>
+<p><span class=f id=f style="shape-outside: inset(0 60px 0 0); shape-margin: 10px"></span><span id=a>Wider</span> by the margin.</p>
+<p><span class=f id=g style="shape-margin: 10%"></span>Percentage.</p>
+</body>
+</html>

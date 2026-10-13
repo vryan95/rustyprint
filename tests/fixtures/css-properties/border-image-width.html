@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-image-width</title>
+<style>
+body { margin: 0 }
+div { width: 30px; height: 30px; border: 10px solid; background: #ddd }
+div { border-image-source: url(assets/frame.png); border-image-slice: 10 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { border-image-width: 20px; layout-image: "0 0 60 60" }
+#b { border-image-width: 2; layout-image: "0 0 60 60" }
+#c { border-image-width: auto; layout-image: "0 0 30 30" }
+#d { border-image-width: 1 }
+</script>
+</head>
+<body>
+<div id=a style="border-image-width: 20px"></div>
+<div id=b style="border-image-width: 2"></div>
+<div id=c style="border-image-width: auto"></div>
+<div id=d></div>
+</body>
+</html>

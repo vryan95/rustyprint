@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:nth-of-type()</title>
+<style>
+p:nth-of-type(even) { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<div><p id=no></p><span></span><p id=yes></p></div>
+</body>
+</html>

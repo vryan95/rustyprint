@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-margin</title>
+<style>
+body { font-size: 10px }
+#a { scroll-margin: 1px 2px 3px 4px }
+#b { scroll-margin: 2em }
+#bad { scroll-margin: 5% }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-margin-top: 1px; scroll-margin-right: 2px; scroll-margin-bottom: 3px; scroll-margin-left: 4px }
+#b { scroll-margin-top: 20px; scroll-margin-left: 20px }
+warning: invalid value for `scroll-margin`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

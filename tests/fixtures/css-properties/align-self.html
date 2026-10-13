@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>align-self</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px; height: 100px }
+.c > div { width: 50px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { align-self: auto; layout-height: 100px }
+#b { align-self: flex-end; layout-y: 90px; layout-height: 10px }
+#c { align-self: center; layout-y: 45px }
+#d { align-self: stretch; layout-height: 100px }
+#e { align-self: self-end; layout-y: 190px }
+#f { align-self: baseline; layout-y: 100px }
+#g { layout-y: 100px; layout-x: 100px }
+#h { align-self: safe center; layout-y: 200px }
+#i { align-self: unsafe center; layout-y: 350px }
+#m { layout-y: 505px }
+#r { layout-x: 0px }
+#v { layout-y: 550px; layout-height: 20px }
+#w { layout-y: 600px; layout-height: 10px }
+#gi { layout-y: 630px }
+#gs { layout-height: 50px }
+</script>
+</head>
+<body>
+<div class=c><div id=a></div><div id=b style="align-self: flex-end; height: 10px"></div><div id=c style="align-self: center; height: 10px"></div><div id=d style="align-self: stretch"></div></div>
+<div class=c style="align-items: center"><div id=e style="align-self: self-end; height: 10px"></div><div id=f style="align-self: baseline; height: 10px"></div><div id=g style="height: 100px; width: 10px; align-self: end"></div></div>
+<div class=c><div id=h style="align-self: safe center; height: 200px"></div></div>
+<div class=c style="height: 0; margin: 100px 0"><div id=i style="align-self: unsafe center; height: 100px"></div></div>
+<div class=c style="height: 10px"><div id=m style="margin: auto 0; height: 0"></div></div>
+<div class=c style="flex-direction: column; height: auto" dir=rtl><div id=r style="align-self: self-end"></div></div>
+<div style="position: relative; height: 100px; width: 300px"><div id=v style="position: absolute; inset: 0; height: 20px; align-self: center"></div><div id=w style="position: absolute; inset: 0; align-self: end"><div style="height: 10px"></div></div></div>
+<div style="display: grid; grid-template-columns: 100px 100px; height: 50px; width: 300px; align-items: center"><div id=gi style="height: 10px"></div><div id=gs style="align-self: stretch"></div></div>
+</body>
+</html>

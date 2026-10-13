@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-invert</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { filter: invert(1); layout-paint: "rect(#00ffff)" }
+#b { filter: invert(0.5); layout-paint: "rect(#808080)" }
+</script>
+</head>
+<body>
+<div id=a style="background: red; filter: invert(1)"></div>
+<div id=b style="background: red; filter: invert(50%)"></div>
+</body>
+</html>

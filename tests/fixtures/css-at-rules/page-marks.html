@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>marks</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page { marks: cross crop }
+@page :left { marks: none }
+@page :first { marks: crop crop }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-marks: "crop+cross none" }
+warning: invalid value for `marks`
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b class=next>b</p>
+</body>
+</html>

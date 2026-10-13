@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>img</title>
+<script type="text/x-rustyprint-expect">
+#a { display: inline; layout-width: 40px; layout-height: 20px; layout-image: "0 0 40 20" }
+#b { layout-width: 80px; layout-height: 40px; aspect-ratio: auto 80 / 40 }
+#c { layout-width: 20px; layout-height: 10px }
+#d { layout-width: 10px; layout-height: 50px; layout-image: "0 0 10 50" }
+#e { layout-text: "Missing photo" }
+#f { layout-width: 30px; layout-height: 40px; layout-image: none }
+#g { layout-width: none }
+#h { layout-x: 376.85px }
+#i { layout-width: 20px; layout-height: 10px }
+#j { border-top-width: 2px; layout-width: 44px; layout-image: "2 2 40 20" }
+#k { layout-width: 20px; layout-height: 10px }
+#l { float: left }
+#m { alignment-baseline: middle }
+warning: could not load image `missing.png`
+warning: could not load image `missing2.png`
+warning: could not load image `missing3.png`
+</script>
+</head>
+<body>
+<p><img id=a src="assets/photo.png"> <img id=b src="assets/photo.png" width=80 height=40>
+<img id=c src="assets/photo.png" height=10> <img id=d src="assets/photo.png" width=10 height=50></p>
+<p><img id=e src="missing.png" alt="Missing photo"> <img id=f src="missing2.png" width=30 height=40>
+<img id=g src="missing3.png" alt=""></p>
+<img id=h src="assets/photo.png" style="display: block; margin: 0 auto">
+<p><img id=i srcset="assets/photo.png 2x"> <img id=j src="assets/photo.png" border=2>
+<img id=k src="assets/photo.png" style="max-width: 20px"></p>
+<p><img id=l src="assets/photo.png" align=left> <img id=m src="assets/photo.png" align=absmiddle></p>
+</body>
+</html>

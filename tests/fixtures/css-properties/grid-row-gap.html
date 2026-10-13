@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-row-gap</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-auto-rows: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-row-gap: 7px; row-gap: 7px }
+#a2 { layout-y: 17px }
+</script>
+</head>
+<body>
+<div class=g id=a style="grid-row-gap: 7px"><div></div><div id=a2></div></div>
+</body>
+</html>

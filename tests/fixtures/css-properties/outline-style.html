@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>outline-style</title>
+<style>
+#t { outline-style: groove }
+#u { outline-style: hidden }
+div { height: 10px }
+#v { outline-style: double }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { outline-style: groove }
+html { outline-style: none }
+#v { outline-width: 3px; paint-items: >#w }
+warning: invalid value for `outline-style`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w></div>
+</body>
+</html>

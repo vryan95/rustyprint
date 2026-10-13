@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>frame-sizing</title>
+<style>
+body { margin: 0 }
+iframe { display: block }
+#t { frame-sizing: content-height }
+#a { frame-sizing: content-block-size; width: 100px }
+#b { frame-sizing: content-inline-size }
+#c { frame-sizing: content-height; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { frame-sizing: content-height }
+html { frame-sizing: auto }
+#a { layout-width: 100px; layout-height: >100 }
+#b { layout-width: 50px; layout-height: 150px }
+#c { layout-height: 20px }
+#d { layout-height: 150px }
+</script>
+</head>
+<body>
+<div id=t></div>
+<iframe id=a frameborder=0 srcdoc="<body style='margin: 0'><p style='margin: 0'>A paragraph that wraps in the narrow frame</p>"></iframe>
+<iframe id=b frameborder=0 srcdoc="<body style='margin: 0'><div style='width: 50px'></div>"></iframe>
+<iframe id=c frameborder=0 srcdoc="<p style='height: 100px'>x</p>"></iframe>
+<iframe id=d frameborder=0 srcdoc="<p style='height: 100px'>x</p>"></iframe>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>column-count</title>
+<style>
+body { margin: 0 }
+.m { width: 340px; column-gap: 20px }
+.m > div { height: 10px; break-inside: avoid }
+#p > div { height: 30px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { column-count: 3; layout-height: 20px }
+#a2 { layout-x: 0px; layout-y: 10px }
+#a3 { layout-x: 120px; layout-y: 0px; layout-width: 100px }
+#a5 { layout-x: 240px; layout-y: 0px }
+#b { layout-height: 30px }
+#b4 { layout-x: 120px; layout-y: 30px }
+#b7 { layout-x: 240px; layout-y: 30px }
+#n { column-count: auto; layout-height: 20px }
+#r1 { layout-x: 240px; layout-y: 80px }
+#r3 { layout-x: 0px; layout-y: 80px }
+#i { layout-width: 110px; layout-height: 10px }
+#f2 { layout-x: 120px }
+#f3 { layout-x: 240px }
+#v3 { layout-x: 0px }
+#v4 { layout-x: 180px }
+#q1 { layout-page: 4; layout-page-x: 0px }
+#q2 { layout-page: 5; layout-page-x: 0px; layout-page-y: 0px }
+#p1 { layout-page: 2; layout-page-x: 0px; layout-page-y: 0px }
+#p37 { layout-page: 2; layout-page-y: 1080px }
+#p38 { layout-page: 2; layout-page-x: 180px; layout-page-y: 0px }
+#p75 { layout-page: 3; layout-page-x: 0px; layout-page-y: 0px }
+#p87 { layout-page: 3; layout-page-y: 360px }
+#p88 { layout-page: 3; layout-page-x: 180px; layout-page-y: 0px }
+#p100 { layout-page: 3; layout-page-y: 360px }
+</script>
+</head>
+<body>
+<div class=m id=a style="column-count: 3"><div></div><div id=a2></div><div id=a3></div><div></div><div id=a5></div><div></div></div>
+<div class=m id=b style="column-count: 3; margin-top: 10px"><div></div><div></div><div></div><div id=b4></div><div></div><div></div><div id=b7></div></div>
+<div class=m id=n><div></div><div></div></div>
+<div class=m dir=rtl style="column-count: 3"><div id=r1></div><div></div><div id=r3></div></div>
+<div><div id=i style="display: inline-block; column-count: 2; column-gap: 10px"><div style="width: 50px; height: 10px"></div><div style="width: 50px; height: 10px"></div></div></div>
+<div class=m style="column-count: 3"><div></div><div id=f2 style="break-before: column"></div><div id=f3></div></div>
+<div class=m style="column-count: 2"><div></div><div style="break-after: avoid-column"></div><div id=v3></div><div id=v4></div></div>
+<div class=m id=p style="column-count: 2; break-before: page"><div id=p1></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div id=p37></div><div id=p38></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div id=p75></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div id=p87></div><div id=p88></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div id=p100></div></div>
+<div class=m style="column-count: 2; break-before: page"><div id=q1></div><div id=q2 style="break-before: page"></div></div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>image-resolution</title>
+<style>
+#b { image-resolution: from-image }
+#c { image-resolution: 2dppx }
+#d { image-resolution: from-image 4dppx }
+#e { image-resolution: 192dpi snap }
+#f { image-resolution: 0dppx }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { image-resolution: 1dppx; layout-width: 40px }
+#b { image-resolution: from-image; layout-width: 20px; layout-height: 10px }
+#c { image-resolution: 2dppx; layout-width: 20px }
+#d { image-resolution: from-image 4dppx; layout-width: 10px }
+#e { image-resolution: 2dppx snap; layout-width: 20px }
+warning: invalid value for `image-resolution`
+</script>
+</head>
+<body>
+<p><img id=a src="assets/hidpi.png"><img id=b src="assets/hidpi.png"><img id=c src="assets/hidpi.png">
+<img id=d src="assets/photo.png"><img id=e src="assets/photo.png"></p>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>backface-visibility</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { transform: rotateY(180deg) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { backface-visibility: hidden; layout-paint: "!rect !transform" }
+#b { backface-visibility: visible; layout-paint: "transform(-1,0,0,1,100,0) rect(#0000ff)" }
+#c { backface-visibility: hidden; layout-paint: "rect(#0000ff)" }
+</script>
+</head>
+<body>
+<div id=a style="backface-visibility: hidden"></div>
+<div id=b></div>
+<div id=c style="backface-visibility: hidden; transform: rotateY(30deg)"></div>
+</body>
+</html>

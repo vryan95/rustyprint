@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>target-counters()</title>
+<style>
+ol { counter-reset: s; list-style: none }
+li { counter-increment: s }
+#a::after { content: " (" target-counters(attr(href url), s, ".") ")" }
+#b::after { content: " (" target-counters(attr(href url), s, "-", lower-alpha) ")" }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "ref (1.2)" }
+#b { layout-text: "ref (a-b)" }
+</script>
+</head>
+<body>
+<p><a id=a href="#x">ref</a> <a id=b href="#x">ref</a></p>
+<ol><li>a<ol><li>b</li><li id=x>c</li></ol></li></ol>
+</body>
+</html>

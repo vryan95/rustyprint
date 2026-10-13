@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>speak-as</title>
+<style>
+body { font-size: 10px }
+#a { speak-as: spell-out digits }
+#b { speak-as: no-punctuation }
+#c { speak-as: literal-punctuation spell-out }
+#d { speak-as: normal }
+#bad { speak-as: spell-out spell-out }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { speak-as: spell-out digits }
+#b { speak-as: no-punctuation }
+#c { speak-as: spell-out literal-punctuation }
+#d { speak-as: normal }
+html { speak-as: normal }
+warning: invalid value for `speak-as`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=bad></div>
+</body>
+</html>

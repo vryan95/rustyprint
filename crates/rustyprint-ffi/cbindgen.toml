@@ -1,0 +1,18 @@
+# cbindgen settings for include/rustyprint.h: `cargo run -p rustyprint-ffi --example header`.
+language = "C"
+header = "/* rustyprint: render HTML and CSS to PDF. */"
+autogen_warning = "/* Generated from crates/rustyprint-ffi/src/lib.rs by cbindgen; do not edit. Run `cargo run -p rustyprint-ffi --example header` to regenerate it. */"
+include_guard = "RUSTYPRINT_H"
+cpp_compat = true
+usize_is_size_t = true
+no_includes = true
+sys_includes = ["stddef.h", "stdint.h"]
+
+[export.rename]
+"Request" = "rp_request"
+"RenderResult" = "rp_result"
+"Status" = "rp_status"
+
+[enum]
+rename_variants = "ScreamingSnakeCase"
+prefix_with_name = true

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-face-font-variation-settings</title>
+<style>
+@font-face { font-family: T; src: url(assets/var.ttf); font-variation-settings: "TEST" 100 }
+@font-face { font-family: Bad; src: url(assets/var.ttf); font-variation-settings: "TOO LONG" 1 }
+.t { font-family: T; font-optical-sizing: none }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: 11px }
+#b { layout-width: 8px }
+warning: invalid value for `font-variation-settings`
+</script>
+</head>
+<body>
+<p><span id=a class=t>A</span></p>
+<p><span id=b class=t style="font-variation-settings: 'TEST' 0">A</span></p>
+</body>
+</html>

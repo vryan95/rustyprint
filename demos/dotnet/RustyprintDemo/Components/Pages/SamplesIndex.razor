@@ -1,0 +1,34 @@
+<Shell Title="Samples · rustyprint">
+  <section class="intro">
+    <h1>Sample documents</h1>
+    <p>
+      Each sample is an HTML page with its own stylesheet, images and fonts. This app passes them to
+      <code>PdfRenderer.RenderAsync</code> as assets and sends back the PDF. Open one to compare the PDF with how
+      your browser shows the same HTML.
+    </p>
+  </section>
+
+  <div class="sample-grid">
+    @foreach (var sample in Samples)
+    {
+      <article class="sample-card">
+        <h2><a href="/samples/@sample.Id">@sample.Title</a></h2>
+        <p>@sample.Summary</p>
+        <ul class="features">
+          @foreach (var feature in sample.Features)
+          {
+            <li>@feature</li>
+          }
+        </ul>
+        <div class="actions">
+          <a href="/samples/@sample.Id" class="button">Compare</a>
+          <a href="/samples/@(sample.Id).pdf" class="button secondary" target="_blank">Open PDF</a>
+        </div>
+      </article>
+    }
+  </div>
+</Shell>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Sample> Samples { get; set; } = [];
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>container-type</title>
+<style>
+body { margin: 0; font-size: 10px; line-height: 10px }
+#size { container-type: size; width: 100px }
+#inline { container-type: inline-size; width: 150px }
+#scroll { container-type: scroll-state inline-size }
+#normal { container-type: normal }
+#bad { container-type: size inline-size }
+@container (width > 120px) { .item { width: 8px } }
+@container (height >= 0px) { .item { height: 4px } }
+</style>
+<script type="text/x-rustyprint-expect">
+#size { container-type: size; layout-height: 0 }
+#inline { container-type: inline-size; layout-height: 10 }
+#scroll { container-type: inline-size scroll-state }
+#normal { container-type: normal }
+#in-size { width: auto; height: 4px }
+#in-inline { width: 8px; height: auto }
+warning: invalid value for `container-type`
+</script>
+</head>
+<body>
+<div id=size><div class=item id=in-size>Text</div></div>
+<div id=inline><div class=item id=in-inline>Text</div></div>
+<div id=scroll></div><div id=normal></div><div id=bad></div>
+</body>
+</html>

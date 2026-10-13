@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>zoom</title>
+<style>
+#t { zoom: 2; width: 100px; height: 10px; border: 1px solid }
+#u { zoom: 150% }
+#v { zoom: normal }
+#w { zoom: 2 }
+#w p { width: 50px; height: 5px; margin: 0 }
+#w span { zoom: 0.5; display: block; width: 40px; height: 1em }
+#x { zoom: -1 }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { zoom: 2; layout-width: 204px; layout-height: 24px }
+#u { zoom: 1.5 }
+#v { zoom: 1 }
+#w p { layout-width: 100px; layout-height: 10px }
+#w span { layout-width: 40px; layout-height: 16px }
+html { zoom: 1 }
+warning: invalid value for `zoom`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w><p></p><span>x</span></div><div id=x></div>
+</body>
+</html>

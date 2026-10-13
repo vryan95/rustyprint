@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <!-- The package, from this repository, as a PackageReference to Rustyprint would give it. -->
+    <ProjectReference Include="../../../bindings/dotnet/src/Rustyprint/Rustyprint.csproj" />
+  </ItemGroup>
+
+</Project>

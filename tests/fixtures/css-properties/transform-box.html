@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transform-box</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { padding: 10px; transform: scale(2); transform-origin: 0 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform-box: content-box; layout-paint: "transform(2,0,0,2,-10,-10)" }
+#b { transform-box: fill-box; layout-paint: "transform(2,0,0,2,-10,-10)" }
+#c { transform-box: view-box; layout-paint: "transform(2,0,0,2,0,0)" }
+</script>
+</head>
+<body>
+<div id=a style="transform-box: content-box"></div>
+<div id=b style="transform-box: fill-box"></div>
+<div id=c></div>
+</body>
+</html>

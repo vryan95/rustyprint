@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-skew</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: skew(45deg); layout-paint: "transform(1,0,1,1,-25,0)" }
+#b { transform: skew(0deg, 45deg); layout-paint: "transform(1,1,0,1,0,-50)" }
+</script>
+</head>
+<body>
+<div id=a style="transform: skew(45deg)"></div>
+<div id=b style="transform: skew(0deg, 45deg)"></div>
+</body>
+</html>

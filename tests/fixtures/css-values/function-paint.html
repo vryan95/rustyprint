@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>paint()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background-image: paint(checkerboard, 2px, red) }
+#b { background: paint(stripes) green }
+#c { background-image: paint(1px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: paint(checkerboard, 2px, red); paint-items: 0 }
+#b { background-image: paint(stripes); paint-items: 1 }
+#c { background-image: none }
+warning: invalid value for `background-image`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div>
+</body>
+</html>

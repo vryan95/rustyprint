@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transition</title>
+<style>
+body { font-size: 10px }
+#a { transition: opacity 1s ease-in 0.5s allow-discrete }
+#b { transition: none }
+#c { transition: all 2s, color 1s linear; color: rgb(0, 128, 0) }
+#bad { transition: none, opacity 1s }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transition-property: opacity; transition-duration: 1s; transition-timing-function: ease-in; transition-delay: 0.5s; transition-behavior: allow-discrete }
+#b { transition-property: none }
+#c { transition-property: all, color; transition-duration: 2s, 1s; transition-timing-function: ease, linear; color: rgb(0, 128, 0) }
+warning: invalid value for `transition`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

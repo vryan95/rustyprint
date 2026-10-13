@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>position-try</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+@position-try --t { top: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { position-try-order: most-width; position-try-fallbacks: flip-block, flip-inline }
+#q { position-try-order: normal; position-try-fallbacks: --t }
+</script>
+</head>
+<body>
+<div class=cb><div class=p id=p style="position-try: most-width flip-block, flip-inline"></div>
+<div class=p id=q style="position-try: --t"></div></div>
+</body>
+</html>

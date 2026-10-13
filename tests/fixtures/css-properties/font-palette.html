@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-palette</title>
+<style>
+@font-face { font-family: Simple; src: url(assets/simple.ttf) }
+@font-face { font-family: Narrow; src: url(assets/narrow.ttf) }
+@font-face { font-family: Var; src: url(assets/var.ttf) }
+@font-face { font-family: Color; src: url(assets/color.ttf) }
+@font-face { font-family: Feat; src: url(assets/features.ttf) }
+.v { font-family: Var; font-optical-sizing: none }
+p { font-family: Color }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { font-palette: normal; layout-paint: "rect(#ff0000) pop clip-path rect(#0000ff)" }
+#b { font-palette: light; layout-paint: "rect(#00ff00) pop clip-path rect(#ffff00)" }
+#c { font-palette: dark; layout-paint: "rect(#000000) pop clip-path rect(#ffffff)" }
+#d { font-palette: --nothing; layout-paint: "rect(#ff0000)" }
+#e { font-palette: palette-mix(in srgb, light, dark 25%) }
+#f { color: rgb(0, 128, 0); layout-paint: "text(#008000) transform clip-path rect(#008000)" }
+</script>
+</head>
+<body>
+<p id=a>A</p>
+<p id=b style="font-palette: light">A</p>
+<p id=c style="font-palette: dark">A</p>
+<p id=d style="font-palette: --nothing">A</p>
+<p id=e style="font-palette: palette-mix(in srgb, light, dark 25%)">A</p>
+<p id=f style="color: green">B</p>
+</body>
+</html>

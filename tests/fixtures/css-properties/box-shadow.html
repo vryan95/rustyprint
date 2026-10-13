@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>box-shadow</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { box-shadow: rgb(255, 0, 0) 5px 5px 0px 0px; layout-paint: "clip-path path(#ff0000) pop rect(#0000ff)" }
+#b { box-shadow: rgba(0, 0, 0, 0.5) 0px 0px 4px 2px inset; layout-paint: "rect(#0000ff) clip image pop" }
+#c { box-shadow: rgb(0, 0, 0) 1px 1px 0px 0px, rgb(0, 128, 0) 2px 2px 0px 0px; layout-paint: "path(#008000) pop clip-path path(#000000)" }
+#d { box-shadow: none; layout-paint: "!clip-path" }
+</script>
+</head>
+<body>
+<div id=a style="box-shadow: 5px 5px red"></div>
+<div id=b style="box-shadow: inset 0 0 4px 2px rgba(0, 0, 0, .5)"></div>
+<div id=c style="box-shadow: 1px 1px, 2px 2px green"></div>
+<div id=d></div>
+</body>
+</html>

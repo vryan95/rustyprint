@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>resize</title>
+<style>
+body { font-size: 10px }
+#a { resize: both }
+#b { resize: inline }
+#c { resize: none }
+#bad { resize: diagonal }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { resize: both }
+#b { resize: inline }
+#c { resize: none }
+html { resize: none }
+warning: invalid value for `resize`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

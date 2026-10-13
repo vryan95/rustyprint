@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>video</title>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: 40px; layout-height: 20px; layout-image: "0 0 40 20" }
+#b { layout-width: 300px; layout-height: 150px; layout-image: none }
+#c { object-fit: contain; layout-width: 100px; layout-height: 100px; layout-image: "0 25 100 50" }
+</script>
+</head>
+<body>
+<p><video id=a poster="assets/photo.png"></video> <video id=b></video>
+<video id=c poster="assets/photo.png" width=100 height=100></video></p>
+</body>
+</html>

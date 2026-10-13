@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>optgroup</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { display: block; font-weight: 700 }
+#t::before { content: "Fruit" }
+#t { layout-text: "Fruit|Apple|Pear" }
+#o { padding-left: 20px; font-weight: 400 }
+</script>
+</head>
+<body>
+<select size=3><optgroup id=t label=Fruit><option id=o>Apple<option>Pear</optgroup></select>
+</body>
+</html>

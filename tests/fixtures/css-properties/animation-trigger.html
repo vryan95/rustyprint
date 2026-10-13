@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-trigger</title>
+<style>
+body { font-size: 10px }
+#a { animation-trigger: --t play pause, none }
+#b { animation-trigger: --a play-once --b reset }
+#bad { animation-trigger: --t }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-trigger: --t play pause, none }
+#b { animation-trigger: --a play-once --b reset }
+html { animation-trigger: none }
+warning: invalid value for `animation-trigger`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

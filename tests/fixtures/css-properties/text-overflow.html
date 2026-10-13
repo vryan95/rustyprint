@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-overflow</title>
+<style>
+#t { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { text-overflow: ellipsis; layout-lines: 1; layout-text: "abcdefghij…" }
+</script>
+</head>
+<body>
+<div id=t>abcdefghijklmnopqrstuvwxyz</div>
+</body>
+</html>

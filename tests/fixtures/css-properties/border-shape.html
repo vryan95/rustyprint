@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-shape</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { border: 4px solid red }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { border-shape: circle(50%); layout-paint: "clip-path rect(#0000ff) pop stroke(#ff0000) !polygon" }
+#b { border-shape: circle(50%) circle(40%); layout-paint: "clip-path rect(#0000ff) pop path(#ff0000)" }
+#c { border-shape: none; layout-paint: "polygon(#ff0000)" }
+</script>
+</head>
+<body>
+<div id=a style="border-shape: circle(50%)"></div>
+<div id=b style="border-shape: circle(50%) circle(40%)"></div>
+<div id=c></div>
+</body>
+</html>

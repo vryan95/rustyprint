@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>counters()</title>
+<style>
+ol { counter-reset: s; list-style: none }
+li { counter-increment: s }
+li::before { content: counters(s, ".") " " }
+#d::before { content: counters(s, "-", upper-alpha) " " }
+#e::before { content: counters(missing, ".") " " }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "1 a|1.1 b|1.2 c" }
+#b { layout-text: "1.1 b" }
+#c { layout-text: "2 c2" }
+#d { layout-text: "C-A d" }
+#e { layout-text: "0 e" }
+</script>
+</head>
+<body>
+<ol><li id=a>a<ol><li id=b>b</li><li>c</li></ol></li><li id=c>c2</li><li>x<ol><li id=d>d</li></ol></li></ol>
+<ol><li style="list-style: none" id=e>e</li></ol>
+</body>
+</html>

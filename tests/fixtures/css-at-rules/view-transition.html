@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@view-transition</title>
+<style>
+@view-transition { navigation: auto; types: slide forwards }
+@view-transition { navigation: sideways }
+@view-transition { types: none slide }
+@view-transition { speed: fast }
+#t { color: rgb(0, 128, 0) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { color: rgb(0, 128, 0) }
+warning: invalid value for `navigation`: `sideways`
+warning: invalid value for `types`: `none slide`
+warning: unknown descriptor `speed` in @view-transition
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

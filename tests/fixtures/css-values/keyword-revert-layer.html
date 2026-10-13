@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>revert-layer</title>
+<style>
+@layer base { #t { color: green } }
+@layer top { #t { color: red; color: revert-layer } }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { color: rgb(0, 128, 0) }
+</script>
+</head>
+<body>
+<p id=t></p>
+</body>
+</html>

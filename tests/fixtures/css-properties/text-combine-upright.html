@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-combine-upright</title>
+<style>
+body { margin: 0; font: 20px/30px serif }
+.v { writing-mode: vertical-rl; height: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { text-combine-upright: all; layout-height: 20px; layout-text: "2024" }
+#d { text-combine-upright: digits 3 }
+#d2 { layout-height: 20px }
+#d4 { layout-height: >20px }
+#n { text-combine-upright: none; layout-height: >20px }
+#h { text-combine-upright: all; layout-width: >20px }
+</script>
+</head>
+<body>
+<div class=v>
+<span id=a style="text-combine-upright: all">2024</span>
+<span id=d style="text-combine-upright: digits 3"><span id=d2>365</span> <span id=d4>2024</span></span>
+<span id=n>12</span>
+</div>
+<p><span id=h style="text-combine-upright: all">2024</span></p>
+</body>
+</html>

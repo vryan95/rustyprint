@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>fr</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-auto-rows: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-template-columns: 100px 1fr 1fr }
+#a2 { layout-x: 100px; layout-width: 100px }
+#b { grid-template-rows: 1fr 2fr; layout-height: 90px }
+#b2 { layout-y: 40px; layout-height: 60px }
+#c1 { layout-width: 200px }
+#c2 { layout-x: 200px; layout-width: 100px }
+#m { layout-width: 50px }
+</script>
+</head>
+<body>
+<div class=g id=a style="grid-template-columns: 100px 1fr 1fr"><div></div><div id=a2></div></div>
+<div class=g id=b style="grid-template-rows: 1fr 2fr; height: 90px"><div></div><div id=b2></div></div>
+<div class=g style="grid-template-columns: 1fr 1fr"><div id=c1><span style="display: inline-block; width: 200px"></span></div><div id=c2></div></div>
+<div class=g style="display: inline-grid; grid-template-columns: 1fr 1fr; width: auto"><div id=m><span style="display: inline-block; width: 50px"></span></div><div></div></div>
+</body>
+</html>

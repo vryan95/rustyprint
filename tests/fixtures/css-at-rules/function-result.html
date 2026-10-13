@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@function result</title>
+<style>
+@function --last() { result: 1px; result: 2px }
+@function --local() { --base: 3px; result: calc(var(--base) + 1px); --base: 5px }
+@function --none() { --only: 1px }
+@function --empty() { result: ; }
+#a { width: --last() }
+#b { width: --local() }
+#c { width: 9px; width: --none() }
+#d { --x: a--empty()b }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { width: 2px }
+#b { width: 6px }
+#c { width: auto }
+warning: ignored `result` with an empty value
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div>
+</body>
+</html>

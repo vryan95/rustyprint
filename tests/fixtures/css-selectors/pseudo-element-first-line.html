@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>::first-line</title>
+<style>
+#t::first-line { background-color: green }
+#a::first-line { text-transform: uppercase }
+#c::first-line { font-size: 32px }
+#d::first-line { text-transform: uppercase }
+#w { width: 120px }
+#w::first-line { font-size: 32px }
+#x { width: 120px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t::first-line { background-color: rgb(0, 128, 0) }
+#t { background-color: rgba(0, 0, 0, 0); layout-text: "x" }
+#a { layout-text: "ONE TWO|three four"; layout-lines: 2 }
+#c { layout-height: >#b }
+#c2 { layout-height: =#b }
+#e { layout-text: "NESTED|block" }
+#w { layout-lines: >#x }
+</script>
+</head>
+<body>
+<p id=t>x</p>
+<p id=a>one <span>two</span><br>three four</p>
+<p id=b>a<br>b</p>
+<div id=c>a<br>b</div>
+<div><p id=c2>a<br>b</p></div>
+<div id=d><p id=e>nested<br>block</p></div>
+<p id=w>aaa bbb ccc ddd eee fff</p>
+<p id=x>aaa bbb ccc ddd eee fff</p>
+</body>
+</html>

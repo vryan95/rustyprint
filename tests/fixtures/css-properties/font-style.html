@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-style</title>
+<style>
+#t { font-style: oblique 20deg }
+#i { font-style: italic }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { font-style: oblique 20deg }
+#i { font-style: italic; layout-width: >0 }
+</script>
+</head>
+<body>
+<div><span id=i>Text</span></div><div id=t></div>
+</body>
+</html>

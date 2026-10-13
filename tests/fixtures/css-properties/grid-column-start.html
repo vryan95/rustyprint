@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-column-start</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-template-columns: repeat(3, 100px) }
+.g > div { height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-column-start: 2; layout-x: 100px; layout-width: 100px }
+#b { grid-column-start: span 2; layout-x: 0px; layout-width: 200px }
+#c { grid-column-start: -2; layout-x: 200px }
+#d { grid-column-start: auto }
+#e { grid-column-start: main; layout-x: 100px }
+</script>
+</head>
+<body>
+<div class=g><div id=a style="grid-column-start: 2"></div></div>
+<div class=g><div id=b style="grid-column-start: span 2"></div></div>
+<div class=g><div id=c style="grid-column-start: -2"></div></div>
+<div class=g style="grid-template-areas: 'side main main'"><div id=e style="grid-column-start: main"></div></div>
+<div id=d></div>
+</body>
+</html>

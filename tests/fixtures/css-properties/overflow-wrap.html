@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>overflow-wrap</title>
+<style>
+#t, #r { width: 30px }
+#t { overflow-wrap: anywhere }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { overflow-wrap: anywhere; layout-lines: >1 }
+#r { layout-lines: 1 }
+</script>
+</head>
+<body>
+<div id=t>abcdefghij</div><div id=r>abcdefghij</div>
+</body>
+</html>

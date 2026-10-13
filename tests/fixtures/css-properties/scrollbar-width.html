@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scrollbar-width</title>
+<style>
+body { font-size: 10px }
+#a { scrollbar-width: thin }
+#b { scrollbar-width: none }
+#bad { scrollbar-width: wide }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scrollbar-width: thin }
+#b { scrollbar-width: none }
+html { scrollbar-width: auto }
+warning: invalid value for `scrollbar-width`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

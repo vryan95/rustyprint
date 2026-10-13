@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>content</title>
+<style>
+@page { size: 400px 300px; margin: 50px }
+body { margin: 0 }
+@page { @top-center { content: "Page " counter(page) " of " counter(pages) }
+  @bottom-left { content: none } @bottom-right { content: normal } }
+.next { break-before: page }
+#t::before { content: open-quote "a" counter(x, upper-roman) / "alt" }
+#u::after { content: url(a.png) counters(item, ".") }
+#v { content: 1 }
+#i::before { content: url(assets/red.png) "x" }
+#w::before { content: none }
+#w::after { content: normal }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-margin-text: "top-center:Page 1 of 2 | top-center:Page 2 of 2" }
+#t::before { content: open-quote "a" counter(x, upper-roman) / "alt" }
+#u::after { content: url("a.png") counters(item, ".") }
+#t { content: normal; layout-text: "“a0a" }
+#w { layout-text: "w" }
+warning: invalid value for `content`
+warning: could not load image `a.png`
+#i { layout-text: "xy"; layout-height: >18 }
+</script>
+</head>
+<body>
+<p id=t>a</p><p id=i>y</p><p id=w>w</p><p id=u class=next>b</p><p id=v></p>
+</body>
+</html>

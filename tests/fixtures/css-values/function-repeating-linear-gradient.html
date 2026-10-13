@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>repeating-linear-gradient()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background-image: repeating-linear-gradient(90deg, red 0 10px, blue 10px 20px) }
+#b { background-image: repeating-linear-gradient(90deg, red 10px, blue 10px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: repeating-linear-gradient(90deg, rgb(255, 0, 0) 0px, rgb(255, 0, 0) 10px, rgb(0, 0, 255) 10px, rgb(0, 0, 255) 20px); layout-gradient: "axial -1 50 201 50" }
+#b { background-image: repeating-linear-gradient(90deg, rgb(255, 0, 0) 10px, rgb(0, 0, 255) 10px); layout-gradient: "axial -1 50 201 50" }
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div>
+</body>
+</html>

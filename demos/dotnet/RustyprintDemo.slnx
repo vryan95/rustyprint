@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="RustyprintDemo/RustyprintDemo.csproj" />
+  <Project Path="RustyprintDemo.Tests/RustyprintDemo.Tests.csproj" />
+  <Project Path="../../bindings/dotnet/src/Rustyprint/Rustyprint.csproj" />
+</Solution>

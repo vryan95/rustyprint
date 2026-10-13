@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>view-timeline-name</title>
+<style>
+body { font-size: 10px }
+#a { view-timeline-name: --a }
+#b { view-timeline-name: none, --b }
+#bad { view-timeline-name: b }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { view-timeline-name: --a }
+#b { view-timeline-name: none, --b }
+html { view-timeline-name: none }
+warning: invalid value for `view-timeline-name`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

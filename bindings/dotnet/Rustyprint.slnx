@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Rustyprint/Rustyprint.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Rustyprint.Tests/Rustyprint.Tests.csproj" />
+  </Folder>
+</Solution>

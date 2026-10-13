@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>circle()</title>
+<style>
+body { margin: 0; font-size: 16px; line-height: 20px }
+p { margin: 0; width: 400px; clear: both }
+.f { float: left; width: 100px; height: 100px }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#f { shape-outside: circle(50%) }
+#a { layout-x: >89px }
+#a { layout-x: <91px }
+</script>
+</head>
+<body>
+<p><span class=f id=f style="shape-outside: circle(50%)"></span><span id=a>First</span> line of text that wraps <span id=b>around</span> the float and then continues below it for a while longer than the float is tall.</p>
+</body>
+</html>

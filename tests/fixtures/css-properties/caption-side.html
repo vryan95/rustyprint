@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>caption-side</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+#a caption { caption-side: bottom }
+#b caption { caption-side: top }
+</style>
+<script type="text/x-rustyprint-expect">
+#ac { caption-side: bottom; layout-y: 24px }
+#bc { caption-side: top }
+#bt { layout-y: 66px }
+html { caption-side: top }
+</script>
+</head>
+<body>
+<table id=a class=p><caption id=ac>A</caption><tr><td style="width: 50px">x</td></tr></table>
+<table id=b class=p><caption id=bc>B</caption><tr><td id=bt style="width: 50px">x</td></tr></table>
+</body>
+</html>

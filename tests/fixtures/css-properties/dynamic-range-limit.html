@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>dynamic-range-limit</title>
+<style>
+#t { dynamic-range-limit: standard }
+#u { dynamic-range-limit: dynamic-range-limit-mix(standard 30%, no-limit 70%) }
+#v { dynamic-range-limit: high }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { dynamic-range-limit: standard }
+#u { dynamic-range-limit: dynamic-range-limit-mix(standard 30%, no-limit 70%) }
+html { dynamic-range-limit: no-limit }
+warning: invalid value for `dynamic-range-limit`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div>
+</body>
+</html>

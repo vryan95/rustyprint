@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>leader()</title>
+<style>
+body { margin: 0 }
+div { width: 300px }
+.dots::after { content: leader(dotted) "5" }
+.solid::after { content: leader(solid) "9" }
+.custom::after { content: leader("-+") "1" }
+#two::after { content: leader(dotted) "1" leader(space) "2" }
+</style>
+<script type="text/x-rustyprint-expect">
+.dots::after { content: leader(dotted) "5" }
+.solid::after { content: leader(solid) "9" }
+.custom::after { content: leader("-+") "1" }
+#plain { layout-width: <100 }
+#a { layout-width: >295; layout-x: 0 }
+#b { layout-width: >295 }
+#c { layout-width: >295 }
+#two { layout-width: >295 }
+#line { layout-lines: 1 }
+</script>
+</head>
+<body>
+<div id=line><span id=a class=dots>Intro</span></div>
+<div><span id=b class=solid>Body</span></div>
+<div><span id=c class=custom>End</span></div>
+<div><span id=two>Both</span></div>
+<div><span id=plain>Plain</span></div>
+</body>
+</html>

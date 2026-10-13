@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>tr</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+@page { size: 300px 100px; margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#r { display: table-row; background-color: rgb(0, 128, 0); baseline-shift: top; text-align: right; layout-x: 2px; layout-y: 2px; layout-height: 40px }
+#c { layout-height: 40px; layout-width: 50px }
+#v { baseline-shift: bottom }
+#long { layout-pages: 2; layout-page-lines: "3 3" }
+#after { layout-page: 4 }
+</script>
+</head>
+<body>
+<table class=p><tr id=r bgcolor=green valign=top align=right height=40><td id=c style="width: 50px">x</td></tr>
+<tr id=v valign=bottom><td>y</td></tr></table>
+<table class=p><thead><tr><td>Head</td></tr></thead>
+<tr><td id=long>1<br>2<br>3<br>4<br>5<br>6</td></tr><tr><td id=after>after</td></tr></table>
+</body>
+</html>

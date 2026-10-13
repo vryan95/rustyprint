@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>speak-as</title>
+<style>
+@counter-style a { system: extends decimal; speak-as: numbers }
+@counter-style b { system: extends decimal; speak-as: bullets }
+@counter-style c { system: extends decimal; speak-as: lower-roman }
+@counter-style bad { system: extends decimal; speak-as: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "1. a" }
+#c { layout-text: "2. c" }
+warning: invalid value for `speak-as`
+</script>
+</head>
+<body>
+<ol><li id=a style="list-style-type: a">a</li><li id=c style="list-style-type: c">c</li></ol>
+</body>
+</html>

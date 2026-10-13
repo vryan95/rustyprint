@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-border-outset</title>
+<style>
+body { margin: 0 }
+div { width: 10px; height: 10px; border: 10px solid; background: blue }
+div { mask-border: url(assets/frame.png) 10 / 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-border-outset: 5px; layout-mask: "-3 -3 255, 7 7 0" }
+#b { mask-border-outset: 1; layout-mask: "-5 -5 255, 5 5 0" }
+#c { mask-border-outset: 0; layout-mask: "5 5 255" }
+</script>
+</head>
+<body>
+<div id=a style="mask-border-outset: 5px"></div>
+<div id=b style="mask-border-outset: 1"></div>
+<div id=c></div>
+</body>
+</html>

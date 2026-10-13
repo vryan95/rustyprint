@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title><time-percentage></title>
+<style>
+#t { transition-delay: calc(1s + 500ms) }
+#bad { transition-delay: calc(1s + 50%) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { transition-delay: 1.5s }
+warning: invalid value for `transition-delay`
+</script>
+</head>
+<body>
+<div id=t></div><div id=bad></div>
+</body>
+</html>

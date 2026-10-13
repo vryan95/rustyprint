@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title><frequency-percentage></title>
+<style>
+#t { margin-top: calc(10px * (1khz / 500hz)) }
+#bad { margin-top: calc(10px * (50% / 1hz)) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-top: 20px }
+warning: invalid value for `margin-top`
+</script>
+</head>
+<body>
+<div id=t></div><div id=bad></div>
+</body>
+</html>

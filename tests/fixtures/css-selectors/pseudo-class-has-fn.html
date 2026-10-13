@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:has()</title>
+<style>
+section:has(> h2 + p) { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<section id=yes><h2></h2><p></p></section><section id=no><h2></h2><div></div><p></p></section>
+</body>
+</html>

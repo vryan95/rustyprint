@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>alpha()</title>
+<style>
+#t { color: alpha(from blue / 0.5) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { color: rgba(0, 0, 255, 0.5) }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

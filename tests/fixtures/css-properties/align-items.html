@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>align-items</title>
+<style>
+body { margin: 0; font-size: 16px; line-height: 20px }
+.c { display: flex; width: 300px; height: 100px }
+.s > div { width: 50px; height: 20px }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#n { align-items: normal }
+#n1 { layout-height: 100px; layout-y: 0px }
+#n2 { layout-height: 30px }
+#c { align-items: center }
+#c1 { layout-y: 140px }
+#e { align-items: flex-end }
+#e1 { layout-y: 280px }
+#st { align-items: start }
+#st1 { layout-y: 300px }
+#en { align-items: safe end }
+#en1 { layout-y: 480px }
+#bl { align-items: baseline }
+#b1 { layout-y: 510px }
+#b2 { layout-y: 500px }
+#lb { align-items: last baseline }
+#l1 { layout-y: 680px }
+#l2 { layout-y: 660px }
+#cc { align-items: center }
+#cc1 { layout-x: 0px; layout-width: 50px }
+#cc2 { layout-x: 125px }
+#ac { align-items: anchor-center }
+</script>
+</head>
+<body>
+<div class=c id=n><div id=n1></div><div id=n2 style="height: 30px"></div></div>
+<div class="c s" id=c style="align-items: center"><div id=c1></div></div>
+<div class="c s" id=e style="align-items: flex-end"><div id=e1></div></div>
+<div class="c s" id=st style="align-items: start"><div id=st1></div></div>
+<div class="c s" id=en style="align-items: safe end"><div id=en1></div></div>
+<div class=c id=bl style="align-items: baseline"><p id=b1 style="padding-top: 10px">x</p><p id=b2 style="padding-top: 20px">x</p></div>
+<div class=c id=lb style="align-items: last baseline; align-content: end"><p id=l1>x</p><p id=l2>x<br>x</p></div>
+<div class=c id=cc style="flex-direction: column; align-items: center; height: auto"><div id=cc1 style="width: 50px; align-self: start">a</div><div id=cc2 style="width: 50px">b</div></div>
+<div id=ac style="align-items: anchor-center"></div>
+</body>
+</html>

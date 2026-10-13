@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title><angle-percentage></title>
+<style>
+#a { width: 100px; height: 100px; background-image: conic-gradient(red 25%, blue 0.5turn) }
+#b { width: 100px; height: 100px; background-image: conic-gradient(from 90deg, red 0deg 50%, blue 50%) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: conic-gradient(rgb(255, 0, 0) 90deg, rgb(0, 0, 255) 180deg) }
+#b { layout-paint: "image" }
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div>
+</body>
+</html>

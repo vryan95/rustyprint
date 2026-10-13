@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>reading-order</title>
+<script type="text/x-rustyprint-expect">
+#a { reading-order: 0 }
+#b { reading-order: -2 }
+#c { reading-order: 5 }
+</script>
+</head>
+<body>
+<div style="display: flex; reading-flow: source-order"><div id=a></div><div id=b style="reading-order: -2"></div><div id=c style="reading-order: 5"></div></div>
+</body>
+</html>

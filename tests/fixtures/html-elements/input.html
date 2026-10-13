@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>input</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: inline-block; font-size: 13.3333px; border-top-width: 1px; padding-left: 2px; layout-text: "Hello" }
+#b { margin-left: 4px; layout-width: 13px; layout-height: 13px }
+#c { layout-width: 13px; layout-height: 13px }
+#d { layout-width: 129px; layout-height: 16px }
+#e { box-sizing: border-box; layout-width: 50px; layout-height: 27px }
+#f { display: none; layout-width: none }
+#g { layout-text: "•••" }
+#h { layout-text: "Name" }
+#i { layout-width: <#a }
+#j { box-sizing: border-box; layout-text: "Submit" }
+#k { layout-text: "Go" }
+#l { layout-text: "Choose FileNo file chosen" }
+#m { layout-text: "Reset" }
+#n { layout-text: "yyyy-mm-dd" }
+#o { layout-text: "7" }
+#p { layout-height: 40px; layout-text: "Tall" }
+#a { paint-items: >1 }
+</script>
+</head>
+<body>
+<p><input id=a value="Hello"> <input id=b type=checkbox checked> <input id=c type=radio> <input id=d type=range>
+<input id=e type=color> <input id=f type=hidden value=x> <input id=g type=password value=abc>
+<input id=h placeholder="Name"> <input id=i size=5></p>
+<p><input id=j type=submit> <input id=k type=image alt="Go"> <input id=l type=file> <input id=m type=reset>
+<input id=n type=date> <input id=o type=number value=7> <input id=p style="height: 40px; box-sizing: border-box" value=Tall></p>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>content-visibility</title>
+<style>
+body { margin: 0; font-size: 10px; line-height: 10px }
+#hidden { content-visibility: hidden; background: red }
+#hidden::before { content: "x" }
+#sized { content-visibility: hidden; contain-intrinsic-size: auto 30px }
+#auto { content-visibility: auto; margin-left: 40px }
+#auto .abs { position: absolute; left: 5px; top: 0; width: 5px; height: 5px }
+</style>
+<script type="text/x-rustyprint-expect">
+#hidden { content-visibility: hidden; layout-height: 0; layout-lines: 0 }
+#hidden-child { layout-width: none }
+#sized { layout-height: 30 }
+#auto { content-visibility: auto; layout-lines: 1 }
+#abs { layout-x: 45 }
+#visible { content-visibility: visible; layout-lines: 1 }
+</script>
+</head>
+<body>
+<div id=hidden>Skipped <span id=hidden-child>text</span></div>
+<div id=sized>Skipped</div>
+<div id=auto>Shown<div class=abs id=abs></div></div>
+<div id=visible>Shown</div>
+</body>
+</html>

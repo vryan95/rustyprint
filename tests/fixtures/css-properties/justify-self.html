@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>justify-self</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px; height: 10px }
+.c > div { width: 50px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { justify-self: auto }
+#b { justify-self: safe right }
+#c { justify-self: anchor-center }
+#d { justify-self: stretch }
+#e { justify-self: baseline }
+#f { justify-self: end; layout-x: 0px }
+#g1 { layout-x: 50px; layout-width: 50px }
+#g2 { layout-x: 180px; layout-width: 40px }
+#g3 { layout-x: 100px; layout-width: 200px }
+#g4 { layout-x: 0px; layout-y: 20px }
+#p { layout-x: 250px; layout-y: 30px }
+#q { layout-x: 80px; layout-width: 40px }
+#r { layout-x: 0px }
+#s { layout-x: 250px }
+#bl { layout-x: 260px; layout-width: 40px }
+#bc { layout-x: 140px; layout-width: 20px }
+#bn { layout-width: 300px }
+</script>
+</head>
+<body>
+<div id=a></div>
+<div id=b style="justify-self: safe right"></div>
+<div id=c style="justify-self: anchor-center"></div>
+<div id=d style="justify-self: stretch"></div>
+<div id=e style="justify-self: first baseline"></div>
+<div class=c><div id=f style="justify-self: end"></div></div>
+<div style="display: grid; width: 300px; grid-template-columns: 100px 200px; grid-auto-rows: 10px"><div id=g1 style="justify-self: end; width: 50px"></div><div id=g2 style="justify-self: center"><span style="display: inline-block; width: 40px; height: 10px"></span></div><div id=g4 style="justify-self: left; grid-column: 1"></div><div id=g3 style="justify-self: stretch"></div></div>
+<div style="position: relative; width: 300px; height: 40px"><div id=p style="position: absolute; inset: 0; width: 50px; justify-self: end"></div><div id=q style="position: absolute; left: 0; right: 100px; top: 0; justify-self: center"><span style="display: inline-block; width: 40px; height: 10px"></span></div><div id=r style="position: absolute; inset: 0; width: 50px"></div></div>
+<div style="position: relative; width: 300px; height: 10px" dir=rtl><div id=s style="position: absolute; inset: 0; width: 50px; justify-self: start"></div></div>
+<div style="width: 300px"><div id=bl style="justify-self: end"><span style="display: inline-block; width: 40px; height: 10px"></span></div><div id=bc style="justify-self: center; width: 20px; height: 5px"></div><div id=bn style="justify-self: normal"></div></div>
+</body>
+</html>

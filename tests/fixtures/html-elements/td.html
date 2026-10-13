@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>td</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: table-cell; alignment-baseline: middle; padding-top: 1px; layout-width: 52px; layout-height: 62px }
+#b { layout-width: 22px }
+#c { layout-width: 76px }
+#r { layout-height: 86px }
+#t { baseline-shift: top; background-color: rgb(255, 0, 0); text-align: right; width: 20px; height: 60px }
+#n { white-space-collapse: collapse; text-wrap-mode: nowrap }
+</script>
+</head>
+<body>
+<table><tr><td id=a style="width: 50px">a</td><td id=t bgcolor=red valign=top align=right width=20 height=60>t</td></tr>
+<tr><td id=c colspan=2>c</td></tr></table>
+<table><tr><td id=r rowspan=2 height=84>r</td><td id=b style="width: 20px">b</td></tr><tr><td>b2</td></tr></table>
+<table><tr><td id=n nowrap>no wrap</td></tr></table>
+</body>
+</html>

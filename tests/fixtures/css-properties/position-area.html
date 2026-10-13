@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>position-area</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+.p { position-anchor: --a }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { position-area: top center; layout-x: 115px; layout-y: 90px }
+#q { position-area: right; layout-x: 150px; layout-y: 105px }
+#r { position-area: bottom span-right; layout-x: 100px; layout-y: 120px }
+#s { position-area: span-left top; layout-x: 130px; layout-y: 90px }
+#t { position-area: none; layout-x: 0px }
+#u { position-area: block-start inline-end; layout-x: 150px; layout-y: 90px }
+</script>
+</head>
+<body>
+<div class=cb><div class=a></div>
+<div class=p id=p style="position-area: top center"></div>
+<div class=p id=q style="position-area: right"></div>
+<div class=p id=r style="position-area: bottom span-right"></div>
+<div class=p id=s style="position-area: span-left top"></div>
+<div class=p id=t style="position-area: none; left: 0"></div>
+<div class=p id=u style="position-area: block-start inline-end"></div></div>
+</body>
+</html>

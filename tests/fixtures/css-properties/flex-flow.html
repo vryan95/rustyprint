@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>flex-flow</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px; height: 50px }
+.c > div { width: 30px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { flex-direction: column; flex-wrap: wrap }
+#a2 { layout-x: 0px; layout-y: 20px }
+#a3 { layout-x: 150px; layout-y: 0px }
+#b { flex-direction: row-reverse; flex-wrap: nowrap }
+#b1 { layout-x: 270px; layout-y: 50px }
+#c { flex-direction: row; flex-wrap: balance }
+#d { flex-direction: column; flex-wrap: nowrap }
+</script>
+</head>
+<body>
+<div class=c id=a style="flex-flow: column wrap"><div></div><div id=a2></div><div id=a3></div></div>
+<div class=c id=b style="flex-flow: row-reverse"><div id=b1></div></div>
+<div class=c id=c style="flex-flow: balance"></div>
+<div class=c id=d style="flex-flow: nowrap column"></div>
+</body>
+</html>

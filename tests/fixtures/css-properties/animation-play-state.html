@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-play-state</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+@keyframes grow { from, to { width: 5px } }
+div { height: 1px; width: 10px }
+#a { animation-play-state: paused, running }
+#b { animation: slide 4s linear -1s paused }
+#bad { animation-play-state: stopped }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-play-state: paused, running }
+#b { margin-left: 75px }
+html { animation-play-state: running }
+warning: invalid value for `animation-play-state`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

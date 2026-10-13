@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background-repeat</title>
+<style>
+div { width: 100px; height: 20px }
+#t { background-repeat: repeat-x }
+#u { background-repeat: space round, no-repeat repeat }
+#v { background-repeat: round round }
+#w { background: url(assets/red.png) no-repeat }
+#x { background: url(assets/red.png) repeat-y }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-repeat: repeat-x }
+#u { background-repeat: space round, repeat-y }
+#v { background-repeat: round }
+html { background-repeat: repeat }
+#w { paint-items: 3 }
+#x { paint-items: 4 }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w></div><div id=x></div>
+</body>
+</html>

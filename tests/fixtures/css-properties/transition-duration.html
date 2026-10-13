@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transition-duration</title>
+<style>
+body { font-size: 10px }
+#a { transition-duration: 1s, 0s }
+#b { transition-duration: 100ms }
+#bad { transition-duration: -1s }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transition-duration: 1s, 0s }
+#b { transition-duration: 0.1s }
+html { transition-duration: 0s }
+warning: invalid value for `transition-duration`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

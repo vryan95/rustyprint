@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>size</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page { size: A5 }
+@page :left { size: landscape }
+@page :first { size: A6 }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-sizes: "559x794 1123x794" }
+warning: invalid value for `size`
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b class=next>b</p>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>order</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px }
+.c > div { width: 50px; height: 10px }
+#z { position: relative; display: flex; width: 100px; height: 20px }
+#z > div { width: 50px; height: 20px }
+#z > #under { background: red; margin-left: -50px; height: 10px }
+#over { background: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { order: 2; layout-x: 100px }
+#b { order: -1; layout-x: 0px }
+#c { order: 0; layout-x: 50px }
+#over { layout-x: 0px }
+#under { layout-x: 0px; layout-paint-order: >#over }
+</script>
+</head>
+<body>
+<div class=c><div id=a style="order: 2"></div><div id=b style="order: -1"></div><div id=c></div></div>
+<div id=z><div id=under style="order: 1"></div><div id=over></div></div>
+</body>
+</html>

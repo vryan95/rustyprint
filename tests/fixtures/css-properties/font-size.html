@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-size</title>
+<style>
+#p { font-size: 20px }
+#t { font-size: 1.5em }
+#u { font-size: larger }
+#v { font-size: x-large }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { font-size: 30px }
+#u { font-size: 24px }
+#v { font-size: 24px }
+</script>
+</head>
+<body>
+<div id=p><div id=t></div><div id=u></div><div id=v></div></div>
+</body>
+</html>

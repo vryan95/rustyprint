@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>cross-fade()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background: cross-fade(url(assets/photo.png) 25%, url(assets/red.png)) no-repeat }
+#b { background: cross-fade(url(assets/photo.png), url(assets/red.png)) no-repeat }
+#c { background-image: cross-fade(red 50%, 50% blue) }
+#d { background: cross-fade(url(assets/photo.png) 80%, url(assets/red.png) 80%) no-repeat }
+#e { background: cross-fade(url(assets/photo.png) 20%) no-repeat }
+#f { background-image: cross-fade(url(assets/photo.png) 150%) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: cross-fade(url("assets/photo.png") 25%, url("assets/red.png")); layout-image: "0 0 25 13"; layout-image-alphas: "255 191" }
+#b { background-image: cross-fade(url("assets/photo.png"), url("assets/red.png")); layout-image: "0 0 30 15"; layout-image-alphas: "255 128" }
+#c { background-image: cross-fade(rgb(255, 0, 0) 50%, rgb(0, 0, 255) 50%); layout-image: none; paint-items: 4 }
+#d { layout-image-alphas: "255 128" }
+#e { layout-image-alphas: "51" }
+#f { background-image: none }
+warning: invalid value for `background-image`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div><div id=f></div>
+</body>
+</html>

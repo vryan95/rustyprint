@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>cqw</title>
+<style>
+.t { font-size: 10px; line-height: 20px; margin-top: 10cqw }
+#inline { container-type: inline-size; width: 300px; padding: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#outside { margin-top: 79.3701px }
+#inside { margin-top: 30px }
+</script>
+</head>
+<body>
+<div class=t id=outside></div>
+<div id=inline><div class=t id=inside></div></div>
+</body>
+</html>

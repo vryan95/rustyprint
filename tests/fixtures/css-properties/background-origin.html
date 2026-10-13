@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background-origin</title>
+<style>
+div { width: 100px; height: 20px; padding: 5px; border: 1px solid }
+#t { background-origin: content-box, border-box }
+#u { background: url(assets/red.png) no-repeat; background-origin: content-box }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-origin: content-box, border-box }
+html { background-origin: padding-box }
+#u { paint-items: 7 }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+</body>
+</html>

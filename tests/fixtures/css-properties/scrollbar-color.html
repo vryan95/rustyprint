@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scrollbar-color</title>
+<style>
+body { font-size: 10px }
+#a { scrollbar-color: red blue }
+#b { scrollbar-color: auto }
+#bad { scrollbar-color: red }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scrollbar-color: rgb(255, 0, 0) rgb(0, 0, 255) }
+#b { scrollbar-color: auto }
+html { scrollbar-color: auto }
+warning: invalid value for `scrollbar-color`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

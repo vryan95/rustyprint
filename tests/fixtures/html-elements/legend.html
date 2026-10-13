@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>legend</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: block; padding-left: 2px; layout-x: 16px; layout-y: 0px }
+#b { margin-left: auto; margin-right: auto; layout-x: >300px }
+#c { layout-x: >500px }
+#d { layout-width: >700px }
+</script>
+</head>
+<body>
+<fieldset><legend id=a>Left</legend>x</fieldset>
+<fieldset><legend id=b align=center>Center</legend>x</fieldset>
+<fieldset><legend id=c align=right>Right</legend>x</fieldset>
+<fieldset><div><legend id=d>Not rendered in the border</legend></div></fieldset>
+</body>
+</html>

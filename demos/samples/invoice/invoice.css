@@ -1,0 +1,157 @@
+/* The invoice sample's stylesheet, also used by the Ruby and .NET demos' invoice views. */
+
+@page {
+  size: A4;
+  margin: 18mm 16mm 22mm;
+
+  @bottom-left {
+    content: "Northwind Trading Co. · Harbour Street 12 · 1011 AB Amsterdam · VAT NL001234567B01";
+    font: 7.5pt "Noto Sans", sans-serif;
+    color: #6e6e6e;
+  }
+
+  @bottom-right {
+    content: "Page " counter(page) " of " counter(pages);
+    font: 7.5pt "Noto Sans", sans-serif;
+    color: #6e6e6e;
+  }
+}
+
+:root {
+  --navy: #1f3a60;
+  --teal: #2a9d8f;
+  --line: #d9dee5;
+}
+
+body {
+  font: 9.5pt/1.45 "Noto Sans", sans-serif;
+  color: #222;
+  margin: 0;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10mm;
+}
+
+header img {
+  width: 58mm;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 22pt;
+  color: var(--navy);
+  text-align: right;
+  letter-spacing: 0.04em;
+}
+
+header .number {
+  text-align: right;
+  color: #6e6e6e;
+}
+
+.parties {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6mm;
+  margin-bottom: 8mm;
+}
+
+.parties h2 {
+  margin: 0 0 1.5mm;
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--teal);
+}
+
+.parties p {
+  margin: 0;
+}
+
+table.lines {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table.lines thead {
+  display: table-header-group;
+}
+
+table.lines th {
+  background: var(--navy);
+  color: white;
+  font-weight: bold;
+  text-align: left;
+  padding: 2mm 2.5mm;
+}
+
+table.lines td {
+  padding: 1.6mm 2.5mm;
+  border-bottom: 0.5pt solid var(--line);
+  vertical-align: top;
+}
+
+table.lines tr {
+  break-inside: avoid;
+}
+
+table.lines tbody tr:nth-child(even) td {
+  background: #f5f7fa;
+}
+
+table.lines .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+table.lines td small {
+  display: block;
+  color: #6e6e6e;
+}
+
+.totals {
+  margin: 6mm 0 0 auto;
+  width: 75mm;
+  border-collapse: collapse;
+  break-inside: avoid;
+}
+
+.totals td {
+  padding: 1.2mm 2.5mm;
+}
+
+.totals .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.totals tr.due td {
+  border-top: 1.5pt solid var(--navy);
+  font-weight: bold;
+  font-size: 11pt;
+  color: var(--navy);
+  padding-top: 2mm;
+}
+
+.payment {
+  margin-top: 10mm;
+  padding: 4mm 5mm;
+  border-left: 3pt solid var(--teal);
+  background: #f0f7f6;
+  break-inside: avoid;
+}
+
+.payment h2 {
+  margin: 0 0 1mm;
+  font-size: 10pt;
+  color: var(--navy);
+}
+
+.payment p {
+  margin: 0;
+}

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>repeating-radial-gradient()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background-image: repeating-radial-gradient(circle, red 0 8px, white 8px 16px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: repeating-radial-gradient(circle, rgb(255, 0, 0) 0px, rgb(255, 0, 0) 8px, rgb(255, 255, 255) 8px, rgb(255, 255, 255) 16px); layout-gradient: "radial 100 50 0 113 1.00" }
+</script>
+</head>
+<body>
+<div id=a></div>
+</body>
+</html>

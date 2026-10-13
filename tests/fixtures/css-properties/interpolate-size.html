@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>interpolate-size</title>
+<style>
+body { font-size: 10px }
+#a { interpolate-size: allow-keywords }
+#b { interpolate-size: numeric-only }
+#bad { interpolate-size: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { interpolate-size: allow-keywords }
+#b { interpolate-size: numeric-only }
+html { interpolate-size: numeric-only }
+warning: invalid value for `interpolate-size`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

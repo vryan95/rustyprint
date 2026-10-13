@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>base</title>
+<base href="assets/">
+<base href="ignored/">
+<link rel=stylesheet href=link.css>
+<style>
+#bg { width: 10px; height: 10px; background-image: url(photo.png) }
+</style>
+<script type="text/x-rustyprint-expect">
+base { display: none }
+#t { background-color: rgb(0, 128, 0) }
+#img { layout-width: >0 }
+#bg { layout-image: "0 0 40 20" }
+#here { layout-page-links: "#1" }
+</script>
+</head>
+<body>
+<p id=t>Styled by a stylesheet the base URL finds</p>
+<img id=img src=photo.png>
+<div id=bg></div>
+<p><a id=here href="#t">Fragments stay in the document</a></p>
+</body>
+</html>

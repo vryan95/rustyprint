@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ruby</title>
+<style>
+body { margin: 0; font: 20px/30px serif }
+</style>
+<script type="text/x-rustyprint-expect">
+#r { display: ruby; layout-text: "漢|kan字|ji" }
+#k { layout-y: <#b1; layout-x: 0 }
+#j { layout-x: >#k }
+#t { layout-x: >#r }
+</script>
+</head>
+<body>
+<p><ruby id=r><span id=b1>漢</span><rt id=k>kan</rt>字<rt id=j>ji</rt></ruby><span id=t>after</span></p>
+</body>
+</html>

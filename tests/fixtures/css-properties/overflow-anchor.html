@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>overflow-anchor</title>
+<style>
+body { font-size: 10px }
+#a { overflow-anchor: none }
+#b { overflow-anchor: auto }
+#bad { overflow-anchor: auto none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { overflow-anchor: none }
+#b { overflow-anchor: auto }
+html { overflow-anchor: auto }
+warning: invalid value for `overflow-anchor`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>col</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#k { display: table-column; background-color: rgb(255, 0, 0); layout-x: 2px; layout-width: 30px; layout-height: 20px }
+#c1 { layout-width: 30px }
+#c2 { layout-x: 34px; layout-width: 30px }
+#c3 { layout-width: 50px }
+#w { width: 50px }
+</script>
+</head>
+<body>
+<table class=p><col id=k span=2 style="width: 30px; background: red"><col id=w width=50>
+<tr><td id=c1>a</td><td id=c2>b</td><td id=c3>c</td></tr></table>
+</body>
+</html>

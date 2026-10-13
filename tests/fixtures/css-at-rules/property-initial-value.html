@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@property initial-value</title>
+<style>
+@property --gap { syntax: '<length>'; inherits: false; initial-value: 0.5in }
+@property --angle { syntax: '<angle>'; inherits: false; initial-value: 0.25turn }
+@property --anything { syntax: '*'; inherits: false }
+@property --relative { syntax: '<length>'; inherits: false; initial-value: 2em }
+@property --wrong { syntax: '<length>'; inherits: false; initial-value: blue }
+#t { margin-top: var(--gap); --check: var(--anything, fallback) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { --gap: 48px; margin-top: 48px; --angle: 90deg; --check: fallback }
+warning: ignored @property --relative: `initial-value` 2em depends on the element
+warning: ignored @property --wrong: `initial-value` blue does not match the syntax
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

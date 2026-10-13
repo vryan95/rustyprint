@@ -1,0 +1,441 @@
+# Publishes a release when a version tag such as `v1.2.3` is pushed: checks that the tag matches
+# the workspace version, runs CI, builds the command-line tool and the native library for every
+# platform and creates a GitHub Release with the archives, their checksums and release notes,
+# publishes the server image to GitHub Container Registry, the Ruby gems to rubygems.org and the
+# NuGet package to nuget.org.
+#
+# Run it by hand from the Actions tab for a dry run: it builds every archive, the image, the gems
+# and the NuGet package, keeping the archives and packages as the run's artifacts, without
+# publishing anything.
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: "1.98"
+  ZIG_VERSION: "0.14.1"
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: The tag matches the workspace version
+        id: version
+        run: |
+          version=$(sed -n '/^\[workspace.package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml)
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME, but Cargo.toml has version $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # A version such as 1.2.0-rc.1 is a prerelease.
+          case "$version" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    # A called workflow gets no more than these; CI's `changes` job reads pull requests.
+    permissions:
+      contents: read
+      pull-requests: read
+
+  build:
+    name: Build (${{ matrix.target }})
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux builds use cargo-zigbuild: the glibc ones run on glibc 2.17 and later, and
+          # the arm64 ones are cross-compiled.
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest, zig: x86_64-unknown-linux-gnu.2.17, run: true }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-latest, zig: aarch64-unknown-linux-gnu.2.17 }
+          # The static builds also build the server, for its image.
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-latest, zig: x86_64-unknown-linux-musl, run: true, server: amd64 }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-latest, zig: aarch64-unknown-linux-musl, server: arm64 }
+          - { target: aarch64-apple-darwin, os: macos-latest, run: true }
+          - { target: x86_64-apple-darwin, os: macos-latest }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest, run: true }
+          - { target: aarch64-pc-windows-msvc, os: windows-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - if: matrix.zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+      - if: matrix.zig
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+      - name: Build
+        shell: bash
+        run: |
+          if [ -n "${{ matrix.server }}" ]; then
+            cargo zigbuild --release --locked -p rustyprint-cli -p rustyprint-server --target "${{ matrix.zig }}"
+          elif [ -n "${{ matrix.zig }}" ]; then
+            cargo zigbuild --release --locked -p rustyprint-cli -p rustyprint-ffi --target "${{ matrix.zig }}"
+          else
+            cargo build --release --locked -p rustyprint-cli -p rustyprint-ffi --target "${{ matrix.target }}"
+          fi
+      # musl links the C runtime statically by default, which rules out a shared library, so
+      # the native library links it dynamically, as programs on musl distributions do.
+      - name: Build the native library (musl)
+        if: contains(matrix.target, 'musl')
+        env:
+          RUSTFLAGS: -C target-feature=-crt-static
+        run: cargo zigbuild --release --locked -p rustyprint-ffi --target "${{ matrix.zig }}"
+      - name: Try the program
+        if: matrix.run
+        shell: bash
+        run: |
+          bin=target/${{ matrix.target }}/release/rustyprint
+          "$bin" --version
+          echo '<h1>Hello</h1>' | "$bin" - -o hello.pdf
+          head -c 5 hello.pdf | grep -q '%PDF-'
+      # The C smoke test, against the library as built. The musl library needs a musl system.
+      - name: Try the native library
+        if: matrix.run && !contains(matrix.target, 'musl')
+        shell: bash
+        run: |
+          lib=target/${{ matrix.target }}/release
+          ffi=crates/rustyprint-ffi
+          if [ "${{ runner.os }}" = Windows ]; then
+            clang -I "$ffi/include" "$ffi/tests/smoke.c" "$lib/rustyprint_ffi.dll.lib" -o smoke.exe
+            PATH="$lib:$PATH" ./smoke.exe
+          else
+            cc -std=c99 -I "$ffi/include" "$ffi/tests/smoke.c" -L "$lib" -lrustyprint_ffi -Wl,-rpath,"$PWD/$lib" -o smoke
+            ./smoke
+          fi
+      - name: Package
+        shell: bash
+        run: |
+          name=rustyprint-${{ needs.version.outputs.version }}-${{ matrix.target }}
+          mkdir -p "dist/$name"
+          cp README.md "dist/$name/"
+          cp fonts/OFL.txt "dist/$name/OFL.txt"
+          # The native library, with its header and README.
+          native=rustyprint-native-${{ needs.version.outputs.version }}-${{ matrix.target }}
+          mkdir -p "dist/$native/include"
+          cp crates/rustyprint-ffi/README.md "dist/$native/"
+          cp crates/rustyprint-ffi/include/rustyprint.h "dist/$native/include/"
+          cp fonts/OFL.txt "dist/$native/OFL.txt"
+          release="target/${{ matrix.target }}/release"
+          cd dist
+          if [ "${{ runner.os }}" = Windows ]; then
+            cp "../$release/rustyprint.exe" "$name/"
+            # The import library, for linking C programs with MSVC.
+            cp "../$release/rustyprint_ffi.dll" "../$release/rustyprint_ffi.dll.lib" "$native/"
+            archives=("$name.zip" "$native.zip")
+            7z a -tzip -bso0 "$name.zip" "$name"
+            7z a -tzip -bso0 "$native.zip" "$native"
+          else
+            cp "../$release/rustyprint" "$name/"
+            if [ "${{ runner.os }}" = macOS ]; then library=librustyprint_ffi.dylib; else library=librustyprint_ffi.so; fi
+            cp "../$release/$library" "$native/"
+            archives=("$name.tar.gz" "$native.tar.gz")
+            tar -czf "$name.tar.gz" "$name"
+            tar -czf "$native.tar.gz" "$native"
+          fi
+          for archive in "${archives[@]}"; do
+            if command -v sha256sum >/dev/null; then
+              sha256sum "$archive" > "$archive.sha256"
+            else
+              shasum -a 256 "$archive" > "$archive.sha256"
+            fi
+            cat "$archive.sha256"
+          done
+      - uses: actions/upload-artifact@v7
+        with:
+          name: archive-${{ matrix.target }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+      - if: matrix.server
+        uses: actions/upload-artifact@v7
+        with:
+          name: server-${{ matrix.server }}
+          path: target/${{ matrix.target }}/release/rustyprint-server
+          if-no-files-found: error
+
+  image:
+    name: Server image
+    needs: [version, ci, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: server-amd64
+          path: docker/bin/amd64
+      - uses: actions/download-artifact@v8
+        with:
+          name: server-arm64
+          path: docker/bin/arm64
+      - name: Image names
+        id: names
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          chmod +x docker/bin/*/rustyprint-server
+          image="ghcr.io/$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')/rustyprint-server"
+          tags="$image:$VERSION"
+          if [ "$PRERELEASE" = false ]; then tags="$tags,$image:latest"; fi
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
+      - if: github.ref_type == 'tag'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: docker
+          file: docker/server.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.ref_type == 'tag' }}
+          tags: ${{ steps.names.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+            org.opencontainers.image.description=HTTP service that renders HTML and CSS to PDF
+
+  gems:
+    name: Ruby gems
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bindings/ruby
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+          working-directory: bindings/ruby
+      - name: The gem version matches the workspace version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        # A block scalar, since " #" would start a YAML comment in a plain one.
+        run: |
+          ruby -r ./lib/rustyprint/version -e 'abort "rustyprint.gem has version #{Rustyprint::VERSION}, Cargo.toml #{ENV["VERSION"]}" unless Rustyprint::VERSION == ENV["VERSION"]'
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: archive-*
+          path: dist
+          merge-multiple: true
+      # One platform gem per native library, holding the library.
+      - name: Build the platform gems
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          dist="$GITHUB_WORKSPACE/dist"
+          while read -r target platform library; do
+            native="rustyprint-native-$VERSION-$target"
+            mkdir -p "$RUNNER_TEMP/$target"
+            if [ -f "$dist/$native.zip" ]; then
+              unzip -q "$dist/$native.zip" -d "$RUNNER_TEMP/$target"
+            else
+              tar -xzf "$dist/$native.tar.gz" -C "$RUNNER_TEMP/$target"
+            fi
+            bundle exec rake native PLATFORM="$platform" LIBRARY="$RUNNER_TEMP/$target/$native/$library"
+          done <<'TARGETS'
+          x86_64-unknown-linux-gnu x86_64-linux-gnu librustyprint_ffi.so
+          aarch64-unknown-linux-gnu aarch64-linux-gnu librustyprint_ffi.so
+          x86_64-unknown-linux-musl x86_64-linux-musl librustyprint_ffi.so
+          aarch64-unknown-linux-musl aarch64-linux-musl librustyprint_ffi.so
+          x86_64-apple-darwin x86_64-darwin librustyprint_ffi.dylib
+          aarch64-apple-darwin arm64-darwin librustyprint_ffi.dylib
+          x86_64-pc-windows-msvc x64-mingw-ucrt rustyprint_ffi.dll
+          aarch64-pc-windows-msvc aarch64-mingw-ucrt rustyprint_ffi.dll
+          TARGETS
+          ls -l pkg
+      # The x86_64 Linux gem, installed and used as an app would.
+      - name: Try the Linux gem
+        run: |
+          gem install "pkg/rustyprint-${{ needs.version.outputs.version }}-x86_64-linux-gnu.gem"
+          ruby -e 'require "rustyprint"; pdf = Rustyprint.render("<h1>Hello</h1>").pdf; abort "no PDF" unless pdf.start_with?("%PDF-")'
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gems
+          path: bindings/ruby/pkg/*.gem
+          if-no-files-found: error
+
+  nuget:
+    name: NuGet package
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bindings/dotnet
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      # The project reads its version from Cargo.toml.
+      - name: The package version matches the workspace version
+        run: |
+          package=$(dotnet msbuild src/Rustyprint -getProperty:Version)
+          if [ "$package" != "$VERSION" ]; then
+            echo "::error::The NuGet package has version $package, Cargo.toml $VERSION"
+            exit 1
+          fi
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: archive-*
+          path: dist
+          merge-multiple: true
+      # runtimes/<rid>/native/<library> for each native library, as the package holds them.
+      - name: Lay out the native libraries
+        run: |
+          dist="$GITHUB_WORKSPACE/dist"
+          native="$RUNNER_TEMP/native"
+          while read -r target rid library; do
+            archive="rustyprint-native-$VERSION-$target"
+            mkdir -p "$RUNNER_TEMP/$target" "$native/runtimes/$rid/native"
+            if [ -f "$dist/$archive.zip" ]; then
+              unzip -q "$dist/$archive.zip" -d "$RUNNER_TEMP/$target"
+            else
+              tar -xzf "$dist/$archive.tar.gz" -C "$RUNNER_TEMP/$target"
+            fi
+            cp "$RUNNER_TEMP/$target/$archive/$library" "$native/runtimes/$rid/native/"
+          done <<'TARGETS'
+          x86_64-unknown-linux-gnu linux-x64 librustyprint_ffi.so
+          aarch64-unknown-linux-gnu linux-arm64 librustyprint_ffi.so
+          x86_64-unknown-linux-musl linux-musl-x64 librustyprint_ffi.so
+          aarch64-unknown-linux-musl linux-musl-arm64 librustyprint_ffi.so
+          x86_64-apple-darwin osx-x64 librustyprint_ffi.dylib
+          aarch64-apple-darwin osx-arm64 librustyprint_ffi.dylib
+          x86_64-pc-windows-msvc win-x64 rustyprint_ffi.dll
+          aarch64-pc-windows-msvc win-arm64 rustyprint_ffi.dll
+          TARGETS
+          find "$native" -type f
+          echo "NATIVE_DIR=$native" >> "$GITHUB_ENV"
+      - name: Pack
+        run: dotnet pack src/Rustyprint -c Release -o "$GITHUB_WORKSPACE/nupkg" -p:RustyprintNativeDir="$NATIVE_DIR"
+      # Installed from a local feed and used as an app would, on x64 Linux.
+      - name: Try the package
+        working-directory: ${{ runner.temp }}
+        run: |
+          dotnet new console -o try
+          cd try
+          dotnet new nugetconfig
+          dotnet nuget add source "$GITHUB_WORKSPACE/nupkg" --name local
+          dotnet add package Rustyprint --version "$VERSION"
+          cat > Program.cs <<'CS'
+          var pdf = Rustyprint.PdfRenderer.Render("<h1>Hello</h1>").Pdf;
+          if (System.Text.Encoding.ASCII.GetString(pdf, 0, 5) != "%PDF-") throw new System.Exception("no PDF");
+          System.Console.WriteLine($"{pdf.Length} bytes");
+          CS
+          dotnet run
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nuget
+          path: nupkg/*.nupkg
+          if-no-files-found: error
+
+  release:
+    name: Publish
+    if: github.ref_type == 'tag'
+    needs: [version, ci, build, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: archive-*
+          path: dist
+          merge-multiple: true
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          cat dist/*.sha256 > dist/SHA256SUMS
+          flags=()
+          if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "rustyprint $VERSION" \
+            --generate-notes \
+            --verify-tag \
+            "${flags[@]}" \
+            dist/*.tar.gz dist/*.zip dist/SHA256SUMS
+
+  # rubygems.org trusts this workflow (trusted publishing), so no API key is stored.
+  rubygems:
+    name: Publish the Ruby gems
+    if: github.ref_type == 'tag'
+    needs: [ci, gems, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: gems
+          path: gems
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+      - uses: rubygems/configure-rubygems-credentials@v2
+      - name: Push the gems
+        run: for gem in gems/*.gem; do gem push "$gem"; done
+
+  # nuget.org trusts this workflow (trusted publishing), so no API key is stored. NUGET_USER, a
+  # repository variable, is the nuget.org account that owns the package.
+  nuget-publish:
+    name: Publish the NuGet package
+    if: github.ref_type == 'tag'
+    needs: [ci, nuget, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: nuget
+          path: nupkg
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - name: Push the package
+        run: dotnet nuget push nupkg/*.nupkg --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json

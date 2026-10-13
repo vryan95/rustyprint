@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>orphans</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+.f { height: 1090px }
+.f + .f, .f ~ .f { break-before: page }
+#u { orphans: 1 }
+#v { orphans: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { orphans: 2; layout-page-lines: "5" }
+#u { orphans: 1; layout-page-lines: "1 4" }
+warning: invalid value for `orphans`
+</script>
+</head>
+<body>
+<div class=f></div><p id=t>a<br>b<br>c<br>d<br>e</p><div class=f></div><p id=u>a<br>b<br>c<br>d<br>e</p><p id=v></p>
+</body>
+</html>

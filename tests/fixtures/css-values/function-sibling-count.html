@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>sibling-count()</title>
+<style>
+li { margin-top: calc(10px * sibling-count()) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-top: 20px }
+</script>
+</head>
+<body>
+<ul><li id=t></li><li></li></ul>
+</body>
+</html>

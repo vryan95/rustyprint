@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>break-inside</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+.f { height: 900px }
+.g { height: 800px }
+.c { height: 150px }
+#t { break-inside: avoid }
+#u { break-inside: avoid-column }
+</style>
+<script type="text/x-rustyprint-expect">
+#r { layout-page: 1; layout-pages: 2 }
+#t { break-inside: avoid; layout-page: 3; layout-pages: 1 }
+#u { break-inside: avoid-column }
+html { break-inside: auto }
+</script>
+</head>
+<body>
+<div class=f></div><div id=r><div class=c></div><div class=c></div></div><div class=g></div><div id=t><div class=c></div><div class=c></div></div><div id=u></div>
+</body>
+</html>

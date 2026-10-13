@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>column-fill</title>
+<style>
+body { margin: 0 }
+.m { width: 340px; column-gap: 20px }
+.m > div { height: 10px; break-inside: avoid }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#a { column-fill: auto; layout-height: 100px }
+#a4 { layout-x: 0px; layout-y: 30px }
+#b { column-fill: balance }
+#b3 { layout-x: 180px; layout-y: 100px }
+#c { column-fill: balance-all }
+#c3 { layout-x: 180px; layout-y: 200px }
+#d { column-fill: auto; layout-height: 20px }
+#d3 { layout-x: 180px; layout-y: 300px }
+#p3 { layout-page: 2; layout-page-x: 0px; layout-page-y: 20px }
+</script>
+</head>
+<body>
+<div class=m id=a style="column-count: 2; height: 100px; column-fill: auto"><div></div><div></div><div></div><div id=a4></div></div>
+<div class=m id=b style="column-count: 2; height: 100px"><div></div><div></div><div id=b3></div><div></div></div>
+<div class=m id=c style="column-count: 2; height: 100px; column-fill: balance-all"><div></div><div></div><div id=c3></div><div></div></div>
+<div class=m id=d style="column-count: 2; column-fill: auto"><div></div><div></div><div id=d3></div><div></div></div>
+<div class=m style="column-count: 2; column-fill: auto; break-before: page"><div></div><div></div><div id=p3></div><div></div></div>
+</body>
+</html>

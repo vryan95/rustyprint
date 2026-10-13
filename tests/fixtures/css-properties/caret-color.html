@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>caret-color</title>
+<style>
+body { font-size: 10px }
+#a { caret-color: auto }
+#b { caret-color: blue }
+#c { caret-color: currentcolor }
+#bad { caret-color: 1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { caret-color: auto }
+#b { caret-color: rgb(0, 0, 255) }
+#c { caret-color: currentcolor }
+html { caret-color: auto }
+warning: invalid value for `caret-color`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

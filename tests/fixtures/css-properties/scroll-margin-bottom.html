@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-margin-bottom</title>
+<style>
+body { font-size: 10px }
+#a { scroll-margin-bottom: 7px }
+#b { scroll-margin-bottom: 2em }
+#bad { scroll-margin-bottom: 5% }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-margin-bottom: 7px }
+#b { scroll-margin-bottom: 20px }
+html { scroll-margin-bottom: 0px }
+warning: invalid value for `scroll-margin-bottom`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

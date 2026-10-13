@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>::first-letter</title>
+<style>
+#t::first-letter { background-color: green }
+#a::first-letter, #c::first-letter, #d::first-letter { font-size: 48px }
+#e::first-letter { initial-letter: 3 }
+li::first-letter { font-size: 48px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t::first-letter { background-color: rgb(0, 128, 0) }
+#t { background-color: rgba(0, 0, 0, 0); layout-text: "x" }
+#a { layout-text: "“Big” letter"; layout-height: >#b; layout-lines: 1 }
+#c { layout-height: =#b }
+#d { layout-height: >#b }
+#e { layout-height: >45 }
+#f { layout-text: "• list"; layout-height: >#b }
+</script>
+</head>
+<body>
+<p id=t>x</p>
+<p id=a>“Big” letter</p>
+<p id=b>Plain</p>
+<p id=c><span style="display: inline-block">a</span> b</p>
+<div id=d><p>Nested block</p></div>
+<p id=e>Drop</p>
+<ul style="list-style-position: inside"><li id=f>list</li></ul>
+</body>
+</html>

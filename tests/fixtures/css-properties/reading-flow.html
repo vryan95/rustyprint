@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>reading-flow</title>
+<script type="text/x-rustyprint-expect">
+#a { reading-flow: normal }
+#b { reading-flow: flex-visual }
+#c { reading-flow: grid-order }
+#d { reading-flow: source-order }
+</script>
+</head>
+<body>
+<div id=a></div>
+<div id=b style="display: flex; reading-flow: flex-visual"></div>
+<div id=c style="reading-flow: grid-order"></div>
+<div id=d style="reading-flow: source-order"></div>
+</body>
+</html>

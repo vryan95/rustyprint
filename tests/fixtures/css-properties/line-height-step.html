@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>line-height-step</title>
+<style>
+#t { line-height-step: 30px; line-height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { line-height-step: 30px; layout-height: 30px }
+</script>
+</head>
+<body>
+<div id=t>Text</div>
+</body>
+</html>

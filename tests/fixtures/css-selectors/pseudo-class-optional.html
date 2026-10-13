@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:optional</title>
+<style>
+:optional { outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { outline-style: dotted }
+#yes2 { outline-style: dotted }
+#no { outline-style: none }
+#no2 { outline-style: none }
+</script>
+</head>
+<body>
+<input id=yes><input id=no required><select id=yes2></select><p id=no2>p</p>
+</body>
+</html>

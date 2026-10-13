@@ -1,0 +1,58 @@
+<% content_for :title, "#{@sample.title} · rustyprint" %>
+
+<nav class="crumbs"><%= link_to "All samples", root_path %></nav>
+
+<section class="sample-header">
+  <div>
+    <h1><%= @sample.title %></h1>
+    <p><%= @sample.summary %></p>
+  </div>
+  <div class="actions">
+    <%= link_to "Open PDF", sample_path(@sample, format: :pdf), class: "button", target: "_blank" %>
+    <%= link_to "Download", sample_path(@sample, format: :pdf, download: 1), class: "button secondary" %>
+  </div>
+</section>
+
+<dl class="stats">
+  <div class="stat"><dt>Pages</dt><dd><%= pluralize(@rendering.pages, "page") %></dd></div>
+  <div class="stat"><dt>Size</dt><dd><%= number_to_human_size(@rendering.bytes) %></dd></div>
+  <div class="stat"><dt>Rendered in</dt><dd><%= (@rendering.seconds * 1000).round %> ms</dd></div>
+  <div class="stat"><dt>Warnings</dt><dd><%= @rendering.warnings.size %></dd></div>
+</dl>
+
+<% if @rendering.warnings.any? %>
+  <ul class="warnings">
+    <% @rendering.warnings.each do |warning| %>
+      <li><%= warning %></li>
+    <% end %>
+  </ul>
+<% end %>
+
+<div class="compare">
+  <figure>
+    <figcaption>PDF from rustyprint</figcaption>
+    <iframe src="<%= sample_path(@sample, format: :pdf) %>" title="<%= @sample.title %> as PDF"></iframe>
+  </figure>
+  <figure>
+    <figcaption>The same HTML in your browser</figcaption>
+    <iframe src="<%= sample_file_path(@sample, "index.html") %>" title="<%= @sample.title %> as HTML"></iframe>
+  </figure>
+</div>
+
+<section class="source">
+  <h2>Source</h2>
+  <p>
+    <code>index.html</code>, rendered with these assets:
+    <% @sample.asset_paths.each do |path| %>
+      <%= link_to path, sample_file_path(@sample, path), class: "asset", target: "_blank" %>
+    <% end %>
+  </p>
+  <details>
+    <summary>Show the Ruby that renders it</summary>
+    <pre><code><%= render_snippet(@sample) %></code></pre>
+  </details>
+  <details>
+    <summary>Show index.html</summary>
+    <pre><code><%= @sample.html %></code></pre>
+  </details>
+</section>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-repeat</title>
+<style>
+body { margin: 0 }
+div { width: 40px; height: 10px; background: blue; mask-image: url(assets/half.png) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-repeat: repeat-x; layout-mask: "2 5 255, 7 5 0, 12 5 255, 37 5 0" }
+#b { mask-repeat: no-repeat; layout-mask: "2 5 255, 12 5 0" }
+#c { mask-repeat: repeat }
+</script>
+</head>
+<body>
+<div id=a style="mask-repeat: repeat-x"></div>
+<div id=b style="mask-repeat: no-repeat"></div>
+<div id=c></div>
+</body>
+</html>

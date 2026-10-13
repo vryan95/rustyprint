@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>inline-size</title>
+<style>
+#t { inline-size: 100px }
+#u { writing-mode: vertical-rl; inline-size: 50px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { width: 100px; inline-size: 100px; layout-width: 100px }
+#u { height: 50px; width: auto }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+</body>
+</html>

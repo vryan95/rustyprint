@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>align-content</title>
+<style>
+body { margin: 0 }
+.c { display: flex; flex-wrap: wrap; width: 100px; height: 100px }
+.c > div { width: 60px; height: 10px }
+.b { height: 100px; width: 100px }
+.b > div { height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#n { align-content: normal }
+#n1 { layout-y: 0px; layout-height: 50px }
+#n2 { layout-y: 50px; layout-height: 50px }
+#s { align-content: flex-start }
+#s2 { layout-y: 110px }
+#c { align-content: center }
+#c1 { layout-y: 240px }
+#c2 { layout-y: 250px }
+#e { align-content: end }
+#e1 { layout-y: 380px }
+#sb { align-content: space-between }
+#sb2 { layout-y: 490px }
+#sa { align-content: space-around }
+#sa1 { layout-y: 520px }
+#se { align-content: space-evenly }
+#se1 { layout-y: 626.667px }
+#k { align-content: safe center }
+#k1 { layout-y: 700px }
+#one { align-content: center }
+#one1 { layout-y: 800px }
+#bc { align-content: center }
+#bc1 { layout-y: 940px }
+#be { align-content: end }
+#be1 { layout-y: 1080px }
+#bs { align-content: space-between }
+#bs1 { layout-y: 1100px }
+#bl { align-content: last baseline }
+</script>
+</head>
+<body>
+<div class=c id=n><div id=n1 style="height: auto"></div><div id=n2 style="height: auto"></div></div>
+<div class=c id=s style="align-content: flex-start"><div></div><div id=s2></div></div>
+<div class=c id=c style="align-content: center"><div id=c1></div><div id=c2></div></div>
+<div class=c id=e style="align-content: end"><div id=e1></div><div></div></div>
+<div class=c id=sb style="align-content: space-between"><div></div><div id=sb2></div></div>
+<div class=c id=sa style="align-content: space-around"><div id=sa1></div><div></div></div>
+<div class=c id=se style="align-content: space-evenly"><div id=se1></div><div></div></div>
+<div class=c id=k style="align-content: safe center"><div id=k1 style="height: 60px"></div><div style="height: 60px"></div></div>
+<div class=c id=one style="flex-wrap: nowrap; align-content: center"><div id=one1></div></div>
+<div class=b id=bc style="align-content: center"><div id=bc1></div></div>
+<div class=b id=be style="align-content: end"><div id=be1></div></div>
+<div class=b id=bs style="align-content: space-between"><div id=bs1></div></div>
+<div id=bl style="align-content: last baseline"></div>
+</body>
+</html>

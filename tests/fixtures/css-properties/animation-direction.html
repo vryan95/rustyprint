@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-direction</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+@keyframes grow { from, to { width: 5px } }
+div { height: 1px; width: 10px }
+#a { animation-direction: reverse, alternate-reverse }
+#b { animation: slide 4s linear -1s reverse }
+#c { animation: slide 4s linear -5s 2 alternate }
+#bad { animation-direction: backwards }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-direction: reverse, alternate-reverse }
+#b { margin-left: 25px }
+#c { margin-left: 25px }
+html { animation-direction: normal }
+warning: invalid value for `animation-direction`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

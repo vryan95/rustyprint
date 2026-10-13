@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>display</title>
+<style>
+#t { display: inline flow-root }
+#u { display: block list-item }
+#v { display: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { display: inline-block }
+#u { display: list-item }
+#v { display: none }
+#f { display: flex; layout-height: 10px }
+#g { display: inline-flex; layout-width: 100px }
+#g > span { display: block }
+#h { display: flex }
+#i { display: block }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div>
+<div id=f style="display: flex"><span style="height: 10px">a</span></div>
+<span id=g style="display: inline-flex"><span style="width: 50px"></span><span style="width: 50px"></span></span>
+<div style="display: flex"><span id=h style="display: inline-flex"></span><span id=i></span></div>
+</body>
+</html>

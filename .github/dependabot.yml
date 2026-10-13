@@ -1,0 +1,36 @@
+# Dependabot opens a pull request each week for new releases of the Rust crates and the GitHub
+# Actions the workflows use. CI checks each pull request like any other.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    # Patch and minor releases arrive together; each breaking release gets a pull request of
+    # its own.
+    groups:
+      cargo:
+        update-types: [minor, patch]
+    ignore:
+      # Kept on the version `image` uses, so the two share one copy (Cargo.toml). Remove this
+      # once `image` moves to moxcms 0.9.
+      - dependency-name: moxcms
+        versions: [">= 0.9"]
+
+  # The fuzz crate's own dependency only. Everything else it uses comes from the workspace,
+  # which the entry above updates; updating it from here would change the workspace's
+  # Cargo.toml without its Cargo.lock.
+  - package-ecosystem: cargo
+    directory: /fuzz
+    schedule:
+      interval: weekly
+    allow:
+      - dependency-name: libfuzzer-sys
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

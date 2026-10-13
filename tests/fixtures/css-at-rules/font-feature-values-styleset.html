@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-feature-values-styleset</title>
+<style>
+@font-face { font-family: Simple; src: url(assets/simple.ttf) }
+@font-face { font-family: Narrow; src: url(assets/narrow.ttf) }
+@font-face { font-family: Var; src: url(assets/var.ttf) }
+@font-face { font-family: Color; src: url(assets/color.ttf) }
+@font-face { font-family: Feat; src: url(assets/features.ttf) }
+.v { font-family: Var; font-optical-sizing: none }
+@font-feature-values Feat { @styleset { both: 1 2; first: 1; big: 100; } }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: 14.5px }
+#b { layout-width: 12px }
+#c { layout-width: 10px }
+warning: invalid value for `big`
+</script>
+</head>
+<body>
+<p><span id=a style="font-family: Feat; font-variant-alternates: styleset(both)">ab</span></p>
+<p><span id=b style="font-family: Feat; font-variant-alternates: styleset(first)">ab</span></p>
+<p><span id=c style="font-family: Feat">ab</span></p>
+</body>
+</html>

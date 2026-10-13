@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>::file-selector-button</title>
+<style>
+#t::file-selector-button { background-color: green }
+#u::file-selector-button { display: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#t::file-selector-button { background-color: rgb(0, 128, 0); margin-right: 4px }
+#t { layout-text: "Choose FileNo file chosen" }
+#u { layout-text: "No files chosen" }
+</script>
+</head>
+<body>
+<input id=t type=file> <input id=u type=file multiple>
+</body>
+</html>

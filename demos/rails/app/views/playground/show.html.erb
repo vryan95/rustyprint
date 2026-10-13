@@ -1,0 +1,37 @@
+<% content_for :title, "Playground · rustyprint" %>
+
+<section class="intro">
+  <h1>Playground</h1>
+  <p>
+    Edit the HTML and CSS and choose the page options. The PDF renders as you type, with
+    <code>Rustyprint.render(html, stylesheet: css, …)</code>. Images can be given as
+    <code>data:</code> URLs.
+  </p>
+</section>
+
+<%= form_with url: playground_path(format: :json), class: "playground",
+              data: { controller: "playground", action: "input->playground#queue change->playground#queue submit->playground#render" } do |form| %>
+  <div class="editors">
+    <label>
+      <span>HTML</span>
+      <%= form.text_area :html, value: @html, spellcheck: false, rows: 14 %>
+    </label>
+    <label>
+      <span>CSS</span>
+      <%= form.text_area :css, value: @css, spellcheck: false, rows: 12 %>
+    </label>
+    <div class="options">
+      <label><span>Page size</span><%= form.select :page_size, PlaygroundController::PAGE_SIZES, selected: "A4" %></label>
+      <label><span>Margin</span><%= form.text_field :margin, placeholder: "2cm" %></label>
+      <label class="check"><%= form.check_box :landscape %> Landscape</label>
+      <%= form.submit "Render", class: "button" %>
+      <p class="hint">An <code>@page</code> rule in the CSS that sets <code>size</code> or <code>margin</code> takes precedence over these options.</p>
+    </div>
+  </div>
+
+  <div class="result">
+    <p class="status" data-playground-target="status" aria-live="polite">Rendering…</p>
+    <ul class="warnings" data-playground-target="warnings" hidden></ul>
+    <iframe class="preview" data-playground-target="preview" title="The rendered PDF"></iframe>
+  </div>
+<% end %>

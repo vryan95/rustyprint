@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transition-delay</title>
+<style>
+body { font-size: 10px }
+#a { transition-delay: -1s, 250ms }
+#bad { transition-delay: 1 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transition-delay: -1s, 0.25s }
+html { transition-delay: 0s }
+warning: invalid value for `transition-delay`
+</script>
+</head>
+<body>
+<div id=a></div><div id=bad></div>
+</body>
+</html>

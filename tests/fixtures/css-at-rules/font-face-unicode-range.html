@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-face-unicode-range</title>
+<style>
+@font-face { font-family: Split; src: url(assets/simple.ttf); unicode-range: U+41 }
+@font-face { font-family: Split; src: url(assets/narrow.ttf); unicode-range: U+42-43, U+44?? }
+@font-face { font-family: Bad; src: url(assets/simple.ttf); unicode-range: A-Z }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: 10px }
+#b { layout-width: 3px }
+#c { layout-width: 7px }
+warning: invalid value for `unicode-range`
+</script>
+</head>
+<body>
+<p><span id=a style="font-family: Split">AB</span></p>
+<p><span id=b style="font-family: Split">C</span></p>
+<p><span id=c style="font-family: Split">A</span></p>
+</body>
+</html>

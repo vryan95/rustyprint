@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-align-last</title>
+<style>
+#p { text-align: justify; text-align-last: justify; width: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { text-align-last: justify }
+#t { layout-x: >280 }
+</script>
+</head>
+<body>
+<div id=p><span id=a>a</span> <span id=t>b</span></div>
+</body>
+</html>

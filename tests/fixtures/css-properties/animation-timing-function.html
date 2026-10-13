@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-timing-function</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+@keyframes grow { from, to { width: 5px } }
+div { height: 1px; width: 10px }
+#a { animation-timing-function: ease, cubic-bezier(0.1, 0.7, 1, 0.1), steps(4, jump-start), linear(0, 0.5 50%, 1) }
+#b { animation: slide 4s -1s; animation-timing-function: steps(2) }
+#c { animation: slide 4s -1s; animation-timing-function: linear }
+#bad { animation-timing-function: cubic-bezier(2, 0, 0, 1) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-timing-function: ease, cubic-bezier(0.1, 0.7, 1, 0.1), steps(4, jump-start), linear(0 0%, 0.5 50%, 1 100%) }
+#b { margin-left: 100px }
+#c { margin-left: 75px }
+html { animation-timing-function: ease }
+warning: invalid value for `animation-timing-function`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

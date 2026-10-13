@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>offset-anchor</title>
+<style>
+body { margin: 0 }
+section { width: 200px; height: 100px }
+div { width: 20px; height: 10px; background: blue }
+div { offset-path: ray(90deg); offset-rotate: 0deg }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { offset-anchor: 0px 0px }
+#p { layout-paint: "transform(1,0,0,1,100,50)" }
+#b { offset-anchor: auto }
+</script>
+</head>
+<body>
+<section id=p><div id=a style="offset-anchor: 0 0"></div></section>
+<div id=b></div>
+</body>
+</html>

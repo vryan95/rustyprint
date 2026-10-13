@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>system</title>
+<style>
+@counter-style cyc { system: cyclic; symbols: x y; suffix: " " }
+@counter-style fix { system: fixed 2; symbols: x y; suffix: " " }
+@counter-style sym { system: symbolic; symbols: "*" "+"; suffix: " " }
+@counter-style alp { system: alphabetic; symbols: x y; suffix: " " }
+@counter-style num { system: numeric; symbols: "0" "1"; suffix: " " }
+@counter-style add { system: additive; additive-symbols: 5 V, 1 I; suffix: " " }
+@counter-style ext { system: extends upper-roman; suffix: " " }
+@counter-style bad { system: random; symbols: x }
+li { list-style-type: var(--s) }
+</style>
+<script type="text/x-rustyprint-expect">
+#c3 { layout-text: "x c" }
+#f3 { layout-text: "y f" }
+#f4 { layout-text: "4 f" }
+#s3 { layout-text: "** s" }
+#s4 { layout-text: "++ s" }
+#a3 { layout-text: "xx a" }
+#n5 { layout-text: "101 n" }
+#d7 { layout-text: "VII d" }
+#e9 { layout-text: "IX e" }
+warning: invalid value for `system`
+</script>
+</head>
+<body>
+<ol start=3><li id=c3 style="--s: cyc">c</li></ol>
+<ol start=3><li id=f3 style="--s: fix">f</li><li id=f4 style="--s: fix">f</li></ol>
+<ol start=3><li id=s3 style="--s: sym">s</li><li id=s4 style="--s: sym">s</li></ol>
+<ol start=3><li id=a3 style="--s: alp">a</li></ol>
+<ol start=5><li id=n5 style="--s: num">n</li></ol>
+<ol start=7><li id=d7 style="--s: add">d</li></ol>
+<ol start=9><li id=e9 style="--s: ext">e</li></ol>
+</body>
+</html>

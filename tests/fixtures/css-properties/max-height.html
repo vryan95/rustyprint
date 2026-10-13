@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>max-height</title>
+<style>
+#t { height: 500px; max-height: 20em }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { max-height: 320px; layout-height: 320px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

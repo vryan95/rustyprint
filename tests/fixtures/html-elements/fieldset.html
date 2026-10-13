@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>fieldset</title>
+<style>
+body { margin: 0; font-size: 16px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { display: block; border-top-style: groove; border-top-width: 2px; margin-left: 2px; padding-left: 10px; layout-x: 2px }
+#t { layout-height: 74px }
+#u { layout-y: 28px }
+#n { layout-height: 28px }
+#c { layout-y: 75px }
+</script>
+</head>
+<body>
+<fieldset id=t style="padding: 4px 10px; font-size: 20px"><legend style="padding: 0; line-height: 24px">Legend</legend><div id=u style="height: 40px"></div></fieldset>
+<fieldset id=n style="padding: 4px; line-height: 20px; border-width: 10px"><legend id=c style="padding: 0; line-height: 8px">x</legend></fieldset>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transform</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: rotate(90deg); layout-paint: "transform(0,1,-1,0,75,-25) rect(#0000ff) pop" }
+#b { transform: translate(10px, 50%) scale(2); layout-paint: "transform(2,0,0,2,-40,0)" }
+#c { transform: none; layout-paint: "!transform" }
+warning: invalid value for `transform`
+</script>
+</head>
+<body>
+<div id=a style="transform: rotate(90deg)"></div>
+<div id=b style="transform: translate(10px, 50%) scale(2)"></div>
+<div id=c style="transform: rotate(10px)"></div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>table-layout</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+#f { table-layout: fixed; width: 206px }
+#a { width: 206px }
+</style>
+<script type="text/x-rustyprint-expect">
+#f { table-layout: fixed }
+#f1 { layout-width: 50px }
+#f2 { layout-width: 150px }
+#a1 { layout-width: >50 }
+html { table-layout: auto }
+</script>
+</head>
+<body>
+<table id=f class=p><tr><td id=f1 style="width: 50px">a</td><td id=f2>b</td></tr>
+<tr><td>a-very-long-unbreakable-word</td><td>c</td></tr></table>
+<table id=a class=p><tr><td id=a1 style="width: 50px">a</td><td>b</td></tr>
+<tr><td>a-very-long-unbreakable-word</td><td>c</td></tr></table>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>image-set()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background: image-set("assets/photo.png" 1x, "assets/hidpi.png" 2x) no-repeat }
+#b { background: image-set(url(assets/photo.png) type("image/png"), url(assets/hidpi.png) 3x type("image/avif")) no-repeat }
+#c { background-image: image-set(linear-gradient(red, blue) 1x) }
+#d { background: image-set("assets/photo.png" 192dpi) no-repeat }
+#e { background: -webkit-image-set("assets/photo.png" 0.5x) no-repeat }
+#f { background-image: image-set(image-set("assets/photo.png" 1x) 1x) }
+#g::before { content: image-set("assets/photo.png" 2x) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: image-set(url("assets/photo.png") 1x, url("assets/hidpi.png") 2x); layout-image: "0 0 20 10" }
+#b { background-image: image-set(url("assets/photo.png") 1x type("image/png"), url("assets/hidpi.png") 3x type("image/avif")); layout-image: "0 0 40 20" }
+#c { background-image: image-set(linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255)) 1x); layout-gradient: "axial 100 -1 100 101" }
+#d { background-image: image-set(url("assets/photo.png") 2x); layout-image: "0 0 20 10" }
+#e { layout-image: "0 0 80 40" }
+#f { background-image: none }
+#g { layout-height: 10 }
+warning: invalid value for `background-image`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div><div id=f></div>
+<p id=g style="line-height: 0"></p>
+</body>
+</html>

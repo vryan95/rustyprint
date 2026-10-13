@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-marker-group</title>
+<style>
+body { font-size: 10px }
+#a { scroll-marker-group: before }
+#b { scroll-marker-group: after }
+#bad { scroll-marker-group: inside }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-marker-group: before }
+#b { scroll-marker-group: after }
+html { scroll-marker-group: none }
+warning: invalid value for `scroll-marker-group`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

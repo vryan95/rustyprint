@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>steps()</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+div { animation: slide 4s -1s }
+#a { animation-timing-function: steps(4) }
+#b { animation-timing-function: steps(2, jump-start) }
+#c { animation-timing-function: steps(3, jump-both) }
+#d { animation-timing-function: steps(2, jump-none) }
+#bad { animation-timing-function: steps(1, jump-none) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-timing-function: steps(4); margin-left: 75px }
+#b { animation-timing-function: steps(2, jump-start); margin-left: 50px }
+#c { animation-timing-function: steps(3, jump-both); margin-left: 75px }
+#d { animation-timing-function: steps(2, jump-none); margin-left: 100px }
+warning: invalid value for `animation-timing-function`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=bad></div>
+</body>
+</html>

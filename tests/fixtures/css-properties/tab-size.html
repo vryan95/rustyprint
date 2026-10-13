@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>tab-size</title>
+<style>
+pre { margin: 0 }
+#p { tab-size: 2 }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { tab-size: 2 }
+#t { layout-x: <#r }
+</script>
+</head>
+<body>
+<pre id=p>	<span id=t>x</span></pre><pre>	<span id=r>x</span></pre>
+</body>
+</html>

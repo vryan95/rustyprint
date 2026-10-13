@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>colgroup</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#g { display: table-column-group; width: 40px; layout-x: 2px; layout-width: 82px; layout-y: 2px; layout-height: 20px }
+#c1 { layout-width: 40px }
+#c2 { layout-x: 44px; layout-width: 40px }
+#c3 { layout-width: 60px }
+#w { width: 25px }
+</script>
+</head>
+<body>
+<table class=p><colgroup id=g span=2 style="width: 40px"></colgroup><colgroup><col style="width: 60px"></colgroup>
+<tr><td id=c1>a</td><td id=c2>b</td><td id=c3>c</td></tr></table>
+<table><colgroup id=w width=25></colgroup><tr><td>x</td></tr></table>
+</body>
+</html>

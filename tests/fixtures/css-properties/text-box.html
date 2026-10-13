@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-box</title>
+<style>
+#t { text-box: trim-both cap alphabetic }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { text-box-trim: trim-both; text-box-edge: cap alphabetic; layout-height: <#r }
+</script>
+</head>
+<body>
+<div id=t>Text</div><div id=r>Text</div>
+</body>
+</html>

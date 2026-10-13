@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>min-height</title>
+<style>
+#p { height: 200px }
+#t { min-height: 10% }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { min-height: 10%; layout-height: 20px }
+</script>
+</head>
+<body>
+<div id=p><div id=t></div></div>
+</body>
+</html>

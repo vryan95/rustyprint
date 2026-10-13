@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-initial-target</title>
+<style>
+body { font-size: 10px }
+#a { scroll-initial-target: nearest }
+#b { scroll-initial-target: none }
+#bad { scroll-initial-target: first }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-initial-target: nearest }
+#b { scroll-initial-target: none }
+html { scroll-initial-target: none }
+warning: invalid value for `scroll-initial-target`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

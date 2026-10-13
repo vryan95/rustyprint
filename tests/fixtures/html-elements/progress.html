@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>progress</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: inline-block; box-sizing: border-box; layout-width: 160px; layout-height: 16px; paint-items: 3 }
+#b { paint-items: 2 }
+#c { layout-width: 100px; layout-height: 10px }
+</script>
+</head>
+<body>
+<p><progress id=a value=0.7></progress> <progress id=b>Loading</progress>
+<progress id=c value=3 max=4 style="width: 100px; height: 10px"></progress></p>
+</body>
+</html>

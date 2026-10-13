@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>counter-increment</title>
+<style>
+div { counter-reset: n }
+p { counter-increment: n }
+.two { counter-increment: n 2 }
+.none { counter-increment: none }
+.hidden { display: none }
+p::after { content: " " counter(n) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { counter-increment: n 1 }
+.two { counter-increment: n 2 }
+.none { counter-increment: none }
+#a { layout-text: "a 1" }
+#b { layout-text: "b 3" }
+#c { layout-text: "c 3" }
+#d { layout-text: "d 4" }
+</script>
+</head>
+<body>
+<div><p id=a>a</p><p id=b class=two>b</p><p id=c class=none>c</p><p class=hidden>x</p><p id=d>d</p></div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-palette-values</title>
+<style>
+@font-face { font-family: Simple; src: url(assets/simple.ttf) }
+@font-face { font-family: Narrow; src: url(assets/narrow.ttf) }
+@font-face { font-family: Var; src: url(assets/var.ttf) }
+@font-face { font-family: Color; src: url(assets/color.ttf) }
+@font-face { font-family: Feat; src: url(assets/features.ttf) }
+.v { font-family: Var; font-optical-sizing: none }
+p { font-family: Color }
+@font-palette-values --mine { font-family: Color; override-colors: 1 rgb(0, 128, 0) }
+@font-palette-values mine { font-family: Color }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-paint: "rect(#ff0000) pop clip-path rect(#008000)" }
+#b { layout-paint: "rect(#ff0000) pop clip-path rect(#0000ff)" }
+warning: @font-palette-values names must start with --
+</script>
+</head>
+<body>
+<p id=a style="font-palette: --mine">A</p>
+<p id=b style="font-palette: --other">A</p>
+</body>
+</html>

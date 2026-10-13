@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>anchor-name</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+#m { anchor-name: --x, --y }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { anchor-name: --a }
+#n { anchor-name: none }
+#m { anchor-name: --x, --y }
+#p { layout-x: 100px; layout-y: 120px }
+#q { layout-x: 200px }
+</script>
+</head>
+<body>
+<div class=cb><div class=a id=a></div><div id=n></div>
+<div id=m style="position: absolute; left: 200px; top: 0; width: 10px; height: 10px"></div>
+<div class=p id=p style="top: anchor(--a bottom); left: anchor(--a left)"></div>
+<div class=p id=q style="top: 0; left: anchor(--y left)"></div></div>
+</body>
+</html>

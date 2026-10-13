@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-face-src</title>
+<style>
+@font-face { font-family: Bold; src: local("Noto Sans Bold") }
+@font-face { font-family: Skip; src: url(assets/narrow.ttf) format("embedded-opentype"), url(assets/simple.ttf) format("truetype") }
+@font-face { font-family: Tech; src: url(assets/narrow.ttf) tech(color-SVG), url(assets/simple.ttf) tech(variations) }
+@font-face { font-family: Late; src: local(Nowhere), url(assets/narrow.ttf) }
+@font-face { font-family: Bad; src: url(assets/narrow.ttf) format(nonsense) }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: #r }
+#b { layout-width: 14px }
+#c { layout-width: 14px }
+#d { layout-width: 3px }
+warning: invalid value for `src`
+warning: ignored @font-face: it needs `font-family` and `src`
+</script>
+</head>
+<body>
+<p><span id=a style="font-family: Bold">AA</span> <span id=r style="font: bold 10px 'Noto Sans'">AA</span></p>
+<p><span id=b style="font-family: Skip">AA</span></p>
+<p><span id=c style="font-family: Tech">AA</span></p>
+<p><span id=d style="font-family: Late">A</span></p>
+</body>
+</html>

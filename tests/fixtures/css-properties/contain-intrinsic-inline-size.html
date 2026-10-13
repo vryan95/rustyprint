@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>contain-intrinsic-inline-size</title>
+<style>
+div { contain-intrinsic-inline-size: 5px }
+#u { writing-mode: vertical-rl }
+#c { contain: inline-size; contain-intrinsic-inline-size: 70px; display: inline-block }
+#d { writing-mode: vertical-rl; contain: size; contain-intrinsic-inline-size: 45px; float: left }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { contain-intrinsic-width: 5px; contain-intrinsic-height: none }
+#u { contain-intrinsic-height: 5px; contain-intrinsic-width: none }
+#c { layout-width: 70 }
+#d { layout-height: 45 }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+<div id=c>Text</div><div id=d>Text</div>
+</body>
+</html>

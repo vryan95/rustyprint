@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>flex</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-auto-rows: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-template-columns: 1fr 3fr }
+#a1 { layout-width: 75px }
+#a2 { layout-x: 75px; layout-width: 225px }
+#h { layout-width: 150px }
+#z { grid-template-columns: 0fr 1fr }
+#z1 { layout-width: 40px }
+#z2 { layout-x: 40px; layout-width: 260px }
+warning: invalid value for `grid-template-columns`
+</script>
+</head>
+<body>
+<div class=g id=a style="grid-template-columns: 1fr 3fr"><div id=a1></div><div id=a2></div></div>
+<div class=g style="grid-template-columns: 0.5fr"><div id=h></div></div>
+<div class=g id=z style="grid-template-columns: 0fr 1fr"><div id=z1><span style="display: inline-block; width: 40px"></span></div><div id=z2></div></div>
+<div style="grid-template-columns: -1fr"></div>
+</body>
+</html>

@@ -1,0 +1,39 @@
+[package]
+name = "rustyprint"
+description = "Render HTML and CSS to PDF"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# `RenderOptions::from_json`, for front ends that take options as JSON.
+serde = ["dep:serde", "dep:serde_json", "dep:serde_path_to_error"]
+# Makes `render` panic on a `<!--rustyprint:panic-->` comment, to test that panics are caught.
+test-support = []
+
+[dependencies]
+rustyprint-css.workspace = true
+rustyprint-dom.workspace = true
+rustyprint-layout.workspace = true
+rustyprint-pdf.workspace = true
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+serde_path_to_error = { workspace = true, optional = true }
+thiserror.workspace = true
+ureq.workspace = true
+
+[dev-dependencies]
+# The integration tests use the optional features.
+rustyprint = { path = ".", features = ["serde", "test-support"] }
+criterion.workspace = true
+image.workspace = true
+lopdf.workspace = true
+serde_json.workspace = true
+
+[[bench]]
+name = "render"
+harness = false
+
+[lints]
+workspace = true

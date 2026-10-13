@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>interest-delay-end</title>
+<style>
+body { font-size: 10px }
+#a { interest-delay-end: 0.5s }
+#b { interest-delay-end: normal }
+#c { interest-delay-end: 250ms }
+#bad { interest-delay-end: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { interest-delay-end: 0.5s }
+#b { interest-delay-end: normal }
+#c { interest-delay-end: 0.25s }
+html { interest-delay-end: normal }
+warning: invalid value for `interest-delay-end`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

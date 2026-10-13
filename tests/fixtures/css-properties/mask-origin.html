@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-origin</title>
+<style>
+body { margin: 0 }
+div { width: 20px; height: 20px; padding: 10px; background: blue; mask: url(assets/half.png) no-repeat }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-origin: content-box; layout-mask: "12 12 255, 17 12 0, 2 2 0" }
+#b { mask-origin: border-box; layout-mask: "2 2 255" }
+</script>
+</head>
+<body>
+<div id=a style="mask-origin: content-box"></div>
+<div id=b></div>
+</body>
+</html>

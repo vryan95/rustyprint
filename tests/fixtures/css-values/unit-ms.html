@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ms</title>
+<style>
+#t { font-size: 10px; line-height: 20px; margin-top: calc(1px * (2000ms / 1s)) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-top: 2px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

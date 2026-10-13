@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>contain-intrinsic-width</title>
+<style>
+#t { contain-intrinsic-width: auto 100px }
+#u { contain-intrinsic-width: auto none }
+#v { contain-intrinsic-width: -1px }
+#c { contain: size; contain-intrinsic-width: 80px; float: left }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { contain-intrinsic-width: auto 100px }
+#u { contain-intrinsic-width: auto none }
+html { contain-intrinsic-width: none }
+warning: invalid value for `contain-intrinsic-width`
+#c { layout-width: 80 }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div>
+<div id=c>Floated text</div>
+</body>
+</html>

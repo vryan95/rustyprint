@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@color-profile rendering-intent</title>
+<style>
+@color-profile --relative { src: url(assets/cmyk.icc); rendering-intent: relative-colorimetric }
+@color-profile --perceptual { src: url(assets/cmyk.icc); rendering-intent: perceptual }
+@color-profile --absolute { src: url(assets/cmyk.icc); rendering-intent: absolute-colorimetric }
+@color-profile --saturation { src: url(assets/cmyk.icc); rendering-intent: saturation }
+@color-profile --bad { src: url(assets/cmyk.icc); rendering-intent: vivid }
+#a { color: color(--relative 0 1 0 0) }
+#b { color: color(--perceptual 0 1 0 0) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { color: rgb(255, 0, 255) }
+#b { color: rgb(255, 0, 255) }
+warning: invalid value for `rendering-intent`: `vivid`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div>
+</body>
+</html>

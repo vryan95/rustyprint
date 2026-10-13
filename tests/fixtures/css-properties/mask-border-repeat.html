@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-border-repeat</title>
+<style>
+body { margin: 0 }
+div { width: 10px; height: 10px; border: 10px solid; background: blue }
+div { mask-border: url(assets/frame.png) 10 / 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-border-repeat: round space; layout-paint: "group(mask)" }
+#b { mask-border-repeat: repeat }
+#c { mask-border-repeat: stretch }
+</script>
+</head>
+<body>
+<div id=a style="mask-border-repeat: round space"></div>
+<div id=b style="mask-border-repeat: repeat repeat"></div>
+<div id=c></div>
+</body>
+</html>

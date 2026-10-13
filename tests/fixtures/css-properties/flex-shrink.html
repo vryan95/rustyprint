@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>flex-shrink</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 200px; height: 10px }
+.c > div { width: 150px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { flex-shrink: 1; layout-width: 125px }
+#b { flex-shrink: 3; layout-width: 75px; layout-x: 125px }
+#n { flex-shrink: 0; layout-width: 150px }
+#m { layout-width: 50px }
+#w { layout-width: 120px }
+#s { layout-width: 80px }
+</script>
+</head>
+<body>
+<div class=c><div id=a></div><div id=b style="flex-shrink: 3"></div></div>
+<div class=c><div id=n style="flex-shrink: 0"></div><div id=m></div></div>
+<div class=c><div id=w style="min-width: 120px"></div><div id=s></div></div>
+</body>
+</html>

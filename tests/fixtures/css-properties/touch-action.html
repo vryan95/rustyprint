@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>touch-action</title>
+<style>
+body { font-size: 10px }
+#a { touch-action: pan-x pan-up pinch-zoom }
+#b { touch-action: manipulation }
+#c { touch-action: none }
+#d { touch-action: pinch-zoom pan-y }
+#bad { touch-action: pan-x pan-right }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { touch-action: pan-x pan-up pinch-zoom }
+#b { touch-action: manipulation }
+#c { touch-action: none }
+#d { touch-action: pan-y pinch-zoom }
+html { touch-action: auto }
+warning: invalid value for `touch-action`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=bad></div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-brightness</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { filter: brightness(0.5); layout-paint: "rect(#808080)" }
+#b { filter: brightness(2); layout-paint: "rect(#c8c8c8)" }
+#c { filter: brightness(1); layout-paint: "rect(#0000ff)" }
+</script>
+</head>
+<body>
+<div id=a style="background: white; filter: brightness(0.5)"></div>
+<div id=b style="background: rgb(100, 100, 100); filter: brightness(200%)"></div>
+<div id=c style="filter: brightness()"></div>
+</body>
+</html>

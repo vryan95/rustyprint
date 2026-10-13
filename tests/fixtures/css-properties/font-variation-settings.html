@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-variation-settings</title>
+<style>
+@font-face { font-family: Simple; src: url(assets/simple.ttf) }
+@font-face { font-family: Narrow; src: url(assets/narrow.ttf) }
+@font-face { font-family: Var; src: url(assets/var.ttf) }
+@font-face { font-family: Color; src: url(assets/color.ttf) }
+@font-face { font-family: Feat; src: url(assets/features.ttf) }
+.v { font-family: Var; font-optical-sizing: none }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { font-variation-settings: "TEST" 50; layout-width: 9.5px }
+#b { font-variation-settings: "wght" 500; layout-width: 9px }
+#c { font-variation-settings: normal; layout-width: 8px }
+#d { font-variation-settings: "TEST" 1000; layout-width: 11px }
+warning: invalid value for `font-variation-settings`
+</script>
+</head>
+<body>
+<p><span id=a class=v style="font-variation-settings: 'TEST' 50">A</span></p>
+<p><span id=b class=v style="font-variation-settings: 'wght' 900, 'wght' 500">A</span></p>
+<p><span id=c class=v style="font-variation-settings: 'wgh' 1">A</span></p>
+<p><span id=d class=v style="font-variation-settings: 'TEST' 1000">A</span></p>
+</body>
+</html>

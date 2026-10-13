@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:first-of-type</title>
+<style>
+p:first-of-type { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<div><span></span><p id=yes></p><p id=no></p></div>
+</body>
+</html>

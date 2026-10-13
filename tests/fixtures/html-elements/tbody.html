@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>tbody</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#b { display: table-row-group; alignment-baseline: middle; layout-x: 2px; layout-y: 2px; layout-width: 30px; layout-height: 42px }
+#r2 { layout-y: 24px }
+#i { display: table-row-group }
+</script>
+</head>
+<body>
+<table class=p><tbody id=b><tr><td style="width: 30px">a</td></tr><tr id=r2><td>b</td></tr></tbody></table>
+<table><tr><td id=x>implicit</td></tr></table>
+<table><tbody id=i></tbody></table>
+</body>
+</html>

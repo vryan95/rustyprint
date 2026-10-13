@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask</title>
+<style>
+body { margin: 0 }
+div { width: 20px; height: 20px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-image: url("assets/half.png"); mask-repeat: no-repeat; mask-size: 100% 100%; mask-position: 0px 0px; mask-border-source: none; layout-paint: "group(mask) rect(#0000ff) /group"; layout-mask: "2 10 255, 18 10 0" }
+#b { mask-image: linear-gradient(rgb(0, 0, 0), rgba(0, 0, 0, 0)); mask-clip: content-box; mask-origin: content-box; mask-composite: intersect; mask-mode: alpha }
+#c { mask-image: none; layout-paint: "!group" }
+</script>
+</head>
+<body>
+<div id=a style="mask: url(assets/half.png) no-repeat 0 0 / 100% 100%"></div>
+<div id=b style="mask: linear-gradient(black, transparent) content-box intersect alpha"></div>
+<div id=c style="mask: none"></div>
+</body>
+</html>

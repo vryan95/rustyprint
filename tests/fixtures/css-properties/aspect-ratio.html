@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>aspect-ratio</title>
+<style>
+#t { width: 200px; aspect-ratio: 2 }
+#u { height: 50px; aspect-ratio: 3 / 2 }
+#v { width: 100px; aspect-ratio: 4; border: 10px solid; box-sizing: border-box }
+#w { width: 100px; aspect-ratio: auto 4; border: 10px solid; box-sizing: border-box }
+#x, #y { width: 100px; aspect-ratio: 10 }
+#y { min-height: 0 }
+.tall { height: 50px }
+#z { aspect-ratio: -1 }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { aspect-ratio: 2 / 1; layout-height: 100px }
+#u { aspect-ratio: 3 / 2; layout-width: 75px }
+#v { layout-height: 25px }
+#w { aspect-ratio: auto 4 / 1; layout-height: 40px }
+#x { layout-height: 50px }
+#y { layout-height: 10px }
+html { aspect-ratio: auto }
+warning: invalid value for `aspect-ratio`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w></div>
+<div id=x><div class=tall></div></div><div id=y><div class=tall></div></div><div id=z></div>
+</body>
+</html>

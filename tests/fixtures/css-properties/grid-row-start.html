@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-row-start</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-auto-rows: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-row-start: 3; layout-y: 20px }
+#b { grid-row-start: -1; layout-y: 60px }
+#c { grid-row-start: 2 x; layout-y: 80px }
+#d { grid-row-start: span x; layout-y: 90px }
+#e { grid-row-start: auto }
+#f { grid-row-start: 3 y; layout-y: 130px }
+</script>
+</head>
+<body>
+<div class=g><div id=a style="grid-row-start: 3"></div></div>
+<div class=g style="grid-template-rows: 10px 10px 10px"><div id=b style="grid-row-start: -1"></div></div>
+<div class=g style="grid-template-rows: [x] 10px [x] 10px"><div id=c style="grid-row-start: 2 x"></div></div>
+<div class=g><div id=d style="grid-row-start: span x"></div></div>
+<div class=g id=e></div>
+<div class=g style="grid-template-rows: [y] 10px"><div id=f style="grid-row-start: 3 y"></div></div>
+</body>
+</html>

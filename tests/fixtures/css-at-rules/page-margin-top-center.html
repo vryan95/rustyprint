@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@top-center</title>
+<style>
+@page { size: 400px 300px; margin: 50px }
+body { margin: 0 }
+@page { @top-center { content: "t"; width: 100px } }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-margin-rects: "top-center:150,0,100,50"; layout-page-margin-text: "top-center:t" }
+</script>
+</head>
+<body>
+<p>x</p>
+</body>
+</html>

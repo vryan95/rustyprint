@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>white-space</title>
+<style>
+#t { white-space: pre }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { white-space-collapse: preserve; text-wrap-mode: nowrap; layout-text: "a   b" }
+</script>
+</head>
+<body>
+<div id=t>a   b</div>
+</body>
+</html>

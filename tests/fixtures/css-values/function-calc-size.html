@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>calc-size()</title>
+<style>
+body { margin: 0; width: 400px; font-size: 10px; line-height: 10px }
+#a { width: calc-size(auto, size * 0.5) }
+#b { width: calc-size(max-content, size + 10px); display: inline-block }
+#b > div { width: 50px }
+#c { width: calc-size(100px, size * 2) }
+#d { width: calc-size(50%, size - 10px) }
+#e { height: calc-size(auto, size * 2) }
+#f { height: calc-size(30px, size + 5px) }
+#g { width: calc-size(any, 75px) }
+#h { width: calc-size(any, size) }
+#i { min-width: calc-size(fit-content, size); width: 0; float: left }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { width: calc-size(auto, size * 0.5); layout-width: 200 }
+#b { layout-width: 60 }
+#c { width: calc-size(100px, size * 2); layout-width: 200 }
+#d { layout-width: 190 }
+#e { layout-height: 20 }
+#f { layout-height: 35 }
+#g { layout-width: 75 }
+#i { layout-width: >0 }
+warning: invalid value for `width`: `calc-size(any, size)`
+</script>
+</head>
+<body>
+<div id=a>A</div>
+<div id=b><div>B</div></div>
+<div id=c>C</div>
+<div id=d>D</div>
+<div id=e>E</div>
+<div id=f>F</div>
+<div id=g>G</div>
+<div id=h>H</div>
+<div id=i>Some text</div>
+</body>
+</html>

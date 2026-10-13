@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-face</title>
+<style>
+@font-face { font-family: Simple; src: url(assets/simple.woff2) format("woff2") }
+@font-face { font-family: "Simple Woff"; src: url(assets/simple.woff) format("woff") }
+@font-face { font-family: Narrow; src: url(assets/narrow.ttf) }
+@font-face { font-family: Missing; src: url(assets/missing.ttf) }
+@font-face { font-family: NoSource }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: 14px }
+#b { layout-width: 14px }
+#c { layout-width: 14px }
+#d { layout-width: 3px }
+warning: could not load font `assets/missing.ttf`
+warning: ignored @font-face: it needs `font-family` and `src`
+</script>
+</head>
+<body>
+<p><span id=a style="font-family: Simple">AA</span></p>
+<p><span id=b style="font-family: 'Simple Woff'">AA</span></p>
+<p><span id=c style="font-family: SIMPLE">AA</span></p>
+<p><span id=d style="font-family: Missing, NoSource, Narrow">A</span></p>
+</body>
+</html>

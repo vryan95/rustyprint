@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>white-space-collapse</title>
+<style>
+#t { white-space-collapse: preserve-breaks }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { white-space-collapse: preserve-breaks; layout-lines: 2; layout-text: "a|b" }
+</script>
+</head>
+<body>
+<div id=t>a   
+   b</div>
+</body>
+</html>

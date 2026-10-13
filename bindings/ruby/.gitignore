@@ -1,0 +1,4 @@
+/lib/rustyprint/native/
+/pkg/
+/Gemfile.lock
+/.bundle/

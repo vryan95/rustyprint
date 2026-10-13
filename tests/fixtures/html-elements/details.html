@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>details</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: block; layout-text: "▸ Summary" }
+#b { layout-text: "▾ Summary|Content" }
+#c { layout-text: "▸ Details" }
+#h { layout-width: none }
+</script>
+</head>
+<body>
+<details id=a><summary>Summary</summary><p id=h>Hidden</p></details>
+<details id=b open><summary>Summary</summary><p>Content</p></details>
+<details id=c><p>No summary</p></details>
+</body>
+</html>

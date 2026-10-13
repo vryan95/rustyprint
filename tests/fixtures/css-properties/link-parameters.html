@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>link-parameters</title>
+<style>
+#a { link-parameters: param(--color, green) }
+#b { link-parameters: param(--fg, rgb(0 0 255)), param(--empty) }
+#c { link-parameters: param(color, red) }
+#d { link-parameters: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { link-parameters: param(--color, green) }
+#b { link-parameters: param(--fg, rgb(0 0 255)), param(--empty) }
+#c { link-parameters: none }
+#d { link-parameters: none }
+#e { link-parameters: none }
+warning: invalid value for `link-parameters`
+</script>
+</head>
+<body>
+<div id=a><span id=e>a</span></div><div id=b></div><div id=c></div><div id=d></div>
+</body>
+</html>

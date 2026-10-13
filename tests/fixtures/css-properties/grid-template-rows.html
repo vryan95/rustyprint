@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-template-rows</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#g1 { grid-template-rows: 20px 1fr 30px; layout-height: 100px }
+#a1 { layout-y: 0px; layout-height: 20px }
+#a2 { layout-y: 20px; layout-height: 50px }
+#a3 { layout-y: 70px; layout-height: 30px }
+#g2 { grid-template-rows: 50% 10px; layout-height: 25px }
+#b2 { layout-y: 115px }
+#g3 { grid-template-rows: [top] 10px [middle] 10px [bottom] }
+#c1 { layout-y: 135px; layout-height: 10px }
+#n { grid-template-rows: none }
+#p1 { layout-page: 1 }
+#p3 { layout-page: 2; layout-page-y: 0px }
+</script>
+</head>
+<body>
+<div class=g id=g1 style="grid-template-rows: 20px 1fr 30px; height: 100px"><div id=a1></div><div id=a2></div><div id=a3></div></div>
+<div class=g id=g2 style="grid-template-rows: 50% 10px"><div style="height: 15px"></div><div id=b2></div></div>
+<div class=g id=g3 style="grid-template-rows: [top] 10px [middle] 10px [bottom]"><div id=c1 style="grid-row: middle / bottom"></div></div>
+<div class=g id=n></div>
+<div class=g style="grid-template-rows: 400px 400px 400px"><div id=p1 style="break-inside: avoid"></div><div style="break-inside: avoid"></div><div id=p3 style="break-inside: avoid"></div></div>
+</body>
+</html>

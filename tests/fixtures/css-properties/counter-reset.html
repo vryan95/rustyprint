@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>counter-reset</title>
+<style>
+.s { counter-reset: n }
+.t { counter-reset: n 5 m -2 }
+.r { counter-reset: reversed(n) }
+p::before { content: counter(n) ":" counter(m) " " }
+.r p { counter-increment: n -1 }
+#bad { counter-reset: none 1 }
+</style>
+<script type="text/x-rustyprint-expect">
+.s { counter-reset: n 0 }
+.t { counter-reset: n 5 m -2 }
+.r { counter-reset: reversed(n) }
+p { counter-reset: none }
+#a { layout-text: "0:0 a" }
+#b { layout-text: "5:-2 b" }
+#c { layout-text: "3:-2 c" }
+#d { layout-text: "1:-2 d" }
+warning: invalid value for `counter-reset`
+</script>
+</head>
+<body>
+<div class=s><p id=a>a</p></div>
+<div class=t><p id=b>b</p></div>
+<div class=r><p id=c>c</p><p>x</p><p id=d>d</p></div>
+<div id=bad></div>
+</body>
+</html>

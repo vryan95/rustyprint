@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-snap-align</title>
+<style>
+body { font-size: 10px }
+#a { scroll-snap-align: start }
+#b { scroll-snap-align: center end }
+#c { scroll-snap-align: end end }
+#bad { scroll-snap-align: left }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-snap-align: start }
+#b { scroll-snap-align: center end }
+#c { scroll-snap-align: end }
+html { scroll-snap-align: none }
+warning: invalid value for `scroll-snap-align`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

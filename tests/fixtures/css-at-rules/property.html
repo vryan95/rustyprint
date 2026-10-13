@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@property</title>
+<style>
+@property --size { syntax: '<length>'; inherits: false; initial-value: 10px }
+@property --tint { syntax: '<color>'; inherits: true; initial-value: red }
+@property --missing { syntax: '<length>'; inherits: false }
+@property not-custom { syntax: '*'; inherits: false }
+@keyframes swell { to { --size: 30px } }
+#a { font-size: 10px; --size: 2em; width: var(--size) }
+#c { --size: red; width: var(--size) }
+#d { animation: swell 2s linear -1s; width: var(--size) }
+#e { --size: initial; --tint: initial }
+#f { --tint: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { --size: 20px; width: 20px; --tint: rgb(255, 0, 0) }
+#b { --size: 10px; --tint: rgb(255, 0, 0) }
+#c { --size: 10px; width: 10px }
+#d { --size: 20px; width: 20px }
+#e { --size: 10px; --tint: rgb(255, 0, 0) }
+#f { --tint: rgb(0, 0, 255) }
+#g { --tint: rgb(0, 0, 255) }
+warning: ignored @property --missing: it needs `initial-value`
+warning: @property names must start with --
+</script>
+</head>
+<body>
+<div id=a><div id=b></div></div>
+<div id=c></div>
+<div id=d></div>
+<div id=e></div>
+<div id=f><div id=g></div></div>
+</body>
+</html>

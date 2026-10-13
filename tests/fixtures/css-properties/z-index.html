@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>z-index</title>
+<style>
+body { margin: 0 }
+div { background: silver; height: 20px }
+#t > div { position: absolute; width: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { z-index: 2 }
+#b { z-index: 1 }
+#c { z-index: -1 }
+#d { z-index: auto }
+#a { layout-paint-order: >#b }
+#b { layout-paint-order: >#d }
+#c { layout-paint-order: <#t }
+#t { layout-paint-order: <#d }
+#e { layout-paint-order: >#f }
+#g { layout-paint-order: <#h }
+#fi { layout-paint-order: <#t }
+#fj { layout-paint-order: >#fk }
+#fj { layout-paint-order: <#h }
+</script>
+</head>
+<body>
+<div id=t>
+<div id=a style="left: 0px; z-index: 2"></div>
+<div id=b style="left: 30px; z-index: 1"></div>
+<div id=c style="left: 60px; z-index: -1"></div>
+<div id=d style="left: 90px; z-index: auto"></div>
+</div>
+<div id=f style="position: relative; z-index: 5"><div id=g style="z-index: 100"></div></div>
+<div id=e style="position: relative; z-index: 6"></div>
+<div id=h style="position: relative; z-index: 5"></div>
+<div style="display: flex; background: none"><div id=fi style="z-index: -1; width: 10px"></div><div id=fj style="z-index: 1; width: 20px"></div><div id=fk style="width: 30px"></div></div>
+</body>
+</html>

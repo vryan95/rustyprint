@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-perspective</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: perspective(100px) translateZ(-100px); layout-paint: "transform(0.5,0,0,0.5,25,12.5)" }
+#b { transform: perspective(none); layout-paint: "transform(1,0,0,1,0,0)" }
+</script>
+</head>
+<body>
+<div id=a style="transform: perspective(100px) translateZ(-100px)"></div>
+<div id=b style="transform: perspective(none)"></div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-margin-right</title>
+<style>
+body { font-size: 10px }
+#a { scroll-margin-right: 7px }
+#b { scroll-margin-right: 2em }
+#bad { scroll-margin-right: 5% }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-margin-right: 7px }
+#b { scroll-margin-right: 20px }
+html { scroll-margin-right: 0px }
+warning: invalid value for `scroll-margin-right`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

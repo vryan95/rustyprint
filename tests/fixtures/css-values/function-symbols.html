@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>symbols()</title>
+<style>
+#a { list-style-type: symbols(cyclic "*" "†") }
+#c { list-style-type: symbols("x") }
+#d::before { content: counter(list-item, symbols(alphabetic "a" "b")) " " }
+#e { list-style-type: symbols(numeric "0") }
+#f { list-style-type: symbols(fixed "①" "②") }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { list-style-type: symbols(cyclic "*" "†") }
+#c { list-style-type: symbols("x") }
+#a1 { layout-text: "* a" }
+#b { layout-text: "† b" }
+#c1 { layout-text: "xx c" }
+#d { layout-text: "• aa d" }
+#f1 { layout-text: "② f" }
+#g { layout-text: "3 g" }
+warning: invalid value for `list-style-type`
+</script>
+</head>
+<body>
+<ol id=a><li id=a1>a</li><li id=b>b</li></ol>
+<ol id=c start=2><li id=c1>c</li></ol>
+<ul><li>x</li><li>x</li><li id=d>d</li></ul>
+<ol id=e><li>e</li></ol>
+<ol id=f start=2><li id=f1>f</li><li id=g>g</li></ol>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>select</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: inline-block; box-sizing: border-box; layout-text: "Medium" }
+#a { layout-width: >#b }
+#b { layout-text: "Two" }
+#c { layout-text: "x" }
+#d { layout-text: "Red|Blues|Navy|Sky" }
+#e { layout-text: "Red|Green" }
+#f { layout-height: <#d }
+</script>
+</head>
+<body>
+<p><select id=a><option>Small<option selected>Medium<option>Extra large</select>
+<select id=b><option disabled>One<option>Two</select>
+<select id=c><option>x</select></p>
+<p><select id=d size=4><option>Red<optgroup label=Blues><option>Navy<option>Sky</optgroup></select>
+<select id=e multiple><option>Red<option selected>Green</select>
+<select id=f size=2><option>a<option>b<option>c</select></p>
+</body>
+</html>

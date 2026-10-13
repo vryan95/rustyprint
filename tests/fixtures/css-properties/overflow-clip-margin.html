@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>overflow-clip-margin</title>
+<style>
+#t { overflow-clip-margin: 20px }
+#u { overflow-clip-margin: 5px content-box }
+#v { overflow-clip-margin: border-box }
+#w { overflow-clip-margin: -1px }
+#x { overflow: clip; overflow-clip-margin: 10px; height: 10px }
+#x div { height: 100px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { overflow-clip-margin: 20px }
+#u { overflow-clip-margin: content-box 5px }
+#v { overflow-clip-margin: border-box }
+html { overflow-clip-margin: 0px }
+#x { paint-items: 2 }
+warning: invalid value for `overflow-clip-margin`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w></div><div id=x><div></div></div>
+</body>
+</html>

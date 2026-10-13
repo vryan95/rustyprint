@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ruby-position</title>
+<style>
+body { margin: 0; font: 20px/30px serif }
+</style>
+<script type="text/x-rustyprint-expect">
+#o { ruby-position: alternate; layout-y: <#ob; layout-x: >#ob }
+#u { ruby-position: under; layout-y: >#ub }
+#a1 { layout-y: <#ab }
+#a2 { layout-y: >#ab }
+#v { ruby-position: over; layout-y: <#vb }
+#i { ruby-position: inter-character; layout-x: >#ib; layout-y: >#ib }
+#iv { layout-x: >#ivb }
+</script>
+</head>
+<body>
+<p><ruby><span id=ob>Base</span><rt id=o>over</rt></ruby></p>
+<p><ruby style="ruby-position: under"><span id=ub>Base</span><rt id=u>under</rt></ruby></p>
+<p><ruby><span id=ab>Two</span><rt id=a1>one</rt><rt id=a2>two</rt></ruby></p>
+<p><ruby style="ruby-position: over"><span id=vb>Base</span><rt id=v>one</rt><rt>two</rt></ruby></p>
+<p><ruby style="ruby-position: inter-character"><span id=ib>X</span><rt id=i>ㄅ</rt></ruby></p>
+<div style="writing-mode: vertical-rl; height: 200px"><ruby style="ruby-position: inter-character"><span id=ivb>X</span><rt id=iv>ㄅ</rt></ruby></div>
+</body>
+</html>

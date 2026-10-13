@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>max-width</title>
+<style>
+#t { max-width: fit-content(100px) }
+#v { max-width: 200px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { max-width: fit-content(100px) }
+#u { max-width: none }
+#v { layout-width: 200px }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div>
+</body>
+</html>

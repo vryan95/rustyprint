@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-rotatez</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: rotateZ(90deg); layout-paint: "transform(0,1,-1,0,75,-25)" }
+</script>
+</head>
+<body>
+<div id=a style="transform: rotateZ(90deg)"></div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>timeline-trigger-active-range</title>
+<style>
+body { font-size: 10px }
+#a { timeline-trigger-active-range: auto }
+#b { timeline-trigger-active-range: cover 10% }
+#bad { timeline-trigger-active-range: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { timeline-trigger-active-range-start: auto; timeline-trigger-active-range-end: auto }
+#b { timeline-trigger-active-range-start: cover 10%; timeline-trigger-active-range-end: cover 100% }
+warning: invalid value for `timeline-trigger-active-range`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

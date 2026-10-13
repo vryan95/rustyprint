@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-name</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+@keyframes grow { from, to { width: 5px } }
+div { height: 1px; width: 10px }
+#a { animation-name: none, slide, "quoted" }
+#b { animation-name: slide; animation-duration: 4s; animation-timing-function: linear; animation-delay: -2s }
+#c { margin-left: 3px; animation-name: missing; animation-duration: 4s }
+#bad { animation-name: slide, initial }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-name: none, slide, "quoted" }
+#b { margin-left: 50px }
+#c { margin-left: 3px }
+html { animation-name: none }
+warning: invalid value for `animation-name`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

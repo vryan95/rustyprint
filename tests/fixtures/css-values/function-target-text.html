@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>target-text()</title>
+<style>
+h2::before { content: "Ch." }
+h2::after { content: "!" }
+#a::after { content: " = " target-text(attr(href url)) }
+#b::after { content: " = " target-text(attr(href url), before) }
+#c::after { content: " = " target-text(attr(href url), after) }
+#d::after { content: " = " target-text(attr(href url), first-letter) }
+#e::after { content: " = " target-text(attr(href url), content) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "a = “Quoted heading”" }
+#b { layout-text: "b = Ch." }
+#c { layout-text: "c = !" }
+#d { layout-text: "d = “Q" }
+#e { layout-text: "e =" }
+</script>
+</head>
+<body>
+<p><a id=a href="#h">a</a></p>
+<p><a id=b href="#h">b</a></p>
+<p><a id=c href="#h">c</a></p>
+<p><a id=d href="#h">d</a></p>
+<p><a id=e href="#missing">e</a></p>
+<h2 id=h>  “Quoted
+   heading”  </h2>
+</body>
+</html>

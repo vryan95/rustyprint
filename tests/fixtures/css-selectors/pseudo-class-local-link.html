@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:local-link</title>
+<style>
+:local-link { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<a id=yes href=#top></a><a id=no href=/page></a>
+</body>
+</html>

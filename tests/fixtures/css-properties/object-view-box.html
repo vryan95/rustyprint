@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>object-view-box</title>
+<style>
+#a { object-view-box: inset(0 50% 0 0) }
+#b { object-view-box: xywh(10px 0 20px 20px) }
+#c { object-view-box: inset(0 50% 0 0); width: 40px }
+#d { object-view-box: circle(5px) }
+#e { object-view-box: rect(0 30px auto 10px) }
+#f { object-view-box: rect(auto auto 50% 50%) }
+#g { object-view-box: inset(5px round 2px) }
+#h { object-view-box: rect(0 auto 10px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { object-view-box: inset(0px 50% 0px 0px); layout-width: 20px; layout-height: 20px; layout-image: "0 0 40 20" }
+#b { object-view-box: xywh(10px 0px 20px 20px); layout-width: 20px; layout-image: "-10 0 40 20" }
+#c { layout-height: 40px; layout-image: "0 0 80 40" }
+#e { object-view-box: rect(0px 30px auto 10px); layout-width: 20px; layout-height: 20px; layout-image: "-10 0 40 20" }
+#f { object-view-box: rect(auto auto 50% 50%); layout-width: 20px; layout-height: 10px; layout-image: "-20 0 40 20" }
+#g { object-view-box: inset(5px 5px 5px 5px); layout-width: 30px }
+#h { object-view-box: none }
+#n { object-view-box: none; layout-width: 40px }
+warning: invalid value for `object-view-box`
+warning: invalid value for `object-view-box`
+</script>
+</head>
+<body>
+<p><img id=a src="assets/photo.png"> <img id=b src="assets/photo.png"> <img id=c src="assets/photo.png">
+<img id=n src="assets/photo.png"> <img id=e src="assets/photo.png"> <img id=f src="assets/photo.png">
+<img id=g src="assets/photo.png"> <img id=h src="assets/photo.png"></p>
+</body>
+</html>

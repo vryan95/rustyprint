@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>place-items</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 100px; height: 100px }
+.c > div { width: 40px; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { align-items: center; justify-items: center }
+#a1 { layout-x: 0px; layout-y: 45px }
+#b { align-items: end; justify-items: legacy left }
+#b1 { layout-y: 190px }
+#c { align-items: baseline; justify-items: baseline }
+</script>
+</head>
+<body>
+<div class=c id=a style="place-items: center"><div id=a1></div></div>
+<div class=c id=b style="place-items: end legacy left"><div id=b1></div></div>
+<div id=c style="place-items: baseline"></div>
+</body>
+</html>

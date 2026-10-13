@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>contain-intrinsic-block-size</title>
+<style>
+div { contain-intrinsic-block-size: auto 5px }
+#u { writing-mode: vertical-lr }
+#c { contain: size; contain-intrinsic-block-size: 25px }
+#d { writing-mode: vertical-lr; contain: size; contain-intrinsic-block-size: 35px; float: left }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { contain-intrinsic-height: auto 5px }
+#u { contain-intrinsic-width: auto 5px }
+#c { layout-height: 25 }
+#d { layout-width: 35 }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+<div id=c>Text</div><div id=d>Text</div>
+</body>
+</html>

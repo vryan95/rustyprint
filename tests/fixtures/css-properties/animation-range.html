@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-range</title>
+<style>
+body { font-size: 10px }
+#a { animation-range: entry 10% exit 90% }
+#b { animation-range: contain }
+#c { animation-range: normal 50% }
+#bad { animation-range: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-range-start: entry 10%; animation-range-end: exit 90% }
+#b { animation-range-start: contain 0%; animation-range-end: contain 100% }
+#c { animation-range-start: normal; animation-range-end: 50% }
+warning: invalid value for `animation-range`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

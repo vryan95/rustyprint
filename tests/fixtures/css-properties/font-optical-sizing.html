@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-optical-sizing</title>
+<style>
+@font-face { font-family: Simple; src: url(assets/simple.ttf) }
+@font-face { font-family: Narrow; src: url(assets/narrow.ttf) }
+@font-face { font-family: Var; src: url(assets/var.ttf) }
+@font-face { font-family: Color; src: url(assets/color.ttf) }
+@font-face { font-family: Feat; src: url(assets/features.ttf) }
+.v { font-family: Var; font-optical-sizing: none }
+span { font-family: Var; font-size: 20px }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { font-optical-sizing: auto; layout-width: 17.2px }
+#b { font-optical-sizing: none; layout-width: 16px }
+</script>
+</head>
+<body>
+<p><span id=a>A</span></p>
+<p><span id=b style="font-optical-sizing: none">A</span></p>
+</body>
+</html>

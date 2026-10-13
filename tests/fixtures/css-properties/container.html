@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>container</title>
+<style>
+#a { container: sidebar / size; width: 100px; height: 50px }
+#b { container: main nav }
+#c { container: none / inline-size; width: 120px }
+#d { container: sidebar / normal }
+#e { container: and / size }
+@container sidebar (width = 100px) { .item { width: 7px } }
+@container (width = 120px) { .item { height: 3px } }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { container-name: sidebar; container-type: size }
+#b { container-name: main nav; container-type: normal }
+#c { container-name: none; container-type: inline-size }
+#d { container-type: normal }
+#a-item { width: 7px }
+#c-item { height: 3px }
+warning: invalid value for `container`
+</script>
+</head>
+<body>
+<div id=a><div class=item id=a-item></div></div><div id=b></div>
+<div id=c><div class=item id=c-item></div></div><div id=d></div><div id=e></div>
+</body>
+</html>

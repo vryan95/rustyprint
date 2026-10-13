@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background-position</title>
+<style>
+#t { background-position: right 10px top }
+#u { background-position: center bottom 5px, top, 25% 75% }
+#v { background-position: bottom right }
+#w { background-position: 10px top }
+#x { background-position: top 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-position-x: right 10px; background-position-y: 0% }
+#u { background-position-x: 50%, 50%, 25%; background-position-y: bottom 5px, 0%, 75% }
+#v { background-position-x: 100%; background-position-y: 100% }
+#w { background-position-x: 10px; background-position-y: 0% }
+warning: invalid value for `background-position`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w></div><div id=x></div>
+</body>
+</html>

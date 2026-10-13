@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>word-spacing</title>
+<style>
+#t { word-spacing: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { word-spacing: 10px; layout-width: >#r }
+</script>
+</head>
+<body>
+<div><span id=t>a b c</span></div>
+<div><span id=r>a b c</span></div>
+</body>
+</html>

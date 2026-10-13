@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>embed</title>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: 40px; layout-height: 20px; layout-image: "0 0 40 20" }
+#b { layout-width: none }
+#c { layout-width: 80px; layout-height: 40px }
+</script>
+</head>
+<body>
+<p><embed id=a src="assets/photo.png"> <embed id=b src="doc.pdf" type="application/pdf">
+<embed id=c src="assets/photo.png" type="image/png" width=80></p>
+</body>
+</html>

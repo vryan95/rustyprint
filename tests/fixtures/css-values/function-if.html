@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>if()</title>
+<style>
+div { --mode: dark }
+#a { color: if(style(--mode: dark): rgb(255, 255, 255); else: rgb(0, 0, 0)) }
+#b { --mode: light; color: if(style(--mode: dark): rgb(255, 255, 255); else: rgb(0, 0, 0)) }
+#c { width: if(media(width > 100px): 30px; else: 10px) }
+#d { width: if(media(print and (width < 1px)): 30px; media(min-width: 1px): 20px) }
+#e { width: if(supports(display: grid): 40px; else: 10px) }
+#f { width: if(not supports(made-up: value): 50px) }
+#g { margin: 1px if(style(--mode): 2px) 3px }
+#h { width: 5px; width: if(style(--mode: none): 9px) }
+#i { width: if((style(--mode: x)) or (style(--mode: dark)): 60px; else: 1px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { color: rgb(255, 255, 255) }
+#b { color: rgb(0, 0, 0) }
+#c { width: 30px }
+#d { width: 20px }
+#e { width: 40px }
+#f { width: 50px }
+#g { margin-top: 1px; margin-right: 2px; margin-bottom: 3px }
+#h { width: auto }
+#i { width: 60px }
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div>
+<div id=f></div><div id=g></div><div id=h></div><div id=i></div>
+</body>
+</html>

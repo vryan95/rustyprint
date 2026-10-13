@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>view-transition-scope</title>
+<style>
+body { font-size: 10px }
+#a { view-transition-scope: all }
+#b { view-transition-scope: none }
+#bad { view-transition-scope: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { view-transition-scope: all }
+#b { view-transition-scope: none }
+html { view-transition-scope: none }
+warning: invalid value for `view-transition-scope`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

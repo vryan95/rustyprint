@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>::placeholder</title>
+<style>
+#t::placeholder { color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#t::placeholder { color: rgb(0, 128, 0) }
+#u::placeholder { color: rgb(117, 117, 117) }
+#t { layout-text: "Your name" }
+#v { layout-text: "Filled" }
+</script>
+</head>
+<body>
+<input id=t placeholder="Your name"> <textarea id=u placeholder=Notes></textarea>
+<input id=v placeholder="Your name" value=Filled>
+</body>
+</html>

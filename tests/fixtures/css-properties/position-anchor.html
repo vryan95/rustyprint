@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>position-anchor</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#p { position-anchor: --a; layout-x: 150px; layout-y: 100px }
+#q { position-anchor: auto; layout-x: 3px }
+#r { position-anchor: none }
+</script>
+</head>
+<body>
+<div class=cb><div class=a></div>
+<div class=p id=p style="position-anchor: --a; left: anchor(right); top: anchor(top)"></div>
+<div class=p id=q style="left: anchor(right, 3px)"></div>
+<div class=p id=r style="position-anchor: none"></div></div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>unset</title>
+<style>
+#p { color: green; margin-top: 7px }
+#t { color: red; margin-top: 3px; color: unset; margin-top: unset }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { color: rgb(0, 128, 0); margin-top: 0px }
+</script>
+</head>
+<body>
+<div id=p><div id=t></div></div>
+</body>
+</html>

@@ -1,0 +1,45 @@
+# frozen_string_literal: true
+
+require "fileutils"
+require "rubygems/package"
+require "rspec/core/rake_task"
+
+REPO = File.expand_path("../..", __dir__)
+NATIVE = File.expand_path("lib/rustyprint/native", __dir__)
+
+def library_name
+  case RbConfig::CONFIG["host_os"]
+  when /mswin|mingw|cygwin/ then "rustyprint_ffi.dll"
+  when /darwin/ then "librustyprint_ffi.dylib"
+  else "librustyprint_ffi.so"
+  end
+end
+
+desc "Build the native library for this platform with Cargo and copy it into lib/rustyprint/native"
+task :compile do
+  sh "cargo", "build", "--release", "--locked", "-p", "rustyprint-ffi", chdir: REPO
+  FileUtils.mkdir_p(NATIVE)
+  target = ENV.fetch("CARGO_TARGET_DIR") { File.join(REPO, "target") }
+  FileUtils.cp(File.join(target, "release", library_name), NATIVE)
+end
+
+RSpec::Core::RakeTask.new(:spec)
+task spec: :compile
+
+desc "Build a platform gem around a native library: rake native PLATFORM=x86_64-linux-gnu LIBRARY=path"
+task :native do
+  platform = ENV.fetch("PLATFORM")
+  library = ENV.fetch("LIBRARY")
+  spec = Gem::Specification.load("rustyprint.gemspec")
+  spec.platform = Gem::Platform.new(platform)
+  FileUtils.rm_rf(NATIVE)
+  FileUtils.mkdir_p(NATIVE)
+  FileUtils.cp(library, NATIVE)
+  spec.files += Dir["lib/rustyprint/native/*"]
+  FileUtils.mkdir_p("pkg")
+  FileUtils.mv(Gem::Package.build(spec), "pkg")
+ensure
+  FileUtils.rm_rf(NATIVE)
+end
+
+task default: :spec

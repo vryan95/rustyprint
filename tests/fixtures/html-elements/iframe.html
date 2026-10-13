@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>iframe</title>
+<style>
+body { margin: 0 }
+iframe { display: block }
+#e { frame-sizing: content-height; width: 200px }
+#f { frame-sizing: content-width }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: block; border-top-width: 2px; border-top-style: inset; layout-width: 304px; layout-height: 154px; paint-items: >0 }
+#b { border-top-style: none; layout-width: 200px; layout-height: 50px; paint-items: 3 }
+#c { layout-width: 300px; layout-height: 150px; paint-items: 3 }
+#d { layout-width: 304px; layout-height: 154px }
+#e { layout-width: 204px; layout-height: 34px }
+#f { layout-width: 140px }
+#g { layout-height: 54px; paint-items: >10 }
+#h { layout-height: 154px }
+warning: could not load frame `missing.html`
+</script>
+</head>
+<body>
+<iframe id=a srcdoc="<p>Hello from srcdoc</p>"></iframe>
+<iframe id=b frameborder=0 width=200 height=50 srcdoc="<body style='margin: 0'><p style='margin: 0'>Hi</p>"></iframe>
+<iframe id=c frameborder=no src="assets/frame.html" srcdoc="<p style='margin: 0'>srcdoc wins</p>"></iframe>
+<iframe id=d src="missing.html"></iframe>
+<iframe id=e src="assets/frame.html"></iframe>
+<iframe id=f srcdoc="<body style='margin: 0 8px'><div style='width: 120px; height: 10px'></div>"></iframe>
+<iframe id=g src="assets/self.html" width=100 height=50></iframe>
+<iframe id=h src="about:blank"></iframe>
+</body>
+</html>

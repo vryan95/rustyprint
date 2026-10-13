@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>view-timeline</title>
+<style>
+body { font-size: 10px }
+#a { view-timeline: --v inline 10px 20px }
+#b { view-timeline: --w 5% }
+#bad { view-timeline: inline --v }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { view-timeline-name: --v; view-timeline-axis: inline; view-timeline-inset: 10px 20px }
+#b { view-timeline-name: --w; view-timeline-axis: block; view-timeline-inset: 5% }
+warning: invalid value for `view-timeline`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

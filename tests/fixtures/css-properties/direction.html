@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>direction</title>
+<style>
+#p { direction: rtl; width: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { direction: rtl }
+#t { layout-x: >250 }
+</script>
+</head>
+<body>
+<div id=p><span id=t>abc</span></div>
+</body>
+</html>

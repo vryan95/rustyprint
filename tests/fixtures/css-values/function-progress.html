@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>progress()</title>
+<style>
+#t { font-size: 10px; line-height: 20px; margin-top: calc(100px * progress(15px, 10px, 20px)) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-top: 50px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

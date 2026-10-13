@@ -1,0 +1,183 @@
+/* The report sample: a title page, a table of contents with page numbers, headers and footers. */
+
+@page {
+  size: A4;
+  margin: 24mm 20mm 22mm;
+
+  @top-left {
+    content: "Northwind Trading Co.";
+    font: bold 8pt "Noto Sans", sans-serif;
+    color: #1f3a60;
+    border-bottom: 0.5pt solid #c9d1dc;
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+  }
+
+  @top-right {
+    content: "Quarterly report, Q3 2026";
+    font: 8pt "Noto Sans", sans-serif;
+    color: #6e6e6e;
+    border-bottom: 0.5pt solid #c9d1dc;
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+  }
+
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font: 8pt "Noto Sans", sans-serif;
+    color: #6e6e6e;
+  }
+}
+
+/* The title page has no header or footer. */
+@page title {
+  margin: 0;
+
+  @top-left { content: none; border: none; }
+  @top-right { content: none; border: none; }
+  @bottom-center { content: none; }
+}
+
+body {
+  font: 10.5pt/1.55 "Noto Serif", serif;
+  color: #222;
+  margin: 0;
+  hyphens: auto;
+  text-align: justify;
+}
+
+.title-page {
+  page: title;
+  height: 297mm;
+  box-sizing: border-box;
+  padding: 70mm 24mm 0;
+  background: linear-gradient(160deg, #1f3a60 0%, #1f3a60 55%, #2a9d8f 100%);
+  color: white;
+  font-family: "Noto Sans", sans-serif;
+  text-align: left;
+}
+
+.title-page .kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 10pt;
+  color: #e9c46a;
+}
+
+.title-page h1 {
+  color: white;
+  font-size: 34pt;
+  line-height: 1.15;
+  margin: 4mm 0 8mm;
+}
+
+.title-page p {
+  font-size: 12pt;
+  max-width: 120mm;
+}
+
+h1, h2, h3 {
+  font-family: "Noto Sans", sans-serif;
+  color: #1f3a60;
+  text-align: left;
+  hyphens: none;
+  break-after: avoid;
+}
+
+main h2 {
+  font-size: 17pt;
+  margin: 0 0 4mm;
+  padding-bottom: 2mm;
+  border-bottom: 1.5pt solid #2a9d8f;
+  break-before: page;
+}
+
+main h3 {
+  font-size: 12pt;
+  margin: 6mm 0 2mm;
+}
+
+nav.toc {
+  break-before: page;
+  font-family: "Noto Sans", sans-serif;
+}
+
+nav.toc h2 {
+  font-size: 17pt;
+  margin: 0 0 6mm;
+}
+
+nav.toc ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+nav.toc li {
+  margin: 0 0 2.5mm;
+}
+
+nav.toc li li {
+  margin: 1.5mm 0 0 6mm;
+  font-size: 9.5pt;
+  color: #444;
+}
+
+nav.toc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+nav.toc a::after {
+  content: leader(dotted) target-counter(attr(href url), page);
+}
+
+figure {
+  margin: 6mm 0;
+  break-inside: avoid;
+}
+
+figure img {
+  width: 100%;
+}
+
+figcaption {
+  font: 8.5pt/1.4 "Noto Sans", sans-serif;
+  color: #6e6e6e;
+  margin-top: 2mm;
+}
+
+table.figures {
+  width: 100%;
+  border-collapse: collapse;
+  font: 9pt "Noto Sans", sans-serif;
+  margin: 4mm 0;
+  break-inside: avoid;
+}
+
+table.figures th,
+table.figures td {
+  padding: 1.5mm 2mm;
+  border-bottom: 0.5pt solid #d9dee5;
+  text-align: right;
+}
+
+table.figures th:first-child,
+table.figures td:first-child {
+  text-align: left;
+}
+
+table.figures thead th {
+  border-bottom: 1pt solid #1f3a60;
+}
+
+.callout {
+  margin: 5mm 0;
+  padding: 3mm 5mm;
+  background: #fdf6e3;
+  border-left: 3pt solid #e9c46a;
+  font-family: "Noto Sans", sans-serif;
+  font-size: 9.5pt;
+  text-align: left;
+  break-inside: avoid;
+}

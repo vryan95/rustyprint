@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:default</title>
+<style>
+:default { outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { outline-style: dotted }
+#yes2 { outline-style: dotted }
+#yes3 { outline-style: dotted }
+#yes4 { outline-style: dotted }
+#no { outline-style: none }
+#no2 { outline-style: none }
+#no3 { outline-style: none }
+#no4 { outline-style: none }
+</script>
+</head>
+<body>
+<input id=yes type=checkbox checked><input id=no type=checkbox>
+<select><option id=no2>a<option id=yes2 selected>b</select>
+<form><input id=no3><button id=yes3>Send</button><input id=no4 type=submit></form>
+<form><input id=yes4 type=image alt=Go></form>
+</body>
+</html>

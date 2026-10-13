@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>prefix</title>
+<style>
+@counter-style step { system: extends decimal; prefix: "Step "; suffix: ": " }
+@counter-style bad { system: extends decimal; prefix: 1 }
+li { list-style-type: step }
+#c::before { content: counter(list-item, step) "/" }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "Step 1: a" }
+#c { layout-text: "Step 2: 2/c" }
+warning: invalid value for `prefix`
+</script>
+</head>
+<body>
+<ol><li id=a>a</li><li id=c>c</li></ol>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>user-select</title>
+<style>
+body { font-size: 10px }
+#a { user-select: none }
+#b { user-select: all }
+#c { user-select: text }
+#bad { user-select: contain }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { user-select: none }
+#b { user-select: all }
+#c { user-select: text }
+html { user-select: auto }
+warning: invalid value for `user-select`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

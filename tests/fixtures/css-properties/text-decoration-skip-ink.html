@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-decoration-skip-ink</title>
+<style>
+#t, #r { text-decoration: underline }
+#r { text-decoration-skip-ink: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { text-decoration-skip-ink: auto; paint-items: >#r }
+#r { text-decoration-skip-ink: none }
+</script>
+</head>
+<body>
+<div id=t>gjpq gjpq</div><div id=r>gjpq gjpq</div>
+</body>
+</html>

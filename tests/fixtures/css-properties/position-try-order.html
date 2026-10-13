@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>position-try-order</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+.p { position-anchor: --a }
+#p { position-try-order: most-height }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { position-try-order: most-height; layout-y: 120px }
+#q { position-try-order: normal }
+#n { layout-y: 50px }
+</script>
+</head>
+<body>
+<div class=cb><div class=a></div>
+<div class=p id=p style="position-area: right; width: 300px; height: 50px; position-try-fallbacks: top span-right, bottom span-right"></div>
+<div class=p id=n style="position-area: right; width: 300px; height: 50px; position-try-fallbacks: top span-right, bottom span-right"></div>
+<div class=p id=q></div></div>
+</body>
+</html>

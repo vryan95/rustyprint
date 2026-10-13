@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@custom-media</title>
+<style>
+@custom-media --wide (width > 100px);
+@custom-media --narrow (width < 100px);
+@media (--wide) { #yes { background-color: green } }
+@media (--narrow) { #no { background-color: green } }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<div id=yes></div>
+<div id=no></div>
+</body>
+</html>

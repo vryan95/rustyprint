@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>cursor</title>
+<style>
+body { font-size: 10px }
+#a { cursor: url(a.png) 4 8, pointer }
+#b { cursor: zoom-in }
+#c { cursor: url(a.svg), url(b.png), not-allowed }
+#bad { cursor: url(a.png) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { cursor: url("a.png") 4 8, pointer }
+#b { cursor: zoom-in }
+#c { cursor: url("a.svg"), url("b.png"), not-allowed }
+html { cursor: auto }
+warning: invalid value for `cursor`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>list-style</title>
+<style>
+#a { list-style: square inside }
+#b { list-style: none }
+#c { list-style: url(a.png) none }
+#d { list-style: none lower-roman }
+#e { list-style: inside "* " }
+#f { list-style: none none none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { list-style-type: square; list-style-position: inside; list-style-image: none }
+#b { list-style-type: none; list-style-image: none; layout-text: "b" }
+#c { list-style-type: none; list-style-image: url("a.png") }
+#d { list-style-type: lower-roman; list-style-image: none; layout-text: "iv. d" }
+#e { list-style-type: "* "; list-style-position: inside; layout-text: "* e" }
+warning: invalid value for `list-style`
+warning: could not load image `a.png`
+</script>
+</head>
+<body>
+<ul><li id=a>a</li></ul>
+<ul><li id=b>b</li></ul>
+<ul><li id=c>c</li></ul>
+<ol start=4><li id=d>d</li></ol>
+<ul><li id=e>e</li><li id=f>f</li></ul>
+</body>
+</html>

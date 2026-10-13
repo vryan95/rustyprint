@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>top</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 200px; height: 100px; padding: 10px; border: 5px solid }
+.cb > div { position: absolute; width: 20px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { top: 10px; layout-y: 15px }
+#b { top: 50%; layout-y: 65px }
+#c { top: 25%; layout-y: 130px }
+#d { top: auto }
+</script>
+</head>
+<body>
+<div class=cb><div id=a style="top: 10px"></div><div id=b style="top: 50%"></div></div>
+<div id=c style="position: relative; top: 25%">relative to an auto height: no offset</div>
+<div id=d style="position: relative; top: auto">auto</div>
+</body>
+</html>

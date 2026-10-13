@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-delay</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+@keyframes grow { from, to { width: 5px } }
+div { height: 1px; width: 10px }
+#a { animation-delay: 1s, -250ms }
+#b { animation: slide 4s linear; animation-delay: -1s }
+#c { animation: slide 4s linear; animation-delay: 1s }
+#bad { animation-delay: 1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-delay: 1s, -0.25s }
+#b { margin-left: 75px }
+#c { margin-left: 0px }
+html { animation-delay: 0s }
+warning: invalid value for `animation-delay`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

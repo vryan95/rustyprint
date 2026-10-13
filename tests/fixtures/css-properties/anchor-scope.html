@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>anchor-scope</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+#s { anchor-scope: --a }
+#t { anchor-scope: all }
+</style>
+<script type="text/x-rustyprint-expect">
+#s { anchor-scope: --a }
+#t { anchor-scope: all }
+#p { layout-x: 100px }
+#q { layout-x: 7px }
+#r { layout-x: 7px }
+</script>
+</head>
+<body>
+<div class=cb><div id=s><div class=a></div><div class=p id=p style="left: anchor(--a left, 7px)"></div></div>
+<div class=p id=q style="left: anchor(--a left, 7px)"></div>
+<div id=t><div class=a style="anchor-name: --b"></div></div>
+<div class=p id=r style="left: anchor(--b left, 7px)"></div></div>
+</body>
+</html>

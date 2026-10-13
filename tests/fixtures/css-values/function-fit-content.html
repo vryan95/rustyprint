@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>fit-content()</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-auto-rows: 10px }
+span { display: inline-block; width: 60px; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-template-columns: fit-content(100px) 1fr }
+#a1 { layout-width: 100px }
+#a2 { layout-x: 100px; layout-width: 200px }
+#b { grid-template-columns: fit-content(100px) 1fr }
+#b1 { layout-width: 60px }
+#c { grid-template-columns: fit-content(10%) }
+#d1 { layout-width: 60px }
+#e { width: fit-content(80px); layout-width: 80px }
+</script>
+</head>
+<body>
+<div class=g id=a style="grid-template-columns: fit-content(100px) 1fr"><div id=a1><span></span><span></span></div><div id=a2></div></div>
+<div class=g id=b style="grid-template-columns: fit-content(100px) 1fr"><div id=b1><span></span></div><div></div></div>
+<div class=g id=c style="grid-template-columns: fit-content(10%)"><div id=d1><span></span></div></div>
+<div id=e style="width: fit-content(80px)"><span></span><span></span></div>
+</body>
+</html>

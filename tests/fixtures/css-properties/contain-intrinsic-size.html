@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>contain-intrinsic-size</title>
+<style>
+#t { contain-intrinsic-size: 10px auto 20px }
+#u { contain-intrinsic-size: auto 30px }
+#c { contain: size; contain-intrinsic-size: 50px 30px; float: left }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { contain-intrinsic-width: 10px; contain-intrinsic-height: auto 20px }
+#u { contain-intrinsic-width: auto 30px; contain-intrinsic-height: auto 30px }
+#c { layout-width: 50; layout-height: 30 }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+<div id=c>Floated text</div>
+</body>
+</html>

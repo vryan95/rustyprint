@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>view-transition-class</title>
+<style>
+body { font-size: 10px }
+#a { view-transition-class: card hero }
+#b { view-transition-class: none }
+#bad { view-transition-class: none card }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { view-transition-class: card hero }
+#b { view-transition-class: none }
+html { view-transition-class: none }
+warning: invalid value for `view-transition-class`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

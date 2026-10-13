@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>overflow-block</title>
+<style>
+#t { writing-mode: vertical-rl; overflow-block: clip }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { overflow-x: clip; overflow-block: clip }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

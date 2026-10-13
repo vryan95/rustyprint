@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-row-end</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-auto-rows: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-row-end: span 3; layout-y: 0px; layout-height: 30px }
+#b { grid-row-end: 3; layout-y: 40px; layout-height: 10px }
+#c { grid-row-end: span x; layout-y: 50px; layout-height: 10px }
+#d { grid-row-end: auto }
+</script>
+</head>
+<body>
+<div class=g><div id=a style="grid-row-end: span 3"></div></div>
+<div class=g><div id=b style="grid-row-end: 3"></div></div>
+<div class=g style="grid-template-rows: 10px [x] 10px [x] 10px"><div id=c style="grid-row: 1 / span x"></div></div>
+<div id=d></div>
+</body>
+</html>

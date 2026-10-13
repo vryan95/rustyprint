@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@container</title>
+<style>
+body { margin: 0 }
+.card { container: card / inline-size; --theme: dark }
+.wide { width: 500px }
+.narrow { width: 200px }
+.box { container-type: size; width: 300px; height: 100px }
+.item { color: rgb(0, 0, 0); width: 10px }
+@container (width > 400px) { .item { color: rgb(0, 128, 0) } }
+@container card (width <= 400px) { .item { color: rgb(255, 0, 0) } }
+@container (height > 50px) { .item { width: 20px } }
+@container (orientation: landscape) and (aspect-ratio > 2) { .item { width: 30px } }
+@container style(--theme: dark) { .item { text-decoration-line: underline } }
+@container not (width > 1000px) { .item { margin-left: 5px } }
+@container missing (width > 0px) { .item { margin-right: 5px } }
+@container (min-width: 30em) { .item { padding-left: 1px } }
+@container card { .card::after { content: "x" } }
+@container card (width > 400px) { .card::before { content: "wide" } }
+.outer { container-type: inline-size; width: 600px }
+.inner { container-type: inline-size; width: 50% }
+@container (width > 250px) { .inner .item { padding-right: 2px } }
+@container scroll-state(stuck: top) { .item { padding-top: 9px } }
+@container (width > ) { .item { padding-bottom: 9px } }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { color: rgb(0, 128, 0); width: 10px; text-decoration-line: underline; margin-left: 5px; margin-right: 0px; padding-left: 1px }
+#b { color: rgb(255, 0, 0); width: 10px; padding-left: 0px }
+#c { color: rgb(0, 0, 0); width: 30px; text-decoration-line: none }
+#wide::before { content: "wide" }
+#wide::after { content: "x" }
+#d { padding-right: 2px; padding-top: 0px; padding-bottom: 0px }
+</script>
+</head>
+<body>
+<div class="card wide" id=wide><div class=item id=a></div></div>
+<div class="card narrow"><div class=item id=b></div></div>
+<div class=box><div class=item id=c></div></div>
+<div class=outer><div class=inner><div class=item id=d></div></div></div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>line-clamp</title>
+<style>
+#t { line-clamp: 2; width: 100px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { line-clamp: 2; layout-lines: 2 }
+</script>
+</head>
+<body>
+<div id=t>hyphenation internationalization characteristically incomprehensibilities</div>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>image-rendering</title>
+<style>
+#b { image-rendering: pixelated }
+#c { image-rendering: crisp-edges }
+#d { image-rendering: smooth }
+div { image-rendering: pixelated }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { image-rendering: auto; layout-image-smooth: true }
+#b { image-rendering: pixelated; layout-image-smooth: false }
+#c { layout-image-smooth: false }
+#d { image-rendering: smooth; layout-image-smooth: true }
+#e { image-rendering: pixelated; layout-image-smooth: false }
+</script>
+</head>
+<body>
+<p><img id=a src="assets/photo.png"><img id=b src="assets/photo.png"><img id=c src="assets/photo.png">
+<img id=d src="assets/photo.png"></p>
+<div><img id=e src="assets/photo.png"></div>
+</body>
+</html>

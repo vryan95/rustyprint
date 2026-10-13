@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>view-timeline-axis</title>
+<style>
+body { font-size: 10px }
+#a { view-timeline-axis: x, block }
+#bad { view-timeline-axis: z }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { view-timeline-axis: x, block }
+html { view-timeline-axis: block }
+warning: invalid value for `view-timeline-axis`
+</script>
+</head>
+<body>
+<div id=a></div><div id=bad></div>
+</body>
+</html>

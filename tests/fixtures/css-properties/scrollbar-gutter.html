@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scrollbar-gutter</title>
+<style>
+body { font-size: 10px }
+#a { scrollbar-gutter: stable }
+#b { scrollbar-gutter: stable both-edges }
+#c { scrollbar-gutter: both-edges stable }
+#bad { scrollbar-gutter: both-edges }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scrollbar-gutter: stable }
+#b { scrollbar-gutter: stable both-edges }
+#c { scrollbar-gutter: stable both-edges }
+html { scrollbar-gutter: auto }
+warning: invalid value for `scrollbar-gutter`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

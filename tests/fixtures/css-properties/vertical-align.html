@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>vertical-align</title>
+<style>
+#t { vertical-align: super }
+#m { vertical-align: middle }
+#b { vertical-align: bottom }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { baseline-shift: super; layout-y: <#r }
+#m { alignment-baseline: middle }
+#b { baseline-shift: bottom }
+</script>
+</head>
+<body>
+<div><span id=r>base</span><span id=t>super</span><span id=m>middle</span><span id=b>bottom</span></div>
+</body>
+</html>

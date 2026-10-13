@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>contain</title>
+<style>
+body { margin: 0; font-size: 10px; line-height: 10px; counter-reset: n }
+.inc::before { counter-increment: n; content: counter(n) }
+#size { contain: size }
+#size-float { contain: size; float: left }
+#inline { contain: inline-size; display: inline-block }
+#layout { contain: layout; margin-left: 50px; height: 20px }
+#layout .abs { position: absolute; left: 10px; top: 0; width: 5px; height: 5px }
+#collapse { contain: layout }
+#collapse p { margin: 20px 0 0 }
+#paint { contain: paint; height: 10px }
+#scoped { contain: style }
+#strict { contain: strict }
+#content { contain: content }
+#mixed { contain: paint style layout }
+#bad { contain: size inline-size }
+</style>
+<script type="text/x-rustyprint-expect">
+#size { contain: size; layout-height: 0 }
+#size-float { layout-width: 0; layout-height: 0 }
+#inline { contain: inline-size; layout-width: 0; layout-height: >0 }
+#abs { layout-x: 60 }
+#collapse { layout-height: 30 }
+#paint { layout-paint: "clip" }
+#s1 { layout-text: "1" }
+#s2 { layout-text: "1" }
+#s3 { layout-text: "2" }
+#strict { contain: strict }
+#content { contain: content }
+#mixed { contain: content }
+#bad { contain: none }
+warning: invalid value for `contain`
+</script>
+</head>
+<body>
+<div id=size>Text that overflows its box</div>
+<div id=size-float>Floated text</div>
+<div id=inline>Some words</div>
+<div id=layout><div class=abs id=abs></div></div>
+<div id=collapse><p id=collapsed-child>Child</p></div>
+<div id=paint>Clipped</div>
+<p id=s1 class=inc></p>
+<div id=scoped><p id=s2 class=inc></p></div>
+<p id=s3 class=inc></p>
+<div id=strict></div><div id=content></div><div id=mixed></div><div id=bad></div>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ruby-overhang</title>
+<style>
+body { margin: 0; font: 20px/30px serif }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { ruby-overhang: auto }
+#ab { layout-x: <#nb }
+#n { ruby-overhang: none }
+#c { layout-x: <#nc }
+#s { layout-x: #sn }
+</script>
+</head>
+<body>
+<p>ab<ruby id=a><span id=ab>X</span><rt>long note</rt></ruby><span id=c>cd</span></p>
+<p>ab<ruby id=n style="ruby-overhang: none"><span id=nb>X</span><rt>long note</rt></ruby><span id=nc>cd</span></p>
+<p><ruby><span id=s>X</span><rt>long note</rt></ruby>cd</p>
+<p><ruby style="ruby-overhang: none"><span id=sn>X</span><rt>long note</rt></ruby>cd</p>
+</body>
+</html>

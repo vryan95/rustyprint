@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>shape-outside</title>
+<style>
+body { margin: 0; font-size: 16px; line-height: 20px }
+p { margin: 0; width: 400px; clear: both }
+.f { float: left; width: 100px; height: 100px }
+#n { shape-outside: none }
+#f { shape-outside: circle(50%) content-box }
+#g { shape-outside: url(assets/half.png) }
+</style>
+<script type="text/x-rustyprint-expect">
+#n { shape-outside: none }
+#a { layout-x: 100px }
+#f { shape-outside: circle(50%) content-box }
+#c { layout-x: <100px }
+#g { shape-outside: url("assets/half.png") }
+#i { layout-x: >45px }
+#i { layout-x: <55px }
+#b { layout-x: 0px }
+</script>
+</head>
+<body>
+<p><span class=f id=n></span><span id=a>Margin</span> box when there is no shape.</p>
+<p><span class=f id=f style="padding: 10px; box-sizing: border-box"></span><span id=c>Content</span> box circle.</p>
+<p><span class=f id=g></span><span id=i>Image</span> shape from the alpha channel.</p>
+<p><span class=f style="shape-outside: inset(0 0 0 100%)"></span><span id=b>An</span> empty shape leaves lines alone.</p>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>li</title>
+<script type="text/x-rustyprint-expect">
+li { display: list-item }
+#v { counter-set: list-item 7 }
+#a { layout-text: "1. a" }
+#v { layout-text: "7. v" }
+#b { layout-text: "8. b" }
+#n { counter-set: list-item -2; layout-text: "-2. n" }
+#t { list-style-type: upper-alpha; layout-text: "I. t" }
+#i { layout-text: "i" }
+</script>
+</head>
+<body>
+<ol><li id=a>a</li><li id=v value=7>v</li><li id=b>b</li><li id=t type=A>t</li><li id=n value=-2>n</li></ol>
+<div><li id=i style="list-style: none">i</li></div>
+</body>
+</html>

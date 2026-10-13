@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-snap-type</title>
+<style>
+body { font-size: 10px }
+#a { scroll-snap-type: x mandatory }
+#b { scroll-snap-type: both }
+#c { scroll-snap-type: block proximity }
+#d { scroll-snap-type: none }
+#bad { scroll-snap-type: mandatory }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-snap-type: x mandatory }
+#b { scroll-snap-type: both }
+#c { scroll-snap-type: block }
+#d { scroll-snap-type: none }
+html { scroll-snap-type: none }
+warning: invalid value for `scroll-snap-type`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=bad></div>
+</body>
+</html>

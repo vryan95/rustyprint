@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>quotes</title>
+<style>
+#a { quotes: "<" ">" "(" ")" }
+#b { quotes: none }
+#c { quotes: auto }
+#d span { quotes: match-parent }
+#e { quotes: "x" }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { quotes: "<" ">" "(" ")"; layout-text: "<a (b) c> <d>" }
+#b { quotes: none; layout-text: "e" }
+#c { quotes: auto; layout-text: "“f”" }
+#d span { quotes: "[" "]" }
+#f { layout-text: "„g“" }
+#g { layout-text: "« h »" }
+warning: invalid value for `quotes`
+</script>
+</head>
+<body>
+<p id=a><q>a <q>b</q> c</q> <q>d</q></p>
+<p id=b><q>e</q></p>
+<p id=c><q>f</q></p>
+<p id=d style='quotes: "[" "]"'><span>x</span></p>
+<p id=e>y</p>
+<p id=f lang=de><q>g</q></p>
+<p id=g lang=fr-CA><q>h</q></p>
+</body>
+</html>

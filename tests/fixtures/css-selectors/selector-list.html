@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Selector list</title>
+<style>
+.a, .b { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes1 { background-color: rgb(0, 128, 0) }
+#yes2 { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<p id=yes1 class=a></p><p id=yes2 class=b></p><p id=no class=c></p>
+</body>
+</html>

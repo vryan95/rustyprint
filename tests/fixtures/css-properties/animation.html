@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+@keyframes grow { from, to { width: 5px } }
+div { height: 1px; width: 10px }
+#a { animation: slide 2s ease-in 1s infinite alternate both paused }
+#b { animation: 1s, slide 2s linear }
+#c { animation: slide 4s linear -1s }
+#d { animation: none }
+#bad { animation: 1s 2s 3s }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-name: slide; animation-duration: 2s; animation-timing-function: ease-in; animation-delay: 1s; animation-iteration-count: infinite; animation-direction: alternate; animation-fill-mode: both; animation-play-state: paused; margin-left: 100px }
+#b { animation-name: none, slide; animation-duration: 1s, 2s; animation-timing-function: ease, linear; margin-left: 100px }
+#c { margin-left: 75px }
+#d { animation-name: none; margin-left: 0px }
+html { animation-name: none; animation-duration: 0s; animation-composition: replace }
+warning: invalid value for `animation`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=bad></div>
+</body>
+</html>

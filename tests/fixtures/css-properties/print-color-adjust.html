@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>print-color-adjust</title>
+<style>
+#t { print-color-adjust: exact }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { print-color-adjust: exact }
+#t span { print-color-adjust: exact }
+html { print-color-adjust: economy }
+</script>
+</head>
+<body>
+<div id=t><span>x</span></div>
+</body>
+</html>

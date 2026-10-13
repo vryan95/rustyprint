@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-timeline</title>
+<style>
+body { font-size: 10px }
+#a { scroll-timeline: --a x, --b }
+#b { scroll-timeline: none }
+#bad { scroll-timeline: x --a }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-timeline-name: --a, --b; scroll-timeline-axis: x, block }
+#b { scroll-timeline-name: none; scroll-timeline-axis: block }
+warning: invalid value for `scroll-timeline`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

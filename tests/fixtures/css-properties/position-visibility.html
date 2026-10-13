@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>position-visibility</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#p { position-visibility: no-overflow; layout-width: none }
+#q { position-visibility: anchors-valid; layout-width: none }
+#r { position-visibility: always; layout-width: 20px }
+#s { position-visibility: anchors-visible; layout-width: none }
+#t { position-visibility: anchors-valid no-overflow; layout-width: 20px }
+</script>
+</head>
+<body>
+<div class=cb><div class=a></div><div class=a style="anchor-name: --hidden; visibility: hidden"></div>
+<div class=p id=p style="left: 390px; top: 0; position-visibility: no-overflow"></div>
+<div class=p id=q style="left: anchor(--missing right); position-visibility: anchors-valid"></div>
+<div class=p id=r style="left: 390px; top: 0; position-visibility: always"></div>
+<div class=p id=s style="position-anchor: --hidden; top: 0; position-visibility: anchors-visible"></div>
+<div class=p id=t style="left: anchor(--a left); top: 0; position-visibility: anchors-valid no-overflow"></div></div>
+</body>
+</html>

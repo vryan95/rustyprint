@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>overflow</title>
+<style>
+#t { overflow: hidden visible; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { overflow-x: hidden; overflow-y: auto; layout-height: 20px }
+</script>
+</head>
+<body>
+<div id=t>This text is taller than its box and is clipped. More text to fill several lines of the box above.</div>
+</body>
+</html>

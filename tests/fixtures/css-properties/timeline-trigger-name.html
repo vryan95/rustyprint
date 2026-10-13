@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>timeline-trigger-name</title>
+<style>
+body { font-size: 10px }
+#a { timeline-trigger-name: --a, --b }
+#b { timeline-trigger-name: none }
+#bad { timeline-trigger-name: a }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { timeline-trigger-name: --a, --b }
+#b { timeline-trigger-name: none }
+html { timeline-trigger-name: none }
+warning: invalid value for `timeline-trigger-name`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

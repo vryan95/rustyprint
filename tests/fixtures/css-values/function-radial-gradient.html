@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>radial-gradient()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background-image: radial-gradient(circle 50px, red, blue) }
+#b { background-image: radial-gradient(red, blue) }
+#c { background-image: radial-gradient(closest-side at 25% 50%, red, blue) }
+#d { background-image: radial-gradient(circle 10%, red, blue) }
+#e { background-image: radial-gradient(ellipse 50px 25px at right 20px top 0, red, blue) }
+#f { background-image: radial-gradient(circle farthest-side, red, blue) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: radial-gradient(50px, rgb(255, 0, 0), rgb(0, 0, 255)); layout-gradient: "radial 100 50 0 51 1.00" }
+#b { background-image: radial-gradient(rgb(255, 0, 0), rgb(0, 0, 255)); layout-gradient: "radial 100 50 0 142 0.50" }
+#c { background-image: radial-gradient(closest-side at 25% 50%, rgb(255, 0, 0), rgb(0, 0, 255)); layout-gradient: "radial 50 50 0 51 1.00" }
+#d { background-image: none }
+#e { background-image: radial-gradient(50px 25px at right 20px 0px, rgb(255, 0, 0), rgb(0, 0, 255)); layout-gradient: "radial 180 0 0 51 0.50" }
+#f { background-image: radial-gradient(circle farthest-side, rgb(255, 0, 0), rgb(0, 0, 255)); layout-gradient: "radial 100 50 0 101 1.00" }
+warning: invalid value for `background-image`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div><div id=f></div>
+</body>
+</html>

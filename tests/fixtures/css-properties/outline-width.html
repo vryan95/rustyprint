@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>outline-width</title>
+<style>
+#t { outline-width: thick; outline-style: solid }
+#u { outline-width: 2px }
+#v { outline-width: 0.5px; outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { outline-width: 5px }
+#u { outline-width: 0px }
+#v { outline-width: 1px }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div>
+</body>
+</html>

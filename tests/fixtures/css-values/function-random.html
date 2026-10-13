@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>random()</title>
+<style>
+body { margin: 0; width: 400px }
+div { height: 1px }
+#a { width: random(10px, 20px) }
+#b, #c { width: random(element-shared, 0px, 300px) }
+#d { width: random(fixed 0.5, 10px, 20px) }
+#e { width: random(fixed 0.99, 0px, 100px, by 30px) }
+#f { width: random(fixed 0.5, 10%, 30%) }
+#g { width: random(--shared, 0px, 300px); margin-left: random(--shared, 0px, 300px) }
+#h { width: random(auto element-shared, 0px, 300px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-width: >9.99 }
+#a { layout-width: <20.01 }
+#b { layout-width: =#c }
+#d { width: 15px }
+#e { width: 90px }
+#f { layout-width: 80px }
+#h { layout-width: =#b }
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div>
+<div id=f></div><div id=g></div><div id=h></div>
+</body>
+</html>

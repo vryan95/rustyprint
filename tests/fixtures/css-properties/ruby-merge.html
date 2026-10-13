@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ruby-merge</title>
+<style>
+body { margin: 0; font: 20px/30px serif }
+ruby { ruby-align: start }
+</style>
+<script type="text/x-rustyprint-expect">
+#s1 { ruby-merge: separate }
+#s2 { layout-x: 17.57px }
+#sb2 { layout-x: 17.57px }
+#m1 { ruby-merge: merge }
+#m2 { layout-x: 17.57px; layout-y: #m1 }
+#mb2 { layout-x: 14.1px }
+#a { ruby-merge: auto }
+#a2 { layout-x: 17.57px }
+</script>
+</head>
+<body>
+<p><ruby><span id=sb1>A</span><rt id=s1>one</rt><span id=sb2>B</span><rt id=s2>two</rt></ruby></p>
+<p><ruby style="ruby-merge: merge"><span id=mb1>A</span><rt id=m1>one</rt><span id=mb2>B</span><rt id=m2>two</rt></ruby></p>
+<p><ruby style="ruby-merge: auto"><span>A</span><rt id=a>one</rt><span>B</span><rt id=a2>two</rt></ruby></p>
+</body>
+</html>

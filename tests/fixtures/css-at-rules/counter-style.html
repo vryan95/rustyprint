@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@counter-style</title>
+<style>
+@counter-style thumbs { system: cyclic; symbols: "👍"; suffix: " " }
+@counter-style Mixed { system: extends decimal; suffix: ") " }
+@counter-style later { system: cyclic; symbols: a; suffix: " " }
+@counter-style later { system: cyclic; symbols: b; suffix: " " }
+@media print { @counter-style printed { system: cyclic; symbols: p; suffix: " " } }
+@media screen { @counter-style screen-only { system: cyclic; symbols: s; suffix: " " } }
+@counter-style decimal { system: cyclic; symbols: x }
+@counter-style none { system: cyclic; symbols: x }
+@counter-style broken { system: alphabetic; symbols: a }
+#a { list-style-type: thumbs }
+#b { list-style-type: Mixed }
+#c { list-style-type: mixed }
+#d { list-style-type: later }
+#e { list-style-type: printed }
+#f { list-style-type: screen-only }
+#g { list-style-type: broken }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "👍 a" }
+#b { layout-text: "2) b" }
+#c { layout-text: "3. c" }
+#d { layout-text: "b d" }
+#e { layout-text: "p e" }
+#f { layout-text: "6. f" }
+#g { layout-text: "7. g" }
+warning: @counter-style cannot define `none`
+warning: ignored @counter-style decimal
+warning: ignored @counter-style broken
+</script>
+</head>
+<body>
+<ol><li id=a>a</li><li id=b>b</li><li id=c>c</li><li id=d>d</li><li id=e>e</li><li id=f>f</li><li id=g>g</li></ol>
+</body>
+</html>

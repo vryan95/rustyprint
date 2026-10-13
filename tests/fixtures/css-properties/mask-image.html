@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-image</title>
+<style>
+body { margin: 0 }
+div { width: 20px; height: 20px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-image: linear-gradient(rgb(0, 0, 0), rgba(0, 0, 0, 0)); layout-mask: "10 0 255, 10 10 128, 10 19.9 0" }
+#b { mask-image: url("missing.png"); layout-mask: "10 10 0" }
+#c { mask-image: none; layout-paint: "!group" }
+warning: could not load image `missing.png`
+</script>
+</head>
+<body>
+<div id=a style="mask-image: linear-gradient(black, transparent)"></div>
+<div id=b style="mask-image: url(missing.png)"></div>
+<div id=c></div>
+</body>
+</html>

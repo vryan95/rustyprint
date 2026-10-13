@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>interactivity</title>
+<style>
+body { font-size: 10px }
+#a { interactivity: inert }
+#b { interactivity: auto }
+#bad { interactivity: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { interactivity: inert }
+#b { interactivity: auto }
+html { interactivity: auto }
+warning: invalid value for `interactivity`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

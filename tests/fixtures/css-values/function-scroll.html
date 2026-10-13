@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll()</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+div { animation: slide 4s -1s }
+#a { animation-timeline: scroll() }
+#b { margin-left: 3px; animation-timeline: scroll(root inline) }
+#c { animation-timeline: scroll(x self) }
+#bad { animation-timeline: scroll(root nearest) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-timeline: scroll(); margin-left: 0px }
+#b { animation-timeline: scroll(root inline); margin-left: 3px }
+#c { animation-timeline: scroll(self x) }
+warning: invalid value for `animation-timeline`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>flex-line-count</title>
+<style>
+body { margin: 0 }
+.c { display: flex; flex-wrap: balance; width: 300px }
+.c > div { width: 10px; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { flex-line-count: 3; layout-height: 30px }
+#a2 { layout-x: 0px; layout-y: 10px }
+#b { flex-line-count: 2 }
+#b3 { layout-x: 20px; layout-y: 30px }
+#b4 { layout-x: 0px; layout-y: 40px }
+#c { flex-line-count: 1 }
+#w { layout-height: 10px }
+#w2 { layout-x: 10px }
+#z { layout-height: 20px }
+</script>
+</head>
+<body>
+<div class=c id=a style="flex-line-count: 3"><div></div><div id=a2></div><div></div></div>
+<div class=c id=b style="flex-line-count: 2"><div></div><div></div><div id=b3></div><div id=b4></div><div></div></div>
+<div id=c></div>
+<div class=c id=w style="flex-wrap: wrap; flex-line-count: 3"><div></div><div id=w2></div></div>
+<div class=c id=z style="flex-line-count: 5"><div></div><div></div></div>
+</body>
+</html>

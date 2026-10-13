@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ruby-align</title>
+<style>
+body { margin: 0; font: 20px/30px serif }
+</style>
+<script type="text/x-rustyprint-expect">
+#s { ruby-align: start; layout-x: #sb }
+#c { ruby-align: center; layout-x: 43.505px }
+#b { ruby-align: space-between; layout-x: #bb; layout-width: #bb }
+#a { ruby-align: space-around; layout-x: 21.7525px; layout-width: 55.275px }
+#w { layout-x: 24.3425px }
+</script>
+</head>
+<body>
+<p><ruby style="ruby-align: start"><span id=sb>Wide base</span><rt id=s>ab</rt></ruby></p>
+<p><ruby style="ruby-align: center"><span id=cb>Wide base</span><rt id=c>ab</rt></ruby></p>
+<p><ruby style="ruby-align: space-between"><span id=bb>Wide base</span><rt id=b>ab</rt></ruby></p>
+<p><ruby><span id=ab>Wide base</span><rt id=a>ab</rt></ruby></p>
+<p><ruby><span id=w>ab</span><rt>a much wider annotation</rt></ruby></p>
+</body>
+</html>

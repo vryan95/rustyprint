@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>outline-offset</title>
+<style>
+#t { outline-offset: -0.5em }
+div { height: 10px; outline: 1px solid }
+#u { outline-offset: 4px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { outline-offset: -8px }
+html { outline-offset: 0px }
+#u { paint-items: =#t }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+</body>
+</html>

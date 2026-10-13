@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>flex-wrap</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 100px }
+.c > div { flex: none; width: 40px; height: 10px }
+#b, #l { width: 130px }
+.lines { display: flex; flex-wrap: wrap; width: 100px; margin-top: 100px }
+.lines > div { width: 60px; height: 400px; break-inside: avoid }
+</style>
+<script type="text/x-rustyprint-expect">
+#n { flex-wrap: nowrap; layout-height: 10px }
+#n3 { layout-x: 80px; layout-y: 0px }
+#w { flex-wrap: wrap; layout-height: 20px }
+#w2 { layout-x: 40px; layout-y: 10px }
+#w3 { layout-x: 0px; layout-y: 20px }
+#wr { flex-wrap: wrap-reverse }
+#wr1 { layout-y: 40px }
+#wr3 { layout-y: 30px }
+#b { flex-wrap: balance }
+#b2 { layout-x: 40px; layout-y: 50px }
+#b3 { layout-x: 0px; layout-y: 60px }
+#l { flex-wrap: wrap-reverse balance }
+#l3 { layout-x: 0px; layout-y: 70px }
+#p1 { layout-page: 1 }
+#p2 { layout-page: 1; layout-page-y: 590px }
+#p3 { layout-page: 2; layout-page-y: 0px }
+</script>
+</head>
+<body>
+<div class=c id=n><div></div><div></div><div id=n3></div></div>
+<div class=c id=w style="flex-wrap: wrap"><div></div><div id=w2></div><div id=w3></div></div>
+<div class=c id=wr style="flex-wrap: wrap-reverse"><div id=wr1></div><div></div><div id=wr3></div></div>
+<div class=c id=b style="flex-wrap: balance"><div></div><div id=b2></div><div id=b3></div><div></div></div>
+<div class=c id=l style="flex-wrap: wrap-reverse balance"><div></div><div></div><div id=l3></div><div></div></div>
+<div class=lines><div id=p1></div><div id=p2></div><div id=p3></div></div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:nth-child()</title>
+<style>
+li:nth-child(2n+1 of .x) { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#yes2 { background-color: rgb(0, 128, 0) }
+#no1 { background-color: rgba(0, 0, 0, 0) }
+#no2 { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<ul><li id=yes class=x></li><li id=no1></li><li id=no2 class=x></li><li id=yes2 class=x></li></ul>
+</body>
+</html>

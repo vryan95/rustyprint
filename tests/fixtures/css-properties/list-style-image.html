@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>list-style-image</title>
+<style>
+#a { list-style-image: url(a.png) }
+#b { list-style-image: none }
+#c { list-style-image: url(assets/red.png) }
+#d { list-style-image: url(assets/red.png); list-style-position: inside }
+</style>
+<script type="text/x-rustyprint-expect">
+#b { list-style-image: none; layout-text: "• b" }
+#a { list-style-image: url("a.png"); layout-text: "• a" }
+#c { list-style-image: url("assets/red.png"); layout-text: " c"; layout-lines: 1 }
+#d { layout-text: " d"; layout-lines: 1 }
+warning: could not load image `a.png`
+</script>
+</head>
+<body>
+<ul><li id=a>a</li><li id=b>b</li><li id=c>c</li><li id=d>d</li></ul>
+</body>
+</html>

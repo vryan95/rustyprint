@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>counter-set</title>
+<style>
+body { counter-reset: n }
+p { counter-increment: n }
+.set { counter-set: n 10 }
+.zero { counter-set: n }
+p::before { content: counter(n) " " }
+</style>
+<script type="text/x-rustyprint-expect">
+.set { counter-set: n 10 }
+.zero { counter-set: n 0 }
+#a { layout-text: "1 a" }
+#b { layout-text: "10 b" }
+#c { layout-text: "11 c" }
+#d { layout-text: "0 d" }
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b class=set>b</p><p id=c>c</p><p id=d class=zero>d</p>
+</body>
+</html>

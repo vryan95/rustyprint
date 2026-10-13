@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>polygon()</title>
+<style>
+body { margin: 0; font-size: 16px; line-height: 20px }
+p { margin: 0; width: 400px; clear: both }
+.f { float: left; width: 100px; height: 100px }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#f { shape-outside: polygon(0px 0px, 40px 0px, 40px 100%, 0px 100%) }
+#a { layout-x: 40px }
+</script>
+</head>
+<body>
+<p><span class=f id=f style="shape-outside: polygon(0 0, 40px 0, 40px 100%, 0 100%)"></span><span id=a>First</span> line of text that wraps <span id=b>around</span> the float and then continues below it for a while longer than the float is tall.</p>
+</body>
+</html>

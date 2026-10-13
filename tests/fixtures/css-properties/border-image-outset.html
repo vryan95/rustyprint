@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-image-outset</title>
+<style>
+body { margin: 0 }
+div { width: 30px; height: 30px; border: 10px solid; background: #ddd }
+div { border-image-source: url(assets/frame.png); border-image-slice: 10 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { border-image-outset: 5px; layout-image: "-5 -5 30 30" }
+#b { border-image-outset: 1; layout-image: "-10 -10 30 30" }
+#c { border-image-outset: 0; layout-image: "0 0 30 30" }
+</script>
+</head>
+<body>
+<div id=a style="border-image-outset: 5px"></div>
+<div id=b style="border-image-outset: 1"></div>
+<div id=c></div>
+</body>
+</html>

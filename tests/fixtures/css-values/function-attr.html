@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>attr()</title>
+<style>
+#t { margin-top: attr(data-m px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-top: 7px }
+</script>
+</head>
+<body>
+<div id=t data-m=7></div>
+</body>
+</html>

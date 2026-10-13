@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-padding-block-start</title>
+<style>
+body { font-size: 10px }
+#a { scroll-padding-block-start: 6px }
+#b { direction: rtl; scroll-padding-block-start: 8px }
+#c { writing-mode: vertical-rl; scroll-padding-block-start: 9px }
+#bad { scroll-padding-block-start: -1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-padding-block-start: 6px; scroll-padding-top: 6px }
+#b { scroll-padding-top: 8px }
+#c { scroll-padding-block-start: 9px }
+html { scroll-padding-block-start: auto }
+warning: invalid value for `scroll-padding-block-start`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

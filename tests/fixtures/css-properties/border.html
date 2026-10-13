@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border</title>
+<style>
+#t { border: 2px dotted red }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { border-top-width: 2px; border-top-style: dotted; border-top-color: rgb(255, 0, 0); border-right-width: 2px; border-right-style: dotted; border-right-color: rgb(255, 0, 0); border-bottom-width: 2px; border-bottom-style: dotted; border-bottom-color: rgb(255, 0, 0); border-left-width: 2px; border-left-style: dotted; border-left-color: rgb(255, 0, 0) }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

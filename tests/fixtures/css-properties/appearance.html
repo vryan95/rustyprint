@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>appearance</title>
+<style>
+
+</style>
+<script type="text/x-rustyprint-expect">
+#a { appearance: auto; paint-items: 2 }
+#b { appearance: none; layout-width: 0px; paint-items: 0 }
+#c { appearance: none; layout-text: "x" }
+#c { layout-width: <#d }
+#d { appearance: menulist-button }
+#e { appearance: none }
+</script>
+</head>
+<body>
+<input id=a type=checkbox checked> <input id=b type=checkbox checked style="appearance: none">
+<select id=c style="appearance: none"><option>x</select> <select id=d style="appearance: menulist-button"><option>x</select>
+<div id=e>div</div>
+</body>
+</html>

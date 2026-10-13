@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>gap</title>
+<style>
+body { margin: 0 }
+.c { display: flex; flex-wrap: wrap; width: 100px }
+.c > div { width: 40px; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { row-gap: 10px; column-gap: 20px; layout-height: 30px }
+#a2 { layout-x: 60px; layout-y: 0px }
+#a3 { layout-x: 0px; layout-y: 20px }
+#b { row-gap: 5px; column-gap: 5px }
+#b2 { layout-x: 45px }
+#c { row-gap: normal; column-gap: normal }
+#d { row-gap: 10%; column-gap: 10% }
+</script>
+</head>
+<body>
+<div class=c id=a style="gap: 10px 20px"><div></div><div id=a2></div><div id=a3></div></div>
+<div class=c id=b style="gap: 5px"><div></div><div id=b2></div></div>
+<div id=c style="gap: normal"></div>
+<div id=d style="gap: 10%"></div>
+</body>
+</html>

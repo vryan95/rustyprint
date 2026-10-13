@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-color</title>
+<style>
+#t { border-color: red green blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { border-top-color: rgb(255, 0, 0); border-right-color: rgb(0, 128, 0); border-bottom-color: rgb(0, 0, 255); border-left-color: rgb(0, 128, 0) }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

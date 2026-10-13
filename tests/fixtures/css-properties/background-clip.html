@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background-clip</title>
+<style>
+div { width: 100px; height: 20px; padding: 5px }
+#t { background-clip: text, border-area }
+#u { background-clip: content-box }
+#v { background: red text }
+#r { background: red }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-clip: text, border-area }
+#u { background-clip: content-box }
+html { background-clip: border-box }
+#v { background-clip: text; paint-items: >#r }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v>x</div><div id=r>x</div>
+</body>
+</html>

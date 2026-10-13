@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-snap-stop</title>
+<style>
+body { font-size: 10px }
+#a { scroll-snap-stop: always }
+#b { scroll-snap-stop: normal }
+#bad { scroll-snap-stop: never }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-snap-stop: always }
+#b { scroll-snap-stop: normal }
+html { scroll-snap-stop: normal }
+warning: invalid value for `scroll-snap-stop`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

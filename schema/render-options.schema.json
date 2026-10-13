@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "rustyprint render options",
+  "description": "Options for rendering one HTML document to PDF. Every field is optional; a field left out keeps its default. Lengths are CSS lengths in px, mm, cm, in or pt; a number without a unit is in px.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "page_size": {
+      "description": "The page size, by name or as a width and height. Default: A4.",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "A3, A4, A5, Letter or Legal, in any case.",
+          "pattern": "^\\s*(?i:a3|a4|a5|letter|legal)\\s*$"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "$ref": "#/$defs/length" },
+            "height": { "$ref": "#/$defs/length" }
+          }
+        }
+      ]
+    },
+    "landscape": {
+      "description": "Turns the page so that it is wider than it is tall. Default: false.",
+      "type": "boolean"
+    },
+    "margin": {
+      "description": "Page margins like the CSS margin shorthand: one to four non-negative lengths for the top, right, bottom and left. Default: 2cm.",
+      "type": "string",
+      "examples": ["15mm", "10mm 20mm", "1cm 2cm 1.5cm 2cm"]
+    },
+    "title": {
+      "description": "The PDF document title. Overrides the document's <title>.",
+      "type": "string"
+    },
+    "stylesheet": {
+      "description": "A stylesheet applied after the document's own styles.",
+      "type": "string"
+    },
+    "remote": {
+      "description": "Hosts that absolute URLs may be fetched from. Without it, nothing is fetched from the network.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed_hosts"],
+      "properties": {
+        "allowed_hosts": {
+          "description": "Host names, such as cdn.example.com, or *.example.com for its subdomains. Redirects must stay on them.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "allow_http": {
+          "description": "Also fetch plain http URLs. Default: false.",
+          "type": "boolean"
+        },
+        "timeout_ms": {
+          "description": "How long one fetch may take. Default: 10000.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_bytes": {
+          "description": "The largest file fetched. Default: 10485760 (10 MB).",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_redirects": {
+          "description": "Redirects followed per fetch. Default: 5.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_fetches": {
+          "description": "Files fetched per render; the rest are not loaded. Default: 100.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "limits": {
+      "description": "Bounds on the work of the render. Exceeding one fails the render, except that larger images are skipped with a warning.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_input_bytes": {
+          "description": "Size of the HTML in bytes. Default: 20971520 (20 MB).",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_nodes": {
+          "description": "DOM nodes, including text and comments, across the document and its iframe documents. Default: 500000.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_depth": {
+          "description": "How deeply elements nest; 1 for the root element alone. Default: 512.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_pages": {
+          "description": "Pages in the PDF. Default: 2000.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_image_pixels": {
+          "description": "Width times height of an image; larger images are skipped with a warning. Default: 100000000.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "timeout_ms": {
+          "description": "How long the render may take, or null for no deadline. Default: 60000.",
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "length": {
+      "description": "A CSS length in px, mm, cm, in or pt, such as 15mm; a number without a unit is in px.",
+      "type": "string",
+      "pattern": "^\\s*-?[0-9]*\\.?[0-9]+(?i:px|mm|cm|in|pt)?\\s*$"
+    }
+  },
+  "examples": [
+    {},
+    { "page_size": "A4", "margin": "15mm", "title": "Invoice 42" },
+    {
+      "page_size": "Letter",
+      "landscape": true,
+      "margin": "0.5in 0.75in",
+      "stylesheet": "body { font-family: sans-serif }"
+    },
+    {
+      "page_size": { "width": "100mm", "height": "150mm" },
+      "margin": "0",
+      "remote": { "allowed_hosts": ["cdn.example.com", "*.images.example.com"] },
+      "limits": { "max_pages": 50, "timeout_ms": 10000 }
+    },
+    { "limits": { "timeout_ms": null } }
+  ]
+}

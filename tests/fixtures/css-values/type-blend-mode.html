@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>type-blend-mode</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mix-blend-mode: color-dodge; layout-paint: "group(colordodge)" }
+#b { mix-blend-mode: luminosity }
+#c { background-blend-mode: hue, saturation, color }
+#d { background-blend-mode: normal }
+warning: invalid value for `background-blend-mode`
+</script>
+</head>
+<body>
+<div id=a style="mix-blend-mode: color-dodge"></div>
+<div id=b style="mix-blend-mode: LUMINOSITY"></div>
+<div id=c style="background-blend-mode: hue, saturation, color"></div>
+<div id=d style="background-blend-mode: plus-darker"></div>
+</body>
+</html>

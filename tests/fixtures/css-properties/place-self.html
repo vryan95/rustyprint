@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>place-self</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 100px; height: 100px }
+.c > div { width: 40px; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { align-self: center; justify-self: center; layout-x: 0px; layout-y: 45px }
+#b { align-self: flex-end; justify-self: right; layout-y: 190px }
+#c { align-self: auto; justify-self: auto }
+</script>
+</head>
+<body>
+<div class=c><div id=a style="place-self: center"></div></div>
+<div class=c><div id=b style="place-self: flex-end right"></div></div>
+<div id=c style="place-self: auto"></div>
+</body>
+</html>

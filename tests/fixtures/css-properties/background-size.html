@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background-size</title>
+<style>
+div { width: 100px; height: 20px }
+#t { background-size: 10px auto }
+#u { background-size: auto 50% }
+#v { background-size: cover, contain }
+#w { background: url(assets/red.png); background-size: 50px 20px }
+#x { background: url(assets/red.png); background-size: 100px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-size: 10px }
+#u { background-size: auto 50% }
+#v { background-size: cover, contain }
+html { background-size: auto }
+#w { paint-items: 4 }
+#x { paint-items: 3 }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w></div><div id=x></div>
+</body>
+</html>

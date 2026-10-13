@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>position</title>
+<style>
+@page { size: 400px 300px; margin: 50px; @top-center { content: element(head); width: 200px }
+  @bottom-center { content: element(head, first-except); width: 200px } }
+body { margin: 0 }
+p { margin: 16px 0 }
+.next { break-before: page }
+header { position: running(head) }
+#u { position: relative }
+#v { position: running(1) }
+#r { position: relative }
+#a { position: absolute }
+#f { position: fixed }
+#k { position: sticky }
+</style>
+<script type="text/x-rustyprint-expect">
+header { position: running(head) }
+#u { position: relative }
+#p { layout-page: 1; layout-page-y: 66 }
+html { layout-page-margin-text: "top-center:Chapter 1, bottom-center: | top-center:Chapter 2, bottom-center:" }
+#r { position: relative; layout-x: 10px; layout-page-y: 103.79 }
+#a { position: absolute; display: block; layout-x: 15px; layout-y: 58.79px; layout-width: 30px }
+#s { position: absolute; layout-x: 10px; layout-page-y: 123.79 }
+#f { position: fixed; layout-pages: 2; layout-page-x: 330; layout-page-y: 240 }
+#k { position: sticky; layout-x: 0px }
+warning: invalid value for `position`
+</script>
+</head>
+<body>
+<header>Chapter 1</header><p id=p>a</p>
+<div id=r style="left: 10px; top: 0; height: 20px"><span id=a style="top: 5px; left: 5px; width: 30px">x</span></div>
+<div style="position: absolute; left: 10px" id=s>static top</div>
+<div id=f style="bottom: 0; right: 0; width: 20px; height: 10px"></div>
+<div id=k style="top: 30px">sticky stays in flow</div>
+<p id=u class=next>b</p><header>Chapter 2</header><p id=v>c</p>
+</body>
+</html>

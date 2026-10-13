@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-skewx</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: skewX(45deg); layout-paint: "transform(1,0,1,1,-25,0)" }
+</script>
+</head>
+<body>
+<div id=a style="transform: skewX(45deg)"></div>
+</body>
+</html>

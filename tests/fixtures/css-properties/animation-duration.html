@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-duration</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+@keyframes grow { from, to { width: 5px } }
+div { height: 1px; width: 10px }
+#a { animation-duration: auto, 1.5s, 200ms }
+#b { animation: slide 1s linear -1s; animation-duration: 2s }
+#c { animation: slide linear; animation-duration: auto }
+#bad { animation-duration: -1s }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-duration: auto, 1.5s, 0.2s }
+#b { margin-left: 50px }
+#c { margin-left: 0px }
+html { animation-duration: 0s }
+warning: invalid value for `animation-duration`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

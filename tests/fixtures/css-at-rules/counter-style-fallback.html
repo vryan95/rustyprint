@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>fallback</title>
+<style>
+@counter-style a-to-c { system: fixed; symbols: A B C; fallback: lower-roman; suffix: " " }
+@counter-style chain { system: fixed; symbols: X; fallback: a-to-c }
+@counter-style missing { system: fixed; symbols: Y; fallback: does-not-exist }
+@counter-style bad { system: extends decimal; fallback: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "B a" }
+#b { layout-text: "iv b" }
+#c { layout-text: "C. c" }
+#d { layout-text: "5. d" }
+warning: invalid value for `fallback`
+</script>
+</head>
+<body>
+<ol start=2><li id=a style="list-style-type: a-to-c">a</li></ol>
+<ol start=4><li id=b style="list-style-type: a-to-c">b</li></ol>
+<ol start=3><li id=c style="list-style-type: chain">c</li></ol>
+<ol start=5><li id=d style="list-style-type: missing">d</li></ol>
+</body>
+</html>

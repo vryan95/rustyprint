@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>justify-content</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px; height: 10px }
+.c > div { width: 50px }
+</style>
+<script type="text/x-rustyprint-expect">
+#n { justify-content: normal }
+#n2 { layout-x: 50px }
+#e { justify-content: flex-end }
+#e1 { layout-x: 200px }
+#e2 { layout-x: 250px }
+#c { justify-content: center }
+#c1 { layout-x: 100px }
+#sb { justify-content: space-between }
+#sb2 { layout-x: 250px }
+#sa { justify-content: space-around }
+#sa1 { layout-x: 50px }
+#sa2 { layout-x: 200px }
+#se { justify-content: space-evenly }
+#se1 { layout-x: 66.667px }
+#se2 { layout-x: 183.333px }
+#l { justify-content: left }
+#l1 { layout-x: 50px }
+#l2 { layout-x: 0px }
+#st { justify-content: start }
+#st1 { layout-x: 50px }
+#fs { justify-content: flex-start }
+#fs1 { layout-x: 250px }
+#sf { justify-content: safe center }
+#sf1 { layout-x: 0px }
+#un { justify-content: center }
+#un1 { layout-x: -50px }
+#m1 { layout-x: 250px }
+#col { justify-content: flex-end }
+#col1 { layout-y: 210px }
+#one { layout-x: 0px }
+</script>
+</head>
+<body>
+<div class=c id=n><div></div><div id=n2></div></div>
+<div class=c id=e style="justify-content: flex-end"><div id=e1></div><div id=e2></div></div>
+<div class=c id=c style="justify-content: center"><div id=c1></div><div></div></div>
+<div class=c id=sb style="justify-content: space-between"><div></div><div id=sb2></div></div>
+<div class=c id=sa style="justify-content: space-around"><div id=sa1></div><div id=sa2></div></div>
+<div class=c id=se style="justify-content: space-evenly"><div id=se1></div><div id=se2></div></div>
+<div class=c id=l style="flex-direction: row-reverse; justify-content: left"><div id=l1></div><div id=l2></div></div>
+<div class=c id=st style="flex-direction: row-reverse; justify-content: start"><div id=st1></div><div></div></div>
+<div class=c id=fs style="flex-direction: row-reverse; justify-content: flex-start"><div id=fs1></div><div></div></div>
+<div class=c id=sf style="justify-content: safe center"><div id=sf1 style="flex: none; width: 200px"></div><div style="flex: none; width: 200px"></div></div>
+<div class=c id=un style="justify-content: center"><div id=un1 style="flex: none; width: 200px"></div><div style="flex: none; width: 200px"></div></div>
+<div class=c style="justify-content: center"><div id=m1 style="margin-left: auto"></div></div>
+<div class=c id=col style="flex-direction: column; height: 100px; justify-content: flex-end"><div id=col1 style="height: 10px"></div></div>
+<div class=c style="justify-content: space-between"><div id=one></div></div>
+</body>
+</html>

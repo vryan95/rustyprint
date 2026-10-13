@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-padding-inline-end</title>
+<style>
+body { font-size: 10px }
+#a { scroll-padding-inline-end: 6px }
+#b { direction: rtl; scroll-padding-inline-end: 8px }
+#c { writing-mode: vertical-rl; scroll-padding-inline-end: 9px }
+#bad { scroll-padding-inline-end: -1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-padding-inline-end: 6px; scroll-padding-right: 6px }
+#b { scroll-padding-left: 8px }
+#c { scroll-padding-inline-end: 9px }
+html { scroll-padding-inline-end: auto }
+warning: invalid value for `scroll-padding-inline-end`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

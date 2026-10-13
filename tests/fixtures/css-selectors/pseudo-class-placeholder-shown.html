@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:placeholder-shown</title>
+<style>
+:placeholder-shown { outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { outline-style: dotted }
+#yes2 { outline-style: dotted }
+#no { outline-style: none }
+#no2 { outline-style: none }
+#no3 { outline-style: none }
+</script>
+</head>
+<body>
+<input id=yes placeholder=Name><input id=no placeholder=Name value=Ann>
+<textarea id=yes2 placeholder=Notes></textarea><textarea id=no2 placeholder=Notes>x</textarea>
+<input id=no3 type=checkbox placeholder=x>
+</body>
+</html>

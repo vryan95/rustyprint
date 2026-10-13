@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-top-right-radius</title>
+<style>
+#t { border-top-right-radius: 10px 20% }
+#u { border-top-right-radius: 1em }
+#r, #t { width: 100px; height: 50px; background: navy }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { border-top-right-radius: 10px 20%; paint-items: =#r }
+#u { border-top-right-radius: 16px }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=r></div>
+</body>
+</html>

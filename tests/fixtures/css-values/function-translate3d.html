@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-translate3d</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: translate3d(10px, 20%, 5px); layout-paint: "transform(1,0,0,1,10,10)" }
+</script>
+</head>
+<body>
+<div id=a style="transform: translate3d(10px, 20%, 5px)"></div>
+</body>
+</html>

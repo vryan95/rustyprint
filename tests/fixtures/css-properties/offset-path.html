@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>offset-path</title>
+<style>
+body { margin: 0 }
+section { width: 200px; height: 100px }
+div { width: 20px; height: 10px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { offset-path: path("M 0 0 L 100 0") }
+#p { layout-paint: "transform(1,0,0,1,40,-5) rect(#0000ff)" }
+#b { offset-path: ray(90deg) border-box }
+#c { offset-path: url("#c") }
+#d { offset-path: none }
+</script>
+</head>
+<body>
+<section id=p><div id=a style="offset-path: path('M 0 0 L 100 0'); offset-distance: 50%"></div></section>
+<div id=b style="offset-path: border-box ray(90deg)"></div>
+<div id=c style="offset-path: url(#c)"></div>
+<div id=d></div>
+</body>
+</html>

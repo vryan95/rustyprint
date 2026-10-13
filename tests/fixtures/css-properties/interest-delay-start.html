@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>interest-delay-start</title>
+<style>
+body { font-size: 10px }
+#a { interest-delay-start: 2s }
+#b { interest-delay-start: normal }
+#bad { interest-delay-start: 1px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { interest-delay-start: 2s }
+#b { interest-delay-start: normal }
+html { interest-delay-start: normal }
+warning: invalid value for `interest-delay-start`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

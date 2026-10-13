@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-auto-flow</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-template-columns: repeat(3, 100px); grid-auto-rows: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#col { grid-auto-flow: column }
+#c3 { layout-x: 50px; layout-y: 0px }
+#s { grid-auto-flow: row }
+#sc { layout-x: 200px; layout-y: 30px }
+#d { grid-auto-flow: row dense }
+#dc { layout-x: 200px; layout-y: 40px }
+#cd { grid-auto-flow: column dense }
+</script>
+</head>
+<body>
+<div class=g id=col style="grid-auto-flow: column; grid-template: 10px 10px / none; grid-auto-columns: 50px"><div></div><div></div><div id=c3></div></div>
+<div class=g id=s style="grid-auto-flow: row"><div style="grid-column: span 2"></div><div style="grid-column: span 2"></div><div id=sc></div></div>
+<div class=g id=d style="grid-auto-flow: dense"><div style="grid-column: span 2"></div><div style="grid-column: span 2"></div><div id=dc></div></div>
+<div id=cd style="grid-auto-flow: dense column"></div>
+</body>
+</html>

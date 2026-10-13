@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-image-slice</title>
+<style>
+body { margin: 0 }
+div { width: 30px; height: 30px; border: 10px solid; background: #ddd }
+div { border-image-source: url(assets/frame.png) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { border-image-slice: 10; layout-image: "0 0 30 30"; layout-paint: "image*8" }
+#b { border-image-slice: 5; layout-image: "0 0 60 60" }
+#c { border-image-slice: 10 fill; layout-paint: "image*9" }
+#d { border-image-slice: 100% }
+</script>
+</head>
+<body>
+<div id=a style="border-image-slice: 10"></div>
+<div id=b style="border-image-slice: 5"></div>
+<div id=c style="border-image-slice: fill 10"></div>
+<div id=d></div>
+</body>
+</html>

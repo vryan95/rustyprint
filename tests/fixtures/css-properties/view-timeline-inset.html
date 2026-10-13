@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>view-timeline-inset</title>
+<style>
+body { font-size: 10px }
+#a { view-timeline-inset: auto, 10px 20% }
+#b { view-timeline-inset: 5px 5px }
+#bad { view-timeline-inset: none }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { view-timeline-inset: auto, 10px 20% }
+#b { view-timeline-inset: 5px }
+html { view-timeline-inset: auto }
+warning: invalid value for `view-timeline-inset`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

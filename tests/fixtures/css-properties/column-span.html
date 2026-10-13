@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>column-span</title>
+<style>
+body { margin: 0 }
+.m { width: 340px; column-gap: 20px }
+.m > div { height: 10px; break-inside: avoid }
+.s { column-span: all; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#s { column-span: all; layout-x: 0px; layout-y: 20px; layout-width: 340px }
+#a { layout-height: 40px }
+#a3 { layout-x: 180px; layout-y: 0px }
+#a5 { layout-x: 0px; layout-y: 30px }
+#a6 { layout-x: 180px; layout-y: 30px }
+#s2 { layout-y: 45px }
+#b1 { layout-x: 0px; layout-y: 60px }
+#n { column-span: all; layout-width: 340px }
+#k { column-span: none }
+#sp { layout-page: 3; layout-page-y: 0px }
+#sp1 { layout-page: 2; layout-page-x: 180px }
+#sp2 { layout-page: 3; layout-page-x: 180px; layout-page-y: 100px }
+</script>
+</head>
+<body>
+<div class=m id=a style="column-count: 2"><div></div><div></div><div id=a3></div><div></div><div class=s id=s></div><div id=a5></div><div id=a6></div></div>
+<div class=m id=b style="column-count: 2"><div class=s id=s2 style="margin: 5px 0"></div><div id=b1></div><div></div></div>
+<div class=m><div class=s id=n></div><div id=k></div></div>
+<div class=m style="column-count: 2; break-before: page"><div style="height: 1100px"></div><div id=sp1 style="height: 1100px"></div><div class=s id=sp style="height: 100px; background: red"></div><div style="height: 10px"></div><div id=sp2 style="height: 10px; margin-top: 10px"></div></div>
+</body>
+</html>

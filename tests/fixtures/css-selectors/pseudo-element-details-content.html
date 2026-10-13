@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>::details-content</title>
+<style>
+body { margin: 8px }
+#a::details-content { padding-left: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a::details-content { padding-left: 10px; display: block }
+#p { layout-x: 18px }
+#q { layout-width: none }
+</script>
+</head>
+<body>
+<details id=a open><summary>S</summary><p id=p>Content</p></details>
+<details id=b><summary>S</summary><p id=q>Content</p></details>
+</body>
+</html>

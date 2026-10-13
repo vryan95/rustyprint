@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>page-orientation</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page { page-orientation: rotate-left }
+@page :left { page-orientation: rotate-right }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-orientation: "rotate-left rotate-right" }
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b class=next>b</p>
+</body>
+</html>

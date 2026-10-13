@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>button</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { display: inline-block; text-align: center; padding-left: 6px; color: rgb(0, 0, 0); background-color: rgb(239, 239, 239); layout-text: "Send it" }
+#u { layout-height: 50px }
+#i { layout-y: >#t }
+</script>
+</head>
+<body>
+<p><button id=t type=submit>Send <b>it</b></button>
+<button id=u style="height: 50px"><i id=i>centered</i></button></p>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>column-wrap</title>
+<style>
+body { margin: 0 }
+.m { width: 340px; column-gap: 20px }
+.m > div { height: 10px; break-inside: avoid }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#a { column-wrap: nowrap; layout-height: 20px }
+#a5 { layout-x: 360px; layout-y: 0px }
+#b { column-wrap: wrap; layout-height: 20px }
+#b5 { layout-x: 0px; layout-y: 40px }
+#n { column-wrap: auto }
+</script>
+</head>
+<body>
+<div class=m id=a style="column-count: 2; column-height: 20px; column-wrap: nowrap"><div></div><div></div><div></div><div></div><div id=a5></div><div></div></div>
+<div class=m id=b style="column-count: 2; height: 20px; column-wrap: wrap; row-gap: 0"><div></div><div></div><div></div><div></div><div id=b5></div><div></div></div>
+<div class=m id=n></div>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>flex-basis</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px; height: 10px }
+.c > div { width: 50px }
+span { display: inline-block; width: 80px; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { flex-basis: 100px; layout-width: 100px }
+#b { flex-basis: 50%; layout-width: 150px; layout-x: 100px }
+#c { flex-basis: content; layout-width: 80px }
+#d { flex-basis: auto; layout-width: 50px; layout-x: 80px }
+#e { flex-basis: 100px; layout-width: 100px }
+#f { flex-basis: max-content; layout-width: 80px }
+#g { layout-height: 40px }
+</script>
+</head>
+<body>
+<div class=c><div id=a style="flex-basis: 100px"></div><div id=b style="flex-basis: 50%"></div></div>
+<div class=c><div id=c style="flex-basis: content"><span></span></div><div id=d></div></div>
+<div class=c><div id=e style="flex-basis: 100px; box-sizing: border-box; padding: 0 10px"></div><div id=f style="flex-basis: max-content"><span></span></div></div>
+<div class=c style="flex-direction: column; height: auto"><div id=g style="flex-basis: 40px"></div></div>
+</body>
+</html>

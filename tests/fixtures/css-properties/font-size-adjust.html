@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-size-adjust</title>
+<style>
+#t { font-size-adjust: 0.6 }
+#c { font-size-adjust: cap-height from-font }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { font-size-adjust: 0.6; layout-width: >#r }
+#c { font-size-adjust: cap-height from-font }
+</script>
+</head>
+<body>
+<div><span id=t>Text</span></div><div><span id=r>Text</span></div><div id=c></div>
+</body>
+</html>

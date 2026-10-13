@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-rendering</title>
+<style>
+#t { text-rendering: optimizeSpeed }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { text-rendering: optimizeSpeed; layout-width: >#r }
+</script>
+</head>
+<body>
+<div><span id=t>AVAVAVAV</span></div>
+<div><span id=r>AVAVAVAV</span></div>
+</body>
+</html>

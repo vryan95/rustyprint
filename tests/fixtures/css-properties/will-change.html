@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>will-change</title>
+<style>
+body { font-size: 10px }
+#a { will-change: transform, opacity }
+#b { will-change: scroll-position }
+#c { will-change: auto }
+#bad { will-change: will-change }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { will-change: transform, opacity }
+#b { will-change: scroll-position }
+#c { will-change: auto }
+html { will-change: auto }
+warning: invalid value for `will-change`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

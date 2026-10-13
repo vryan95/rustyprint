@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>::checkmark</title>
+<style>
+input { appearance: base; width: 20px; height: 20px; border: 1px solid }
+#a::checkmark { content: "✔"; color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#a::checkmark { color: rgb(0, 128, 0) }
+#a { appearance: base; layout-text: "✔" }
+#b { layout-text: "" }
+#c { paint-items: >1 }
+</script>
+</head>
+<body>
+<input id=a type=checkbox checked> <input id=b type=checkbox> <input id=c type=radio checked>
+</body>
+</html>

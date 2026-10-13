@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>param()</title>
+<style>
+#a { link-parameters: param(--a, 1px solid) }
+#b { link-parameters: param(--b) }
+#c { link-parameters: param(--c, red) param(--d, blue) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { link-parameters: param(--a, 1px solid) }
+#b { link-parameters: param(--b) }
+#c { link-parameters: none }
+warning: invalid value for `link-parameters`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ol</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: block; margin-top: 16px; padding-left: 40px; counter-reset: list-item 0; list-style-type: decimal }
+#start { counter-reset: list-item 2 }
+#rev { counter-reset: reversed(list-item) }
+#revstart { counter-reset: reversed(list-item) 11 }
+#a { layout-text: "1. a|2. b" }
+#s { layout-text: "3. s" }
+#r1 { layout-text: "3. x" }
+#r3 { layout-text: "1. z" }
+#rs { layout-text: "10. y" }
+#t { layout-text: "c. t" }
+#n { layout-text: "1. n|ii. m|2. o" }
+</script>
+</head>
+<body>
+<ol id=a><li>a</li><li>b</li></ol>
+<ol id=start start=3><li id=s>s</li></ol>
+<ol id=rev reversed><li id=r1>x</li><li>y</li><li id=r3>z</li></ol>
+<ol id=revstart reversed start=10><li id=rs>y</li></ol>
+<ol type=a start=3><li id=t>t</li></ol>
+<ol id=n><li>n<ol type=i start=2><li>m</li></ol></li><li>o</li></ol>
+</body>
+</html>

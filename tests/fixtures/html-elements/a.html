@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>a</title>
+<style>
+.next { break-before: page }
+</style>
+<script type="text/x-rustyprint-expect">
+#e { display: inline; color: rgb(0, 0, 238); text-decoration-line: underline }
+#n { color: rgb(0, 0, 0); text-decoration-line: none }
+html { layout-page-links: "https://example.com/, #2, #2, #1, mailto:a@example.com, #2 | #1" }
+</script>
+</head>
+<body>
+<p><a id=e href="https://example.com/">external</a> <a href="#far">to an id</a>
+<a href="#named">to a name</a> <a href="#">to the top</a> <a href="mailto:a@example.com">mail</a>
+<a href="#caf%C3%A9">encoded</a> <a href="#missing">missing</a> <a href="javascript:void(0)">script</a>
+<a id=n>no href</a> <a href="#hidden">hidden</a></p>
+<p style="display: none" id=hidden>x</p>
+<p class=next id=far><a name=named></a>target <span id=café>here</span></p>
+<p><a href="#top"><span>back to top</span></a></p>
+</body>
+</html>

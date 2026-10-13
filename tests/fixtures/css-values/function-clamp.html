@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>clamp()</title>
+<style>
+#t { font-size: 10px; line-height: 20px; margin-top: clamp(5px, 1em, 8px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-top: 8px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

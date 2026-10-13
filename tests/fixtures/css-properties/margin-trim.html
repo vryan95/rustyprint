@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>margin-trim</title>
+<style>
+#t, #u, #r { border: 1px solid }
+p { margin: 20px 0; height: 10px }
+#t { margin-trim: block }
+#u { margin-trim: block-start }
+#v { margin-trim: inline-end block-start }
+#w { margin-trim: block-start block-end inline-start inline-end }
+#x { margin-trim: block block }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-trim: block; layout-height: 42px }
+#u { margin-trim: block-start; layout-height: 62px }
+#r { layout-height: 82px }
+#v { margin-trim: block-start inline-end }
+#w { margin-trim: block inline }
+html { margin-trim: none }
+#fa { layout-x: 188px }
+#fz { layout-x: 258px }
+#fb { layout-height: 10px }
+#fc { layout-y: #fb }
+#t1 { layout-x: 8px; layout-y: #gt; layout-width: 90px }
+#t2 { layout-x: 118px; layout-width: 90px }
+warning: invalid value for `margin-trim`
+</script>
+</head>
+<body>
+<div id=t><p></p><p></p></div><div id=u><p></p><p></p></div><div id=r><p></p><p></p></div>
+<div id=v></div><div id=w></div><div id=x></div>
+<div style="display: flex; justify-content: flex-end; width: 300px; margin-trim: inline"><div id=fa style="margin: 0 10px; width: 50px"></div><div id=fz style="margin: 0 10px; width: 50px"></div></div>
+<div id=fb style="display: flex; margin-trim: block"><div id=fc style="margin: 10px 0; height: 10px"></div></div>
+<div id=gt style="display: grid; grid-template-columns: 100px 100px; width: 200px; margin-trim: block inline"><div id=t1 style="margin: 10px"></div><div id=t2 style="margin: 10px"></div></div>
+</body>
+</html>

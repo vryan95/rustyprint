@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background-attachment</title>
+<style>
+#t { background-attachment: fixed, local }
+#u { background-attachment: scroll }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-attachment: fixed, local }
+#u { background-attachment: scroll }
+html { background-attachment: scroll }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div>
+</body>
+</html>

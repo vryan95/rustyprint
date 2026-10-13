@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>column-rule-color</title>
+<style>
+body { margin: 0 }
+.m { width: 340px; column-gap: 20px }
+.m > div { height: 10px; break-inside: avoid }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#a { column-rule-width: 0px; column-rule-style: none; column-rule-color: currentcolor }
+#b { column-rule-width: 5px; column-rule-style: solid; column-rule-color: rgb(255, 0, 0) }
+#c { column-rule-width: 2px; column-rule-style: dashed; column-rule-color: rgb(0, 128, 0) }
+#d { column-rule-width: 1px; column-rule-style: double }
+</script>
+</head>
+<body>
+<div class=m id=a style="columns: 2; color: blue"></div>
+<div class=m id=b style="columns: 2; column-rule: thick solid red"></div>
+<div class=m id=c style="columns: 2; column-rule-width: 2.5px; column-rule-style: dashed; column-rule-color: green"></div>
+<div class=m id=d style="columns: 2; column-rule: double thin"></div>
+</body>
+</html>

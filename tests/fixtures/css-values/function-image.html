@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>image()</title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background: image("assets/photo.png") no-repeat }
+#b { background-image: image(red) }
+#c { background-image: image(url(assets/missing.png), blue) }
+#d { direction: rtl; background: image(ltr "assets/photo.png") no-repeat }
+#e { direction: rtl; background: image(rtl "assets/photo.png") no-repeat }
+#f { background: image("assets/photo.png#xywh=10,0,20,10") no-repeat }
+#g { background: image("assets/photo.png#xywh=percent:50,50,50,50") no-repeat }
+#h { background-image: image(ltr) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: image(url("assets/photo.png")); layout-image: "0 0 40 20"; layout-image-orientation: 1 }
+#b { background-image: image(rgb(255, 0, 0)); layout-image: none; paint-items: 3 }
+#c { background-image: image(url("assets/missing.png"), rgb(0, 0, 255)); paint-items: 3 }
+#d { background-image: image(ltr url("assets/photo.png")); layout-image-orientation: 2 }
+#e { layout-image-orientation: 1 }
+#f { layout-image: "-10 0 40 20"; paint-items: 5 }
+#g { layout-image: "-20 -10 40 20" }
+#h { background-image: none }
+warning: invalid value for `background-image`
+warning: could not load image `assets/missing.png`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div><div id=f></div>
+<div id=g></div><div id=h></div>
+</body>
+</html>

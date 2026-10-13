@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-behavior</title>
+<style>
+body { font-size: 10px }
+#a { scroll-behavior: smooth }
+#b { scroll-behavior: auto }
+#bad { scroll-behavior: fast }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-behavior: smooth }
+#b { scroll-behavior: auto }
+html { scroll-behavior: auto }
+warning: invalid value for `scroll-behavior`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

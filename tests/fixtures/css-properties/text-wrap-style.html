@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-wrap-style</title>
+<style>
+#p, #q { width: 300px }
+#p { text-wrap-style: balance }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { text-wrap-style: balance; layout-lines: 2 }
+#t { layout-x: >#r }
+</script>
+</head>
+<body>
+<div id=p>aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa <span id=t>bbbb</span></div><div id=q>aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa aaaa <span id=r>bbbb</span></div>
+</body>
+</html>

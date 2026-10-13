@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-image-repeat</title>
+<style>
+body { margin: 0 }
+div { width: 25px; height: 25px; border: 10px solid; border-image-source: url(assets/frame.png); border-image-slice: 10 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { border-image-repeat: stretch; layout-paint: "image*8" }
+#b { border-image-repeat: repeat; layout-paint: "image*16" }
+#c { border-image-repeat: round; layout-paint: "image*16" }
+#d { border-image-repeat: space; layout-paint: "image*12" }
+#e { border-image-repeat: round space }
+</script>
+</head>
+<body>
+<div id=a></div>
+<div id=b style="border-image-repeat: repeat"></div>
+<div id=c style="border-image-repeat: round round"></div>
+<div id=d style="border-image-repeat: space"></div>
+<div id=e style="border-image-repeat: round space"></div>
+</body>
+</html>

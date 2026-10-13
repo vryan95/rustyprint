@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transform-origin</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { transform: scale(2) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform-origin: 0px 0px; layout-paint: "transform(2,0,0,2,0,0)" }
+#b { transform-origin: 100% 100% 5px }
+#c { transform-origin: 50% 0%; layout-paint: "transform(2,0,0,2,-50,0)" }
+#d { transform-origin: 50% 50% }
+</script>
+</head>
+<body>
+<div id=a style="transform-origin: 0 0"></div>
+<div id=b style="transform-origin: bottom right 5px"></div>
+<div id=c style="transform-origin: top"></div>
+<div id=d></div>
+</body>
+</html>

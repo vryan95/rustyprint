@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>type-filter-function</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { filter: blur(1px) brightness(2) contrast(0.5) grayscale(0.5) }
+#b { filter: hue-rotate(90deg) invert(0.25) opacity(0.5) saturate(3) sepia(1) }
+#c { filter: drop-shadow(rgb(255, 0, 0) 1px 2px 0px) blur(0px) }
+#d { filter: none }
+warning: invalid value for `filter`
+</script>
+</head>
+<body>
+<div id=a style="filter: blur(1px) brightness(200%) contrast(.5) grayscale(50%)"></div>
+<div id=b style="filter: hue-rotate(0.25turn) invert(25%) opacity(50%) saturate(3) sepia(200%)"></div>
+<div id=c style="filter: drop-shadow(1px 2px red) blur()"></div>
+<div id=d style="filter: grayscale(-1)"></div>
+</body>
+</html>

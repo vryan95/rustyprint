@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>option</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: block; padding-left: 2px; padding-bottom: 1px; text-wrap-mode: nowrap }
+#b { background-color: rgb(206, 206, 206) }
+#a { background-color: rgba(0, 0, 0, 0) }
+#c { layout-text: "Short label" }
+</script>
+</head>
+<body>
+<select size=3><option id=a>A<option id=b selected>B</select>
+<select id=c><option label="Short label">Long text</select>
+</body>
+</html>

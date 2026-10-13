@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>page-break-inside</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+.f { height: 1050px }
+.c { height: 50px }
+#t { page-break-inside: avoid }
+#u { page-break-inside: page }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { break-inside: avoid; layout-page: 2; layout-pages: 1 }
+warning: invalid value for `page-break-inside`
+</script>
+</head>
+<body>
+<div class=f></div><div id=t><div class=c></div><div class=c></div></div><div id=u></div>
+</body>
+</html>

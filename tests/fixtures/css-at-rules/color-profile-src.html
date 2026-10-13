@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@color-profile src</title>
+<style>
+@color-profile --quoted { src: "assets/gray.icc" }
+@color-profile --missing { src: url(assets/missing.icc) }
+@color-profile --not-icc { src: url(assets/../color-profile-src.html) }
+@color-profile --none { rendering-intent: perceptual }
+@color-profile --later { src: url(assets/missing.icc) }
+@color-profile --later { src: url(assets/gray.icc) }
+#a { color: color(--quoted 1) }
+#b { color: color(--missing 1) }
+#c { color: color(--later 0) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { color: rgb(255, 255, 255) }
+#b { color: rgb(0, 0, 0) }
+#c { color: rgb(0, 0, 0) }
+warning: could not load color profile `assets/missing.icc`: it was not found
+warning: could not load color profile `assets/../color-profile-src.html`: not an ICC profile
+warning: ignored @color-profile --none: it needs `src`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-area</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px; grid-template-columns: repeat(3, 100px); grid-template-rows: 10px 10px; position: relative; padding: 5px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-row-start: 2; grid-column-start: 2; grid-row-end: 3; grid-column-end: 4 }
+#a { layout-x: 105px; layout-y: 15px; layout-width: 200px; layout-height: 10px }
+#n { grid-row-start: foo; grid-column-start: foo; grid-row-end: foo; grid-column-end: foo }
+#m { grid-row-start: 1; grid-column-start: auto; grid-row-end: auto; grid-column-end: auto }
+#p { layout-x: 205px; layout-y: 5px; layout-width: 100px; layout-height: 20px }
+#q { layout-x: 0px; layout-y: 15px; layout-width: 105px; layout-height: 15px }
+</script>
+</head>
+<body>
+<div class=g><div id=a style="grid-area: 2 / 2 / 3 / 4"></div>
+<div id=p style="position: absolute; inset: 0; grid-area: 1 / 3 / 3 / 4"></div>
+<div id=q style="position: absolute; inset: 0; grid-row: 2 / auto; grid-column: auto / 2"></div></div>
+<div id=n style="grid-area: foo"></div>
+<div id=m style="grid-area: 1"></div>
+</body>
+</html>

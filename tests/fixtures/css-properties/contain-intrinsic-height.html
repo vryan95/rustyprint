@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>contain-intrinsic-height</title>
+<style>
+#t { contain-intrinsic-height: 2em }
+#c { contain: size; contain-intrinsic-height: 40px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { contain-intrinsic-height: 32px }
+html { contain-intrinsic-height: none }
+#c { layout-height: 40 }
+</script>
+</head>
+<body>
+<div id=t></div>
+<div id=c>Text<br>more<br>lines<br>than<br>fit</div>
+</body>
+</html>

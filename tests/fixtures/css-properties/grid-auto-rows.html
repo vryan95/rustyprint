@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-auto-rows</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { grid-auto-rows: 15px 25px; layout-height: 80px }
+#a2 { layout-y: 15px; layout-height: 25px }
+#a4 { layout-y: 55px; layout-height: 25px }
+#b { grid-auto-rows: minmax(20px, auto) }
+#b1 { layout-height: 20px }
+#b2 { layout-height: 30px }
+#c { grid-auto-rows: auto }
+#d { layout-y: 130px; layout-height: 7px }
+</script>
+</head>
+<body>
+<div class=g id=a style="grid-auto-rows: 15px 25px"><div></div><div id=a2></div><div></div><div id=a4></div></div>
+<div class=g id=b style="grid-auto-rows: minmax(20px, auto)"><div id=b1></div><div id=b2><div style="height: 30px"></div></div></div>
+<div class=g id=c></div>
+<div class=g style="grid-template-rows: 10px; grid-auto-rows: 7px"><div id=d style="grid-row: -3"></div><div></div></div>
+</body>
+</html>

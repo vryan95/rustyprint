@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>page-margin-safety</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page { page-margin-safety: clamp }
+@page :left { page-margin-safety: add }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-margin-safety: "clamp add" }
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b class=next>b</p>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background-image</title>
+<style>
+div { width: 100px; height: 20px }
+#t { background-image: url(assets/red.png) }
+#u { background-image: url('assets/red.png'), none }
+#v { background-image: url(missing.png); background-color: red }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-image: url("assets/red.png"); paint-items: 12 }
+#u { background-image: url("assets/red.png"), none }
+#v { paint-items: 1 }
+html { background-image: none }
+warning: could not load image `missing.png`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div>
+</body>
+</html>

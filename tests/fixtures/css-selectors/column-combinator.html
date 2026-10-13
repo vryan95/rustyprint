@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Column combinator</title>
+<style>
+col.x || td { background-color: green }
+colgroup.g || td { color: red }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-color: rgb(0, 128, 0) }
+#b { background-color: rgba(0, 0, 0, 0); color: rgb(255, 0, 0) }
+#c { background-color: rgb(0, 128, 0) }
+#d { background-color: rgba(0, 0, 0, 0) }
+#e { background-color: rgba(0, 0, 0, 0) }
+#f { background-color: rgba(0, 0, 0, 0); color: rgb(0, 0, 0) }
+</script>
+</head>
+<body>
+<table>
+<colgroup><col class=x><col></colgroup>
+<colgroup class=g span=2></colgroup>
+<tr><td id=a rowspan=2>a</td><td id=b colspan=2>b</td></tr>
+<tr><td id=d>d</td></tr>
+<tr><td id=c>c</td><td id=e colspan=0 style="display: none"></td></tr>
+</table>
+<table><tr><td id=f>f</td></tr></table>
+</body>
+</html>

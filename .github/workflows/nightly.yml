@@ -1,0 +1,86 @@
+# Fuzzing and benchmarks, which take too long for every pull request. Runs every night on
+# master, and by hand from the Actions tab.
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_TOOLCHAIN: "1.98"
+
+jobs:
+  fuzz:
+    name: Fuzz (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [html, css, render]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # cargo-fuzz needs nightly for its sanitizer flags.
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      # The corpus grows from night to night: each run starts from the last one's.
+      - uses: actions/cache@v6
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: fuzz-corpus-${{ matrix.target }}-
+      # The fixtures seed the corpus with documents that reach every part of the engine.
+      - name: Fuzz for 10 minutes
+        working-directory: fuzz
+        run: |
+          mkdir -p corpus/${{ matrix.target }}
+          cargo fuzz run ${{ matrix.target }} corpus/${{ matrix.target }} ../tests/fixtures \
+            -- -max_total_time=600 -timeout=30 -rss_limit_mb=4096
+      - name: Keep the crashing input
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crash-${{ matrix.target }}
+          path: fuzz/artifacts/${{ matrix.target }}
+
+  bench:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+      # Criterion compares each run with the results it finds in target/criterion, so the
+      # report says how much each benchmark changed since the previous night.
+      - uses: actions/cache@v6
+        with:
+          path: target/criterion
+          key: criterion-${{ github.run_id }}
+          restore-keys: criterion-
+      - name: Run the benchmarks
+        run: cargo bench -p rustyprint --bench render --locked 2>&1 | tee bench.txt
+      - name: Summary
+        run: |
+          {
+            echo '### Render benchmarks'
+            echo '```'
+            grep -E 'pages|time:|change:|Performance|No change' bench.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: benchmarks
+          path: |
+            bench.txt
+            target/criterion

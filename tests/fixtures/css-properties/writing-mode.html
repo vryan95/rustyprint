@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>writing-mode</title>
+<style>
+body { writing-mode: vertical-rl; margin: 0; font: 20px/30px serif }
+.b { width: 50px }
+</style>
+<script type="text/x-rustyprint-expect">
+body { writing-mode: vertical-rl }
+#a { layout-x: 743.7008px; layout-y: 0px; layout-width: 50px; layout-height: 1122.5197px }
+#b { layout-x: 693.7008px }
+#t { layout-x: 663.7008px; layout-y: 0px; layout-width: 30px; layout-lines: 1; layout-text: "Vertical text" }
+#h { writing-mode: horizontal-tb; layout-x: 641.4408px; layout-width: 22.26px; layout-height: 1122.5197px }
+#lr { writing-mode: vertical-lr; layout-x: 541.4408px; layout-width: 100px }
+#lr1 { layout-x: #lr }
+#p { layout-page: 2; layout-page-x: 93.7px }
+</script>
+</head>
+<body>
+<div class=b id=a></div>
+<div class=b id=b></div>
+<div id=t>Vertical text</div>
+<div id=h style="writing-mode: horizontal-tb">Hi</div>
+<div id=lr style="writing-mode: vertical-lr"><div class=b id=lr1></div><div class=b></div></div>
+<div id=p style="width: 700px; break-inside: avoid"></div>
+</body>
+</html>

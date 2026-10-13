@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>counter()</title>
+<style>
+@page { size: 400px 300px; margin: 50px }
+body { margin: 0 }
+@page { @bottom-center { content: counter(page, upper-roman) "/" counter(pages, lower-alpha) } }
+.next { break-before: page }
+h2 { counter-increment: h }
+h2::before { content: counter(h) ". " }
+#l::before { content: counter(h, lower-greek) counter(h, none) counter(h, square) " " }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-margin-text: "bottom-center:I/b | bottom-center:II/b" }
+#h1 { layout-text: "1. x" }
+#h2 { layout-text: "2. y" }
+#l { layout-text: "β▪ z" }
+</script>
+</head>
+<body>
+<p>a</p><h2 id=h1>x</h2><h2 id=h2>y</h2><p id=l>z</p><p class=next>b</p>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title><gradient></title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background: linear-gradient(red, blue), radial-gradient(red, blue) 0 0 / 50% 50%, green }
+li { list-style-image: linear-gradient(red, blue) }
+#c::before { content: linear-gradient(red, blue) " x" }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255)), radial-gradient(rgb(255, 0, 0), rgb(0, 0, 255)), none; background-color: rgb(0, 128, 0) }
+#b { layout-text: " b"; layout-lines: 1 }
+#c { layout-height: >150; layout-text: " xc" }
+</script>
+</head>
+<body>
+<div id=a></div>
+<ul><li id=b>b</li></ul>
+<p id=c>c</p>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>var()</title>
+<style>
+:root { --size: 3px }
+#t { margin-top: var(--size); margin-left: var(--missing, 4px) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-top: 3px; margin-left: 4px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

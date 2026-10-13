@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-styleset</title>
+<style>
+@font-face { font-family: Simple; src: url(assets/simple.ttf) }
+@font-face { font-family: Narrow; src: url(assets/narrow.ttf) }
+@font-face { font-family: Var; src: url(assets/var.ttf) }
+@font-face { font-family: Color; src: url(assets/color.ttf) }
+@font-face { font-family: Feat; src: url(assets/features.ttf) }
+.v { font-family: Var; font-optical-sizing: none }
+@font-feature-values Feat { @styleset { one: 1; } }
+span { font-family: Feat }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { font-variant-alternates: styleset(one); layout-width: 7px }
+#b { font-variant-alternates: normal }
+warning: invalid value for `font-variant-alternates`
+</script>
+</head>
+<body>
+<p><span id=a style="font-variant-alternates: styleset(one)">a</span></p>
+<p><span id=b style="font-variant-alternates: styleset()">a</span></p>
+</body>
+</html>

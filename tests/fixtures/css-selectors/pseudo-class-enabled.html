@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:enabled</title>
+<style>
+:enabled { outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { outline-style: dotted }
+#yes2 { outline-style: dotted }
+#yes3 { outline-style: dotted }
+#no { outline-style: none }
+#no2 { outline-style: none }
+#no3 { outline-style: none }
+#no4 { outline-style: none }
+</script>
+</head>
+<body>
+<input id=yes><input id=no disabled><button id=yes3>b</button>
+<fieldset disabled><legend><input id=yes2></legend><input id=no2></fieldset>
+<select><optgroup disabled><option id=no3>o</optgroup></select><p id=no4>p</p>
+</body>
+</html>

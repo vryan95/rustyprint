@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>page-break-before</title>
+<style>
+body { margin: 0 }
+p { margin: 0; line-height: 20px }
+#t { page-break-before: always }
+#u { page-break-before: left }
+#v { page-break-before: page }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { break-before: page; layout-page: 2 }
+#u { break-before: left; layout-page: 4 }
+warning: invalid value for `page-break-before`
+</script>
+</head>
+<body>
+<p>a</p><p id=t>t</p><p id=u>u</p><p id=v>v</p>
+</body>
+</html>

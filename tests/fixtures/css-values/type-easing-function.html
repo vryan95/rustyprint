@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title><easing-function></title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+div { animation: slide 4s -1s }
+#a { animation-timing-function: linear }
+#b { animation-timing-function: ease-out }
+#c { animation-timing-function: step-start }
+#d { transition-timing-function: ease-in-out, cubic-bezier(0, 0, 1, 1), steps(2, end), linear(0, 1) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-timing-function: linear; margin-left: 75px }
+#b { animation-timing-function: ease-out }
+#b { layout-x: <75 }
+#c { animation-timing-function: steps(1, start); margin-left: 0px }
+#d { transition-timing-function: ease-in-out, cubic-bezier(0, 0, 1, 1), steps(2), linear(0 0%, 1 100%) }
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div>
+</body>
+</html>

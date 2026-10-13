@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>overlay</title>
+<style>
+body { font-size: 10px }
+#a { overlay: auto }
+#b { overlay: none }
+#bad { overlay: top }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { overlay: auto }
+#b { overlay: none }
+html { overlay: none }
+warning: invalid value for `overlay`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

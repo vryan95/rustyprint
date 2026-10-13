@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>bleed</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page { bleed: 8px }
+@page :left { bleed: auto; marks: crop }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-bleed: "8 8" }
+</script>
+</head>
+<body>
+<p id=a>a</p><p id=b class=next>b</p>
+</body>
+</html>

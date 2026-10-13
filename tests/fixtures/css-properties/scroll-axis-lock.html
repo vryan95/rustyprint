@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-axis-lock</title>
+<style>
+body { font-size: 10px }
+#a { scroll-axis-lock: none }
+#b { scroll-axis-lock: auto }
+#bad { scroll-axis-lock: x }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-axis-lock: none }
+#b { scroll-axis-lock: auto }
+html { scroll-axis-lock: auto }
+warning: invalid value for `scroll-axis-lock`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

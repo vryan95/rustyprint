@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-transform</title>
+<style>
+#t { text-transform: uppercase }
+#c { text-transform: capitalize }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { text-transform: uppercase; layout-text: "HELLO WORLD" }
+#c { layout-text: "Hello World" }
+</script>
+</head>
+<body>
+<div id=t>hello world</div><div id=c>hello world</div>
+</body>
+</html>

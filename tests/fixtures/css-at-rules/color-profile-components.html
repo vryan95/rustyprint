@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@color-profile components</title>
+<style>
+@color-profile --press { src: url(assets/cmyk.icc); components: cyan, magenta, yellow, black }
+@color-profile --bad { src: url(assets/cmyk.icc); components: 1, 2 }
+#a { color: color(--press 0 0 1 0) }
+#b { color: color(--press 0 0) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { color: rgb(255, 255, 0) }
+#b { color: rgb(255, 255, 255) }
+warning: invalid value for `components`: `1, 2`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div>
+</body>
+</html>

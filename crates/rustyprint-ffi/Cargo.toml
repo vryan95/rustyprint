@@ -1,0 +1,36 @@
+[package]
+name = "rustyprint-ffi"
+description = "C ABI over rustyprint, as a shared library"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lib]
+# The shared library for C, Ruby and .NET; the rlib for the tests. Named `rustyprint_ffi`
+# rather than `rustyprint`, whose files would collide with the CLI's and the core crate's.
+name = "rustyprint_ffi"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# Makes rendering panic on a `<!--rustyprint:panic-->` comment, to test internal errors.
+test-support = ["rustyprint/test-support"]
+
+[dependencies]
+rustyprint = { workspace = true, features = ["serde"] }
+serde_json.workspace = true
+
+[dev-dependencies]
+# The tests use the optional features.
+rustyprint-ffi = { path = ".", features = ["test-support"] }
+cbindgen = { workspace = true }
+cc.workspace = true
+lopdf.workspace = true
+
+# The only crate allowed `unsafe` code, so it sets its own lints instead of the workspace's.
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+undocumented_unsafe_blocks = "warn"

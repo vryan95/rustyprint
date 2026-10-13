@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-box-trim</title>
+<style>
+#t, #r { line-height: 40px }
+#t { text-box-trim: trim-start }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { text-box-trim: trim-start; text-box-edge: auto; layout-height: <#r }
+</script>
+</head>
+<body>
+<div id=t>Text</div><div id=r>Text</div>
+</body>
+</html>

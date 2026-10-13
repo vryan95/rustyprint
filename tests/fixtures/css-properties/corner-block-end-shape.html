@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>corner-block-end-shape</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { border-radius: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { corner-bottom-left-shape: notch; corner-bottom-right-shape: squircle }
+#b { corner-bottom-left-shape: bevel; corner-bottom-right-shape: bevel }
+</script>
+</head>
+<body>
+<div id=a style="corner-block-end-shape: notch squircle"></div>
+<div id=b style="corner-block-end-shape: bevel"></div>
+</body>
+</html>

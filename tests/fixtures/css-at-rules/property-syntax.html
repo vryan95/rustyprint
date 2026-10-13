@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@property syntax</title>
+<style>
+@property --choice { syntax: '<length> | auto'; inherits: false; initial-value: auto }
+@property --list { syntax: '<number>+'; inherits: false; initial-value: 1 }
+@property --colors { syntax: '<color>#'; inherits: false; initial-value: red }
+@property --turn { syntax: '<transform-function>'; inherits: false; initial-value: rotate(0deg) }
+@property --name { syntax: '<custom-ident>'; inherits: false; initial-value: none }
+@property --broken { syntax: '<made-up>'; inherits: false; initial-value: 1 }
+@property --unquoted { syntax: <length>; inherits: false; initial-value: 1px }
+#t {
+  font-size: 10px;
+  --choice: 3em;
+  --list: 1 calc(1 + 1)  3;
+  --colors: lime, rgb(0 0 255 / 50%);
+  --turn: translateX(2em);
+  --name: banner;
+}
+#u { --choice: auto; --list: one }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { --choice: 30px; --list: 1 2 3; --colors: rgb(0, 255, 0), rgba(0, 0, 255, 0.5); --turn: translateX(20px); --name: banner }
+#u { --choice: auto; --list: 1 }
+warning: ignored @property --broken: invalid syntax `<made-up>`
+warning: ignored @property --unquoted: `syntax` must be a string
+</script>
+</head>
+<body>
+<div id=t></div>
+<div id=u></div>
+</body>
+</html>

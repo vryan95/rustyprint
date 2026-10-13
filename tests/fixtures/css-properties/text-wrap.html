@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-wrap</title>
+<style>
+#t { text-wrap: nowrap; width: 30px }
+#b { text-wrap: balance }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { text-wrap-mode: nowrap; layout-lines: 1 }
+#b { text-wrap-mode: wrap; text-wrap-style: balance }
+</script>
+</head>
+<body>
+<div id=t>hyphenation internationalization characteristically incomprehensibilities</div><div id=b></div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-composition</title>
+<style>
+@keyframes slide { from { margin-left: 100px } to { margin-left: 0px } }
+@keyframes grow { from, to { width: 5px } }
+div { height: 1px; width: 10px }
+#a { animation-composition: add, accumulate }
+#b { width: 10px; animation: grow 1s; animation-composition: add }
+#c { width: 10px; animation: grow 1s; animation-composition: replace }
+#bad { animation-composition: replace add }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-composition: add, accumulate }
+#b { width: 15px }
+#c { width: 5px }
+html { animation-composition: replace }
+warning: invalid value for `animation-composition`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>cqb</title>
+<style>
+.t { font-size: 10px; line-height: 20px; margin-top: 10cqb }
+#size { container-type: size; width: 300px; height: 200px }
+</style>
+<script type="text/x-rustyprint-expect">
+#outside { margin-top: 112.252px }
+#inside { margin-top: 20px }
+</script>
+</head>
+<body>
+<div class=t id=outside></div>
+<div id=size><div class=t id=inside></div></div>
+</body>
+</html>

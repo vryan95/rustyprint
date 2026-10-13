@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:read-only</title>
+<style>
+:read-only { outline-style: dotted }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { outline-style: dotted }
+#yes2 { outline-style: dotted }
+#yes3 { outline-style: dotted }
+#yes4 { outline-style: dotted }
+#no { outline-style: none }
+#no2 { outline-style: none }
+</script>
+</head>
+<body>
+<input id=yes readonly><input id=no><input id=yes2 type=checkbox>
+<textarea id=no2></textarea><input id=yes3 disabled><p id=yes4>p</p>
+</body>
+</html>

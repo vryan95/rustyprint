@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>flex</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px; height: 10px }
+.c > div { width: 100px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { flex-grow: 1; flex-shrink: 1; flex-basis: 0%; layout-width: 100px }
+#b { flex-grow: 2; layout-width: 200px }
+#n { flex-grow: 0; flex-shrink: 0; flex-basis: auto; layout-width: 100px }
+#m { layout-width: 200px }
+#u { flex-grow: 1; flex-shrink: 1; flex-basis: auto; layout-width: 150px }
+#v { layout-width: 150px }
+#s { flex-grow: 0; flex-shrink: 1; flex-basis: 30px }
+</script>
+</head>
+<body>
+<div class=c><div id=a style="flex: 1"></div><div id=b style="flex: 2"></div></div>
+<div class=c><div id=n style="flex: none"></div><div id=m style="flex: 1"></div></div>
+<div class=c><div id=u style="flex: auto"></div><div id=v style="flex: auto"></div></div>
+<div id=s style="flex: 0 30px"></div>
+</body>
+</html>

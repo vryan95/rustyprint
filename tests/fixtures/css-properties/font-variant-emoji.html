@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>font-variant-emoji</title>
+<style>
+@font-face { font-family: Simple; src: url(assets/simple.ttf) }
+@font-face { font-family: Narrow; src: url(assets/narrow.ttf) }
+@font-face { font-family: Var; src: url(assets/var.ttf) }
+@font-face { font-family: Color; src: url(assets/color.ttf) }
+@font-face { font-family: Feat; src: url(assets/features.ttf) }
+.v { font-family: Var; font-optical-sizing: none }
+span { font-family: Simple, Color }
+body { margin: 0; font-size: 10px; line-height: 1 }
+p { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { font-variant-emoji: normal; layout-width: 7px }
+#b { font-variant-emoji: emoji; layout-width: 10px }
+#c { font-variant-emoji: text; layout-width: 7px }
+#d { font-variant-emoji: unicode; layout-width: 7px }
+#e { font-variant-emoji: unicode; layout-width: 10px }
+#f { font-variant-emoji: emoji; font-variant-caps: normal }
+</script>
+</head>
+<body>
+<p><span id=a>&#x2764;</span></p>
+<p><span id=b style="font-variant-emoji: emoji">&#x2764;</span></p>
+<p><span id=c style="font-variant-emoji: text">&#x2764;</span></p>
+<p><span id=d style="font-variant-emoji: unicode">&#x2764;</span></p>
+<p><span id=e style="font-variant-emoji: unicode">&#x2764;&#xFE0F;</span></p>
+<p><span id=f style="font-variant: emoji">a</span></p>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>object-fit</title>
+<style>
+img { width: 100px; height: 100px }
+#a { object-fit: fill }
+#b { object-fit: contain }
+#c { object-fit: cover }
+#d { object-fit: none }
+#e { object-fit: scale-down }
+#f { object-fit: scale-down; width: 20px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { object-fit: fill; layout-image: "0 0 100 100" }
+#b { object-fit: contain; layout-image: "0 25 100 50" }
+#c { object-fit: cover; layout-image: "-50 0 200 100" }
+#d { object-fit: none; layout-image: "30 40 40 20" }
+#e { object-fit: scale-down; layout-image: "30 40 40 20" }
+#f { layout-image: "0 5 20 10" }
+</script>
+</head>
+<body>
+<p><img id=a src="assets/photo.png"><img id=b src="assets/photo.png"><img id=c src="assets/photo.png">
+<img id=d src="assets/photo.png"><img id=e src="assets/photo.png"><img id=f src="assets/photo.png"></p>
+</body>
+</html>

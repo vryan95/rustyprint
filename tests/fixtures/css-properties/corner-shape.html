@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>corner-shape</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { border-radius: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { corner-top-left-shape: bevel; corner-top-right-shape: scoop; corner-bottom-right-shape: bevel; corner-bottom-left-shape: scoop; layout-paint: "path(#0000ff)" }
+#b { corner-top-left-shape: notch; corner-top-right-shape: squircle; corner-bottom-right-shape: square; corner-bottom-left-shape: squircle }
+#c { corner-top-left-shape: round; corner-bottom-left-shape: round }
+</script>
+</head>
+<body>
+<div id=a style="corner-shape: bevel scoop"></div>
+<div id=b style="corner-shape: notch squircle square"></div>
+<div id=c></div>
+</body>
+</html>

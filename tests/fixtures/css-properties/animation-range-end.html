@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>animation-range-end</title>
+<style>
+body { font-size: 10px }
+#a { animation-range-end: normal, exit 50% }
+#b { animation-range-end: exit-crossing }
+#bad { animation-range-end: auto }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { animation-range-end: normal, exit 50% }
+#b { animation-range-end: exit-crossing 100% }
+html { animation-range-end: normal }
+warning: invalid value for `animation-range-end`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

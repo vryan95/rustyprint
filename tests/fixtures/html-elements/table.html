@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>table</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: table; box-sizing: border-box; border-spacing: 2px; layout-width: 86px; layout-height: 24px }
+#a1 { layout-x: 2px; layout-y: 2px; layout-width: 50px; layout-height: 20px }
+#b { border-top-width: 2px; border-top-style: outset; border-spacing: 0px; layout-width: 200px; layout-height: 32px }
+#b1 { border-top-style: inset; border-top-width: 1px; padding-top: 3px; layout-width: 196px }
+#c { layout-x: 346.85px; layout-width: 100px }
+#d { border-collapse: collapse; border-top-style: hidden }
+#d1 { border-right-style: solid; layout-width: 22.5px }
+#e { background-color: rgb(255, 255, 0) }
+#f2 { layout-width: 244px }
+#g { display: inline-table; layout-width: 24px }
+</script>
+</head>
+<body>
+<table id=a class=p><tr><td id=a1 style="width: 50px">x</td><td style="width: 30px">y</td></tr></table>
+<table id=b border=2 cellspacing=0 cellpadding=3 width=200><tr><td id=b1>x</td></tr></table>
+<table id=c align=center width=100><tr><td>x</td></tr></table>
+<table id=d frame=void rules=all><tr><td id=d1 style="width: 20px">x</td><td>y</td></tr></table>
+<table id=e bgcolor=yellow><tr><td>x</td></tr></table>
+<table id=f class=p style="width: 300px"><tr><td style="width: 50px">a</td><td id=f2>b</td></tr></table>
+<p>Inline <table id=g class=p style="display: inline-table"><tr><td style="width: 20px">x</td></tr></table> table</p>
+</body>
+</html>

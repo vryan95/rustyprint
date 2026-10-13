@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>window-drag</title>
+<style>
+body { font-size: 10px }
+#a { window-drag: move }
+#b { window-drag: none }
+#bad { window-drag: drag }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { window-drag: move }
+#b { window-drag: none }
+html { window-drag: none }
+warning: invalid value for `window-drag`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

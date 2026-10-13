@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>background</title>
+<style>
+div { width: 100px; height: 20px }
+#t { background: url(assets/red.png) no-repeat 10px 20% / 30px 40px content-box padding-box fixed red }
+#u { background: url(assets/red.png) right / contain, border-box blue }
+#v { background-color: red; background: none }
+#w { background: red, blue }
+#x { background: text green }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { background-image: url("assets/red.png"); background-repeat: no-repeat; background-position-x: 10px; background-position-y: 20%; background-size: 30px 40px; background-origin: content-box; background-clip: padding-box; background-attachment: fixed; background-color: rgb(255, 0, 0) }
+#u { background-image: url("assets/red.png"), none; background-position-x: 100%, 0%; background-position-y: 50%, 0%; background-size: contain, auto; background-origin: padding-box, border-box; background-clip: border-box, border-box; background-color: rgb(0, 0, 255) }
+#v { background-color: rgba(0, 0, 0, 0); background-image: none }
+#x { background-clip: text; background-origin: padding-box }
+warning: invalid value for `background`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w></div><div id=x></div>
+</body>
+</html>

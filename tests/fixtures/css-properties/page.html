@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>page</title>
+<style>
+body { margin: 0 }
+p { margin: 0; height: 20px }
+.next { break-before: page }
+@page index { margin-top: 30px }
+.index { page: index }
+#u { page: auto }
+#v { page: initial-x }
+#w { page: inherit }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { page: index; layout-page: 2; layout-page-y: 30 }
+#t p { page: auto; layout-page: 2 }
+#x { page: index; layout-page: 2; layout-page-y: 50 }
+#y { layout-page: 3; layout-page-y: 0 }
+#u { page: auto }
+#v { page: initial-x }
+html { page: auto }
+</script>
+</head>
+<body>
+<p id=a>a</p><div id=t class=index><p>t</p></div><p id=x class=index>x</p><p id=y>y</p><p id=u></p><p id=v></p>
+</body>
+</html>

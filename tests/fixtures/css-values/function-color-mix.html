@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>color-mix()</title>
+<style>
+#t { color: color-mix(in srgb, red, blue) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { color: rgb(128, 0, 128) }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

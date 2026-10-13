@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-orientation</title>
+<style>
+body { margin: 0; font: 20px/30px serif }
+.v { writing-mode: vertical-rl; height: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#u { text-orientation: upright; layout-height: 40px }
+#s { text-orientation: sideways; layout-height: 27.18px }
+#m { text-orientation: mixed; layout-height: #s }
+#i { layout-height: 40px }
+#w { layout-height: #s }
+</script>
+</head>
+<body>
+<div class=v>
+<span id=u style="text-orientation: upright">AB</span>
+<span id=s style="text-orientation: sideways">AB</span>
+<span id=m>AB</span>
+<span id=i>漢字</span>
+</div>
+<div class=v style="writing-mode: sideways-rl"><span id=w style="text-orientation: upright">AB</span></div>
+</body>
+</html>

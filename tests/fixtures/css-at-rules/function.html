@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@function</title>
+<style>
+@function --double(--x <length>) returns <length> { result: calc(var(--x) * 2) }
+@function --pad(--x: 4px, --y: var(--x)) { result: var(--x) var(--y) }
+@function --shade(--c type(<color> | none)) {
+  --mixed: color-mix(in srgb, var(--c) 50%, white);
+  result: var(--mixed);
+}
+@function --outer() { result: var(--set-by-caller) }
+@function --typed() returns <length> { result: red }
+@function --self() { result: --self() }
+@function --wide() {
+  result: narrow;
+  @media (min-width: 100px) { result: wide }
+  @supports (made-up: property) { result: unsupported }
+}
+@function notdashed() { result: 1px }
+#a { width: --double(25px) }
+#b { padding: --pad() }
+#c { padding: --pad(2px) }
+#d { padding: --pad(1px, {3px}) }
+#e { color: --shade(rgb(0, 0, 255)) }
+#f { --set-by-caller: 7px; margin-left: --outer() }
+#g { width: 10px; width: --typed() }
+#h { width: 10px; width: --self() }
+#i { --answer: --wide() }
+#j { width: 10px; width: --double(red) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { width: 50px }
+#b { padding-top: 4px; padding-right: 4px }
+#c { padding-top: 2px; padding-right: 2px }
+#d { padding-top: 1px; padding-right: 3px }
+#e { color: rgb(128, 128, 255) }
+#f { margin-left: 7px }
+#g { width: auto }
+#h { width: auto }
+#i { --answer: wide }
+#j { width: auto }
+warning: @function needs a name such as --name()
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=d></div><div id=e></div>
+<div id=f></div><div id=g></div><div id=h></div><div id=i></div><div id=j></div>
+</body>
+</html>

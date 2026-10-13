@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>grid-template-columns</title>
+<style>
+body { margin: 0 }
+.g { display: grid; width: 300px }
+.g > div { height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#g1 { grid-template-columns: 100px 1fr 2fr }
+#a1 { layout-x: 0px; layout-width: 100px; layout-y: 0px }
+#a2 { layout-x: 100px; layout-width: 66.667px }
+#a3 { layout-x: 166.667px; layout-width: 133.333px }
+#g2 { grid-template-columns: 25% auto }
+#b2 { layout-x: 75px; layout-width: 225px }
+#g3 { grid-template-columns: [a] 50px [b] 50px [c] }
+#c1 { layout-x: 50px; layout-width: 50px }
+#g4 { grid-template-columns: 100px 200px }
+#s { grid-template-columns: subgrid; layout-width: 300px }
+#s2 { layout-x: 100px; layout-width: 200px }
+#n { grid-template-columns: none }
+#r1 { layout-x: 0px; layout-y: 40px; layout-width: 200px }
+#r2 { layout-x: 200px; layout-y: 50px }
+#rtl { grid-template-columns: 100px 200px }
+</script>
+</head>
+<body>
+<div class=g id=g1 style="grid-template-columns: 100px 1fr 2fr"><div id=a1></div><div id=a2></div><div id=a3></div></div>
+<div class=g id=g2 style="grid-template-columns: 25% auto"><div></div><div id=b2></div></div>
+<div class=g id=g3 style="grid-template-columns: [a] 50px [b] 50px [c]"><div id=c1 style="grid-column: b / c"></div></div>
+<div class=g id=g4 style="grid-template-columns: 100px 200px"><div id=s style="display: grid; grid-column: 1 / 3; grid-template-columns: subgrid; height: auto"><div style="height: 10px"></div><div id=s2 style="height: 10px"></div></div></div>
+<div class=g id=n></div>
+<div class=g id=rtl dir=rtl style="grid-template-columns: 100px 200px"><div id=r1 style="grid-column: 2"></div><div id=r2></div></div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>anchor-size()</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#p { width: anchor-size(--a width); layout-width: 50px }
+#q { height: anchor-size(--a); layout-height: 20px }
+#r { width: calc(anchor-size(--a height) * 2); layout-width: 40px }
+#s { width: anchor-size(--missing width, 33px); layout-width: 33px }
+</script>
+</head>
+<body>
+<div class=cb><div class=a></div>
+<div class=p id=p style="width: anchor-size(--a width)"></div>
+<div class=p id=q style="height: anchor-size(--a)"></div>
+<div class=p id=r style="width: calc(anchor-size(--a height) * 2)"></div>
+<div class=p id=s style="width: anchor-size(--missing width, 33px)"></div></div>
+</body>
+</html>

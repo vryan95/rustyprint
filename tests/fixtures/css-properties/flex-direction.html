@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>flex-direction</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px }
+.c > div { width: 50px; height: 20px }
+#cr { height: 100px }
+#cs > div { width: auto; height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#r { flex-direction: row }
+#r1 { layout-x: 0px; layout-y: 0px }
+#r2 { layout-x: 50px; layout-y: 0px }
+#rr { flex-direction: row-reverse }
+#rr1 { layout-x: 250px; layout-y: 20px }
+#rr2 { layout-x: 200px }
+#c { flex-direction: column; layout-height: 40px }
+#c1 { layout-x: 0px; layout-y: 40px }
+#c2 { layout-y: 60px }
+#cr { flex-direction: column-reverse }
+#cr1 { layout-y: 160px }
+#cr2 { layout-y: 140px }
+#t1 { layout-x: 250px; layout-y: 180px }
+#t2 { layout-x: 200px }
+#s { layout-width: 300px; layout-y: 200px }
+#tall { layout-page: 1; layout-pages: 2 }
+#after { layout-page: 2 }
+#rt { layout-page: 3; layout-pages: 2; layout-page-x: 0px }
+#rs { layout-page: 3; layout-pages: 1; layout-page-x: 50px }
+#ra { layout-page: 4 }
+</script>
+</head>
+<body>
+<div class=c id=r><div id=r1></div><div id=r2></div></div>
+<div class=c id=rr style="flex-direction: row-reverse"><div id=rr1></div><div id=rr2></div></div>
+<div class=c id=c style="flex-direction: column"><div id=c1></div><div id=c2></div></div>
+<div class=c id=cr style="flex-direction: column-reverse"><div id=cr1></div><div id=cr2></div></div>
+<div class=c dir=rtl><div id=t1></div><div id=t2></div></div>
+<div class=c id=cs style="flex-direction: column"><div id=s></div></div>
+<div class=c style="flex-direction: column"><div id=tall style="height: 1500px"></div><div id=after></div></div>
+<div class=c style="break-before: page"><div id=rt style="height: 1500px"></div><div id=rs style="height: 10px"></div></div>
+<div id=ra></div>
+</body>
+</html>

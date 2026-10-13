@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>position-try-fallbacks</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+.p { position-anchor: --a }
+@position-try --left { left: auto; right: anchor(left); width: 80px }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { position-try-fallbacks: flip-block; layout-y: 150px }
+#q { position-try-fallbacks: --left, flip-inline; layout-x: 20px }
+#r { position-try-fallbacks: none; layout-y: 295px }
+#s { position-try-fallbacks: bottom; layout-y: 120px }
+</script>
+</head>
+<body>
+<div class=cb><div class=a></div>
+<div class=a style="top: 250px; anchor-name: --low"></div>
+<div class=p id=p style="position-anchor: --low; top: anchor(bottom); height: 100px; position-try-fallbacks: flip-block"></div>
+<div class=p id=q style="left: anchor(right); top: 0; width: 300px; position-try-fallbacks: --left, flip-inline"></div>
+<div class=p id=r style="top: 295px"></div>
+<div class=p id=s style="position-area: top; height: 150px; position-try-fallbacks: bottom"></div></div>
+</body>
+</html>

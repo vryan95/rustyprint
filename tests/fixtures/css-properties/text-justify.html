@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-justify</title>
+<style>
+#p { text-align: justify; text-align-last: justify; text-justify: inter-character; width: 300px }
+#n { text-justify: distribute }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { text-justify: inter-character }
+#t { layout-width: >100 }
+#n { text-justify: inter-character }
+</script>
+</head>
+<body>
+<div id=p><span id=t>ab</span></div><div id=n></div>
+</body>
+</html>

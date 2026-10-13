@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-rotate3d</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: rotate3d(0, 0, 1, 90deg); layout-paint: "transform(0,1,-1,0,75,-25)" }
+#b { transform: rotate3d(0, 1, 0, 60deg); layout-paint: "transform(0.5,0,0,1,25,0)" }
+</script>
+</head>
+<body>
+<div id=a style="transform: rotate3d(0, 0, 1, 90deg)"></div>
+<div id=b style="transform: rotate3d(0, 1, 0, 60deg)"></div>
+</body>
+</html>

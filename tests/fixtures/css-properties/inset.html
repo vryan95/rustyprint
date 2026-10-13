@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>inset</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 200px; height: 100px; padding: 10px; border: 5px solid }
+.cb > div { position: absolute; width: 20px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { top: 1px; right: 2px; bottom: 3px; left: 4px }
+#a { layout-x: 9px; layout-y: 6px; layout-width: 214px; layout-height: 116px }
+#b { top: 0px; right: 0px; bottom: 0px; left: 0px; layout-width: 220px }
+</script>
+</head>
+<body>
+<div class=cb><div id=a style="inset: 1px 2px 3px 4px; width: auto; height: auto"></div>
+<div id=b style="inset: 0; width: auto"></div></div>
+</body>
+</html>

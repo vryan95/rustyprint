@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-mode</title>
+<style>
+body { margin: 0 }
+div { width: 20px; height: 20px; background: blue }
+div { mask-image: linear-gradient(black, black) }
+#d { mask-image: linear-gradient(white, white) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-mode: luminance; layout-mask: "10 10 0" }
+#b { mask-mode: alpha; layout-mask: "10 10 255" }
+#c { mask-mode: match-source; layout-mask: "10 10 255" }
+#d { mask-mode: luminance; layout-mask: "10 10 255" }
+</script>
+</head>
+<body>
+<div id=a style="mask-mode: luminance"></div>
+<div id=b style="mask-mode: alpha"></div>
+<div id=c></div>
+<div id=d style="mask-mode: luminance"></div>
+</body>
+</html>

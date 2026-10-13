@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-start-end-radius</title>
+<style>
+div { border-start-end-radius: 4px 8px }
+#u { direction: rtl }
+#v { writing-mode: vertical-rl }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { border-top-right-radius: 4px 8px }
+#u { border-top-left-radius: 4px 8px }
+#v { border-bottom-right-radius: 4px 8px }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div>
+</body>
+</html>

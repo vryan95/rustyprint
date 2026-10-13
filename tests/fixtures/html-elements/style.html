@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>style</title>
+<style media=print>#t { background-color: green }</style>
+<style media=screen>#t { color: red }</style>
+<script type="text/x-rustyprint-expect">
+style { display: none }
+#t { background-color: rgb(0, 128, 0); color: rgb(0, 0, 0) }
+</script>
+</head>
+<body>
+<p id=t>x</p>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>border-block</title>
+<style>
+#t { border-block: 3px solid }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { border-top-width: 3px; border-bottom-width: 3px; border-left-width: 0px; layout-height: 6px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

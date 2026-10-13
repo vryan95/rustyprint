@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>text-size-adjust</title>
+<style>
+body { font-size: 10px }
+#a { text-size-adjust: none }
+#b { text-size-adjust: 150% }
+#c { text-size-adjust: auto }
+#bad { text-size-adjust: -10% }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { text-size-adjust: none }
+#b { text-size-adjust: 150% }
+#c { text-size-adjust: auto }
+html { text-size-adjust: auto }
+warning: invalid value for `text-size-adjust`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>

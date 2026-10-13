@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>hyphens</title>
+<style>
+#t { hyphens: auto; width: 40px }
+#m { width: 40px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { hyphens: auto; layout-lines: >1 }
+#m { hyphens: manual; layout-lines: 1 }
+</script>
+</head>
+<body>
+<div id=t>hyphenation</div><div id=m>hyphenation</div>
+</body>
+</html>

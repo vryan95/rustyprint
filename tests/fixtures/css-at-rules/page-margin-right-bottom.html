@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@right-bottom</title>
+<style>
+@page { size: 400px 300px; margin: 50px }
+body { margin: 0 }
+@page { @right-bottom { content: "r" } }
+</style>
+<script type="text/x-rustyprint-expect">
+html { layout-page-margin-rects: "right-bottom:350,50,50,200"; layout-page-margin-text: "right-bottom:r" }
+</script>
+</head>
+<body>
+<p>x</p>
+</body>
+</html>

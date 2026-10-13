@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>summary</title>
+<style>
+body { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { display: list-item; list-style-type: disclosure-closed; list-style-position: inside; layout-text: "▸ Closed" }
+#b { list-style-type: disclosure-open; layout-text: "▾ Open" }
+#c { display: block; layout-text: "Second" }
+</script>
+</head>
+<body>
+<details><summary id=a>Closed</summary></details>
+<details open><summary id=b>Open</summary><summary id=c>Second</summary></details>
+</body>
+</html>

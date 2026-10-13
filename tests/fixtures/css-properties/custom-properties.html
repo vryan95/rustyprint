@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>--*</title>
+<style>
+:root { --gap: 4px }
+#t { --pair: var(--gap) var(--gap); margin-top: var(--gap) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { --gap: 4px; --pair: 4px 4px; margin-top: 4px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

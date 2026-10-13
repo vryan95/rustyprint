@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>corner-start-start-shape</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { border-radius: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { corner-top-left-shape: bevel; corner-start-start-shape: bevel }
+#b { corner-top-right-shape: scoop; corner-start-start-shape: scoop }
+</script>
+</head>
+<body>
+<div id=a style="corner-start-start-shape: bevel"></div>
+<div id=b style="corner-start-start-shape: scoop; direction: rtl"></div>
+</body>
+</html>

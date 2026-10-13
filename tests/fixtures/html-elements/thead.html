@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>thead</title>
+<style>
+body { margin: 0 }
+table { line-height: 20px }
+.p td, .p th { padding: 0 }
+@page { size: 300px 100px; margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#h { display: table-header-group; layout-y: 2px; layout-pages: 2 }
+#b1 { layout-y: 24px }
+#h2 { display: table-header-group; layout-pages: 1 }
+</script>
+</head>
+<body>
+<table class=p><tbody><tr><td id=b1 style="width: 50px">1</td></tr><tr><td>2</td></tr><tr><td>3</td></tr>
+<tr><td>4</td></tr><tr><td>5</td></tr></tbody><thead id=h><tr><td>Head</td></tr></thead>
+<thead id=h2><tr><td>Second head</td></tr></thead></table>
+</body>
+</html>

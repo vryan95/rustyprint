@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>anchor()</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+
+</style>
+<script type="text/x-rustyprint-expect">
+#p { top: anchor(--a top); left: anchor(--a right); layout-x: 150px; layout-y: 100px }
+#q { top: calc(anchor(--a bottom) + 5px); layout-y: 125px }
+#r { left: anchor(--missing left, 7px); layout-x: 7px }
+#s { right: anchor(--a inside); layout-x: 130px }
+#t { left: anchor(--a center); top: anchor(--a outside); layout-x: 125px; layout-y: 120px }
+#u { left: anchor(--a 20%); bottom: anchor(--a start); layout-x: 110px; layout-y: 90px }
+#v { left: anchor(--missing left); layout-x: 0px }
+</script>
+</head>
+<body>
+<div class=cb><div class=a></div>
+<div class=p id=p style="top: anchor(--a top); left: anchor(--a right)"></div>
+<div class=p id=q style="top: calc(anchor(--a bottom) + 5px)"></div>
+<div class=p id=r style="left: anchor(--missing left, 7px)"></div>
+<div class=p id=s style="right: anchor(--a inside)"></div>
+<div class=p id=t style="left: anchor(--a center); top: anchor(--a outside)"></div>
+<div class=p id=u style="left: anchor(--a 20%); bottom: anchor(--a start)"></div>
+<div class=p id=v style="left: anchor(--missing left)"></div></div>
+</body>
+</html>

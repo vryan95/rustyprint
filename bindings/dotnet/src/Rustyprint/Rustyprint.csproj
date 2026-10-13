@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Rustyprint</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <PackageId>Rustyprint</PackageId>
+    <Authors>Ryan Verschuren</Authors>
+    <Description>rustyprint renders HTML and CSS to PDF with a layout engine of its own, written in Rust: no browser, no external runtime and no network access unless allowed.</Description>
+    <PackageTags>pdf;html;css;html-to-pdf;rendering</PackageTags>
+    <PackageProjectUrl>https://github.com/vryan95/rustyprint</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/vryan95/rustyprint</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <InternalsVisibleTo Include="Rustyprint.Tests" />
+  </ItemGroup>
+
+  <!--
+    The native library, crates/rustyprint-ffi. A build compiles it with Cargo for this platform
+    and copies it next to the assembly, and into runtimes/<rid>/native/ of a package. The release
+    workflow packs the libraries of every platform instead: RustyprintNativeDir is a directory
+    holding runtimes/<rid>/native/<library> for each, and Cargo is not run.
+  -->
+  <PropertyGroup>
+    <RustyprintNativeName Condition="$([MSBuild]::IsOSPlatform('Windows'))">rustyprint_ffi.dll</RustyprintNativeName>
+    <RustyprintNativeName Condition="$([MSBuild]::IsOSPlatform('OSX'))">librustyprint_ffi.dylib</RustyprintNativeName>
+    <RustyprintNativeName Condition="'$(RustyprintNativeName)' == ''">librustyprint_ffi.so</RustyprintNativeName>
+    <RustyprintCargoTargetDir>$(CARGO_TARGET_DIR)</RustyprintCargoTargetDir>
+    <RustyprintCargoTargetDir Condition="'$(RustyprintCargoTargetDir)' == ''">$(RustyprintRepoRoot)target</RustyprintCargoTargetDir>
+    <!-- The portable runtime identifier, such as linux-x64, rather than the SDK's own, which can name a distribution. -->
+    <RustyprintRidOs Condition="$([MSBuild]::IsOSPlatform('Windows'))">win</RustyprintRidOs>
+    <RustyprintRidOs Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</RustyprintRidOs>
+    <RustyprintRidOs Condition="'$(RustyprintRidOs)' == ''">linux</RustyprintRidOs>
+    <RustyprintRid>$(RustyprintRidOs)-$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</RustyprintRid>
+    <RustyprintNativeLibrary>$([MSBuild]::NormalizePath('$(RustyprintCargoTargetDir)', 'release', '$(RustyprintNativeName)'))</RustyprintNativeLibrary>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(RustyprintNativeDir)' == ''">
+    <None Include="$(RustyprintNativeLibrary)" Link="$(RustyprintNativeName)" Visible="false"
+          CopyToOutputDirectory="PreserveNewest"
+          Pack="true" PackagePath="runtimes/$(RustyprintRid)/native/" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(RustyprintNativeDir)' != ''">
+    <None Include="$(RustyprintNativeDir)/runtimes/**/*" Visible="false"
+          Pack="true" PackagePath="runtimes/" />
+  </ItemGroup>
+
+  <Target Name="BuildRustyprintNative" BeforeTargets="BeforeBuild" Condition="'$(RustyprintNativeDir)' == ''">
+    <Exec Command="cargo build --release --locked -p rustyprint-ffi" WorkingDirectory="$(RustyprintRepoRoot)" />
+  </Target>
+
+</Project>

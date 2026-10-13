@@ -1,0 +1,6 @@
+# The Rust version every cargo command in this repository uses, the workspace's rust-version,
+# which CI also pins. rustup installs it on first use. `cargo +nightly` still picks nightly, as
+# fuzzing needs.
+[toolchain]
+channel = "1.98"
+components = ["rustfmt", "clippy"]

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>left</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 200px; height: 100px; padding: 10px; border: 5px solid }
+.cb > div { position: absolute; width: 20px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { left: 10px; layout-x: 15px }
+#b { left: 50%; layout-x: 115px }
+#c { left: 20px; layout-x: 20px }
+</script>
+</head>
+<body>
+<div class=cb><div id=a style="left: 10px"></div><div id=b style="left: 50%"></div></div>
+<div id=c style="position: relative; left: 20px">moved</div>
+</body>
+</html>

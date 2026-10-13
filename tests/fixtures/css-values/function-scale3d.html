@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-scale3d</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transform: scale3d(2, 2, 5); layout-paint: "transform(2,0,0,2,-50,-25)" }
+</script>
+</head>
+<body>
+<div id=a style="transform: scale3d(2, 2, 5)"></div>
+</body>
+</html>

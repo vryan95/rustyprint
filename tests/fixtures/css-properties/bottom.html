@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>bottom</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 200px; height: 100px; padding: 10px; border: 5px solid }
+.cb > div { position: absolute; width: 20px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { bottom: 10px; layout-y: 95px }
+#b { bottom: 0px; top: 0px; layout-y: 5px; layout-height: 120px }
+#c { bottom: 5px; layout-y: <#d }
+</script>
+</head>
+<body>
+<div class=cb><div id=a style="bottom: 10px"></div><div id=b style="top: 0; bottom: 0; height: auto"></div></div>
+<p id=c style="position: relative; bottom: 5px">raised</p><p id=d>below</p>
+</body>
+</html>

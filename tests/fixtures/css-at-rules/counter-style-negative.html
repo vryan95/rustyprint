@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>negative</title>
+<style>
+@counter-style paren { system: extends decimal; negative: "(" ")"; suffix: " " }
+@counter-style minus { system: extends decimal; negative: "−"; suffix: " " }
+@counter-style cyc { system: cyclic; symbols: x; negative: "-"; suffix: " " }
+@counter-style bad { system: extends decimal; negative: 1 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "(2) a" }
+#b { layout-text: "−2 b" }
+#c { layout-text: "x c" }
+warning: invalid value for `negative`
+</script>
+</head>
+<body>
+<ol start=-2><li id=a style="list-style-type: paren">a</li></ol>
+<ol start=-2><li id=b style="list-style-type: minus">b</li></ol>
+<ol start=-2><li id=c style="list-style-type: cyc">c</li></ol>
+</body>
+</html>

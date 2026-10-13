@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>min-width</title>
+<style>
+#t { width: 10px; min-width: min-content }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { min-width: min-content; layout-width: 10px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

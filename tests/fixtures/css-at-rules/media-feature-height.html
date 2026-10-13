@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>height</title>
+<style>
+@media (1000px < height < 30cm) { #yes { background-color: green } }
+@media (height < 1000px) { #no { background-color: green } }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<div id=yes></div>
+<div id=no></div>
+</body>
+</html>

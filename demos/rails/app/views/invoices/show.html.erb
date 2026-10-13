@@ -1,0 +1,57 @@
+<% content_for :head, stylesheet_link_tag("invoice") %>
+
+<header>
+  <%= image_tag "logo.png", alt: "Northwind Trading Co." %>
+  <div>
+    <h1>INVOICE</h1>
+    <p class="number">No. <%= @invoice.id %><br><%= l @invoice.date, format: :long %></p>
+  </div>
+</header>
+
+<section class="parties">
+  <div>
+    <h2>Billed to</h2>
+    <p><%= safe_join([ @invoice.customer.name, *@invoice.customer.address ], tag.br) %></p>
+  </div>
+  <div>
+    <h2>Details</h2>
+    <p>Order <%= @invoice.order %><br>Due <%= l @invoice.due, format: :long %></p>
+  </div>
+</section>
+
+<table class="lines">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Description</th>
+      <th class="num">Qty</th>
+      <th class="num">Unit price</th>
+      <th class="num">Amount</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @invoice.lines.each.with_index(1) do |line, number| %>
+      <tr>
+        <td><%= number %></td>
+        <td><%= line.description %><small><%= line.detail %></small></td>
+        <td class="num"><%= line.quantity %></td>
+        <td class="num"><%= euros line.unit_price %></td>
+        <td class="num"><%= euros line.amount %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<table class="totals">
+  <tr><td>Subtotal</td><td class="num"><%= euros @invoice.subtotal %></td></tr>
+  <tr><td>VAT <%= (Invoice::VAT_RATE * 100).to_i %>%</td><td class="num"><%= euros @invoice.vat %></td></tr>
+  <tr class="due"><td>Total due</td><td class="num"><%= euros @invoice.total %></td></tr>
+</table>
+
+<section class="payment">
+  <h2>Payment</h2>
+  <p>
+    Please transfer the total within 30 days to IBAN NL91 ABNA 0417 1643 00 (BIC ABNANL2A),
+    quoting invoice <%= @invoice.id %>.
+  </p>
+</section>

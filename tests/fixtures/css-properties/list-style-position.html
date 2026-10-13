@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>list-style-position</title>
+<style>
+body { margin: 0 }
+ol { margin: 0; padding-left: 40px }
+.in { list-style-position: inside }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { list-style-position: outside }
+.in { list-style-position: inside }
+#a { layout-x: 40px; layout-text: "1. a"; layout-lines: 1 }
+#b { layout-x: 40px; layout-text: "2. b"; layout-lines: 1 }
+#ma { layout-x: 40px }
+#mb { layout-x: >50 }
+</script>
+</head>
+<body>
+<ol><li id=a><span id=ma>a</span></li><li id=b class=in><span id=mb>b</span></li></ol>
+</body>
+</html>

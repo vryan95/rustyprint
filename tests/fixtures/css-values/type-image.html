@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title><image></title>
+<style>
+body { margin: 0 }
+div { width: 200px; height: 100px }
+#a { background-image: url(assets/photo.png), linear-gradient(red, blue), image(red), image-set("assets/photo.png" 1x), cross-fade(red, blue), element(#a), paint(x), none }
+li { list-style-image: image-set("assets/hidpi.png" 2x) }
+#c::before { content: image(red) }
+#d { list-style-image: image(green) }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { background-image: url("assets/photo.png"), linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255)), image(rgb(255, 0, 0)), image-set(url("assets/photo.png") 1x), cross-fade(rgb(255, 0, 0), rgb(0, 0, 255)), element(#a), paint(x), none }
+#b { list-style-image: image-set(url("assets/hidpi.png") 2x); layout-text: " b" }
+#c { layout-height: >150 }
+#d { layout-text: " d" }
+</script>
+</head>
+<body>
+<div id=a></div>
+<ul><li id=b>b</li><li id=d>d</li></ul>
+<p id=c></p>
+</body>
+</html>

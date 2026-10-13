@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-timeline-axis</title>
+<style>
+body { font-size: 10px }
+#a { scroll-timeline-axis: inline, y }
+#bad { scroll-timeline-axis: z }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-timeline-axis: inline, y }
+html { scroll-timeline-axis: block }
+warning: invalid value for `scroll-timeline-axis`
+</script>
+</head>
+<body>
+<div id=a></div><div id=bad></div>
+</body>
+</html>

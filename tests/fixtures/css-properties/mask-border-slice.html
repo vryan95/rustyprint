@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-border-slice</title>
+<style>
+body { margin: 0 }
+div { width: 10px; height: 10px; border: 10px solid; background: blue }
+div { mask-border: url(assets/frame.png) 10 / 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-border-slice: 10 fill; layout-mask: "15 15 255" }
+#b { mask-border-slice: 10; layout-mask: "15 15 0" }
+#c { mask-border-slice: 10% 20 }
+</script>
+</head>
+<body>
+<div id=a style="mask-border-slice: fill 10"></div>
+<div id=b></div>
+<div id=c style="mask-border-slice: 10% 20 10% 20"></div>
+</body>
+</html>

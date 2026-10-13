@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>function-ray</title>
+<style>
+body { margin: 0 }
+section { width: 200px; height: 100px }
+div { width: 20px; height: 10px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { offset-path: ray(90deg) }
+#p { layout-paint: "transform(1,0,0,1,140,45)" }
+#b { offset-path: ray(45deg farthest-corner contain at 10px 20px) }
+#c { offset-path: ray(0deg sides) }
+#q { layout-paint: "transform(0,-1,1,0,95,10)" }
+</script>
+</head>
+<body>
+<section id=p><div id=a style="offset-path: ray(90deg); offset-distance: 100%; offset-rotate: 0deg"></div></section>
+<div id=b style="offset-path: ray(at 10px 20px contain farthest-corner 45deg)"></div>
+<section id=q><div id=c style="offset-path: ray(0deg sides); offset-distance: 100%"></div></section>
+</body>
+</html>

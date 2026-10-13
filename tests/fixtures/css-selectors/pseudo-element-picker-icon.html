@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>::picker-icon</title>
+<style>
+#a::picker-icon { color: green }
+#b::picker-icon { content: "+" }
+</style>
+<script type="text/x-rustyprint-expect">
+#a::picker-icon { color: rgb(0, 128, 0) }
+#b { layout-text: "x+" }
+</script>
+</head>
+<body>
+<select id=a><option>x</select> <select id=b><option>x</select>
+</body>
+</html>

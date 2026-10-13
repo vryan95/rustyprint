@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>inset-block-end</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 200px; height: 100px; padding: 10px; border: 5px solid }
+.cb > div { position: absolute; width: 20px; height: 20px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { bottom: 10px; layout-y: 95px }
+</script>
+</head>
+<body>
+<div class=cb><div id=a style="inset-block-end: 10px"></div></div>
+</body>
+</html>

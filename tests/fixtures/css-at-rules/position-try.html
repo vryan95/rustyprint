@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>@position-try</title>
+<style>
+body { margin: 0 }
+.cb { position: relative; width: 400px; height: 300px }
+.a { position: absolute; left: 100px; top: 100px; width: 50px; height: 20px; anchor-name: --a }
+.p { position: absolute; width: 20px; height: 10px }
+#p { position-anchor: --a; left: 390px; top: 0; position-try-fallbacks: --below }
+@position-try --below { left: anchor(left); top: anchor(bottom); color: red }
+</style>
+<script type="text/x-rustyprint-expect">
+#p { position-try-fallbacks: --below; layout-x: 100px; layout-y: 120px }
+warning: `color` is not allowed in @position-try
+</script>
+</head>
+<body>
+<div class=cb><div class=a></div>
+<div class=p id=p></div></div>
+</body>
+</html>

@@ -1,0 +1,77 @@
+@* An invoice as a document of its own, for the browser and for rustyprint. *@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Invoice @Invoice.Id</title>
+  <link rel="stylesheet" href="/invoice/invoice.css">
+</head>
+<body>
+  <header>
+    <img src="/invoice/logo.png" alt="Northwind Trading Co.">
+    <div>
+      <h1>INVOICE</h1>
+      <p class="number">No. @Invoice.Id<br>@Invoice.LongDate(Invoice.Date)</p>
+    </div>
+  </header>
+
+  <section class="parties">
+    <div>
+      <h2>Billed to</h2>
+      <p>
+        @Invoice.Customer.Name
+        @foreach (var line in Invoice.Customer.Address)
+        {
+          <br>@line
+        }
+      </p>
+    </div>
+    <div>
+      <h2>Details</h2>
+      <p>Order @Invoice.Order<br>Due @Invoice.LongDate(Invoice.Due)</p>
+    </div>
+  </section>
+
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Description</th>
+        <th class="num">Qty</th>
+        <th class="num">Unit price</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (var (line, number) in Invoice.Lines.Select((line, i) => (line, i + 1)))
+      {
+        <tr>
+          <td>@number</td>
+          <td>@line.Description<small>@line.Detail</small></td>
+          <td class="num">@line.Quantity</td>
+          <td class="num">@Invoice.Euros(line.UnitPrice)</td>
+          <td class="num">@Invoice.Euros(line.Amount)</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td>Subtotal</td><td class="num">@Invoice.Euros(Invoice.Subtotal)</td></tr>
+    <tr><td>VAT @((int)(Invoice.VatRate * 100))%</td><td class="num">@Invoice.Euros(Invoice.Vat)</td></tr>
+    <tr class="due"><td>Total due</td><td class="num">@Invoice.Euros(Invoice.Total)</td></tr>
+  </table>
+
+  <section class="payment">
+    <h2>Payment</h2>
+    <p>
+      Please transfer the total within 30 days to IBAN NL91 ABNA 0417 1643 00 (BIC ABNANL2A),
+      quoting invoice @Invoice.Id.
+    </p>
+  </section>
+</body>
+</html>
+
+@code {
+    [Parameter, EditorRequired] public Invoice Invoice { get; set; } = null!;
+}

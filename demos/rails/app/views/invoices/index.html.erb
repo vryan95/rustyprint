@@ -1,0 +1,28 @@
+<% content_for :title, "Invoices · rustyprint" %>
+
+<section class="intro">
+  <h1>Invoices from an ERB view</h1>
+  <p>
+    These invoices are an ERB view filled from data in the app. The controller answers
+    <code>.pdf</code> requests with <code>render pdf:</code>, which renders the view to HTML and
+    passes it to rustyprint with the stylesheet and logo from the asset pipeline.
+  </p>
+</section>
+
+<div class="sample-grid">
+  <% @invoices.each do |invoice| %>
+    <article class="sample-card">
+      <h2><%= link_to "Invoice #{invoice.id}", invoice_path(invoice) %></h2>
+      <p><%= invoice.customer.name %> · <%= pluralize(invoice.lines.size, "line") %> · <%= euros invoice.total %></p>
+      <div class="actions">
+        <%= link_to "Open PDF", invoice_path(invoice, format: :pdf), class: "button", target: "_blank" %>
+        <%= link_to "View HTML", invoice_path(invoice), class: "button secondary" %>
+      </div>
+    </article>
+  <% end %>
+</div>
+
+<section class="source">
+  <h2>The controller</h2>
+  <pre><code><%= File.read(Rails.root.join("app/controllers/invoices_controller.rb")) %></code></pre>
+</section>

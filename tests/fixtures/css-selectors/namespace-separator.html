@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Namespace separator</title>
+<style>
+@namespace svg url(http://www.w3.org/2000/svg);
+svg|rect { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<svg><rect id=yes /></svg><rect id=no></rect>
+</body>
+</html>

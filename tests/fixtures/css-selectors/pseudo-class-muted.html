@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>:muted</title>
+<style>
+:muted { background-color: green }
+</style>
+<script type="text/x-rustyprint-expect">
+#yes { background-color: rgb(0, 128, 0) }
+#no { background-color: rgba(0, 0, 0, 0) }
+</script>
+</head>
+<body>
+<video id=yes muted></video><video id=no></video>
+</body>
+</html>

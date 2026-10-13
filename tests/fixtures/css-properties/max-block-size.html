@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>max-block-size</title>
+<style>
+#t { height: 80px; max-block-size: 40px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { max-height: 40px; layout-height: 40px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

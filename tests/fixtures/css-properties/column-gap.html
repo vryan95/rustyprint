@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>column-gap</title>
+<style>
+body { margin: 0 }
+.c { display: flex; width: 300px; height: 10px }
+.c > div { width: 50px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { column-gap: 10px }
+#a2 { layout-x: 60px }
+#b { column-gap: 10% }
+#b2 { layout-x: 80px }
+#g { layout-width: 135px }
+#h { layout-x: 165px }
+#n { column-gap: normal }
+#i { layout-width: 120px }
+#m2 { layout-x: 178px; layout-width: 162px }
+#p2 { layout-x: 187px }
+</script>
+</head>
+<body>
+<div class=c id=a style="column-gap: 10px"><div></div><div id=a2></div></div>
+<div class=c id=b style="column-gap: 10%"><div></div><div id=b2></div></div>
+<div class=c style="column-gap: 30px"><div id=g style="flex: 1"></div><div id=h style="flex: 1"></div></div>
+<div id=n></div>
+<span style="display: inline-flex; column-gap: 20px"><span id=i style="display: inline-flex"><span style="width: 50px"></span><span style="width: 50px; margin-left: 20px"></span></span></span>
+<div style="column-count: 2; width: 340px"><div style="height: 10px"></div><div id=m2 style="height: 10px; break-before: column"></div></div>
+<div style="column-count: 2; width: 340px; column-gap: 10%"><div style="height: 10px"></div><div id=p2 style="height: 10px; break-before: column"></div></div>
+</body>
+</html>

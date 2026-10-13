@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>transition-behavior</title>
+<style>
+body { font-size: 10px }
+#a { transition-behavior: allow-discrete, normal }
+#bad { transition-behavior: discrete }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { transition-behavior: allow-discrete, normal }
+html { transition-behavior: normal }
+warning: invalid value for `transition-behavior`
+</script>
+</head>
+<body>
+<div id=a></div><div id=bad></div>
+</body>
+</html>

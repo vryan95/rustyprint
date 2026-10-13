@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>suffix</title>
+<style>
+@counter-style paren { system: extends lower-alpha; suffix: ") " }
+@counter-style none { system: extends decimal; suffix: "" }
+@counter-style nosuffix { system: extends decimal; suffix: "" }
+@counter-style bad { system: extends decimal; suffix: 1 2 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "a) a" }
+#b { layout-text: "2b" }
+warning: @counter-style cannot define `none`
+warning: invalid value for `suffix`
+</script>
+</head>
+<body>
+<ol><li id=a style="list-style-type: paren">a</li><li id=b style="list-style-type: nosuffix">b</li></ol>
+</body>
+</html>

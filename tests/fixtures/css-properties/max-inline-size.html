@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>max-inline-size</title>
+<style>
+#t { max-inline-size: 300px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { max-width: 300px; layout-width: 300px }
+</script>
+</head>
+<body>
+<div id=t></div>
+</body>
+</html>

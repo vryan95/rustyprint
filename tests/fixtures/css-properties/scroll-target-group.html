@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-target-group</title>
+<style>
+body { font-size: 10px }
+#a { scroll-target-group: auto }
+#b { scroll-target-group: none }
+#bad { scroll-target-group: all }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-target-group: auto }
+#b { scroll-target-group: none }
+html { scroll-target-group: none }
+warning: invalid value for `scroll-target-group`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=bad></div>
+</body>
+</html>

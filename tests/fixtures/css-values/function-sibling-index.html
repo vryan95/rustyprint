@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>sibling-index()</title>
+<style>
+li { margin-top: calc(10px * sibling-index()) }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { margin-top: 30px }
+</script>
+</head>
+<body>
+<ul><li></li><li></li><li id=t></li></ul>
+</body>
+</html>

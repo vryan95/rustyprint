@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>outline</title>
+<style>
+#t { outline: red dashed thin }
+#u { outline: 2px }
+#v { outline: auto }
+#w { outline: solid; height: 10px }
+#r { height: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { outline-color: rgb(255, 0, 0); outline-style: dashed; outline-width: 1px }
+#u { outline-style: none; outline-width: 0px; outline-color: auto }
+#v { outline-style: auto; outline-width: 3px }
+#w { paint-items: >#r }
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v></div><div id=w></div><div id=r></div>
+</body>
+</html>

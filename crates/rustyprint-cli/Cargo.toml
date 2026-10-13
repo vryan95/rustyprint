@@ -1,0 +1,29 @@
+[package]
+name = "rustyprint-cli"
+description = "Command-line HTML to PDF renderer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[features]
+# Makes rendering panic on a `<!--rustyprint:panic-->` comment, to test internal errors.
+test-support = ["rustyprint/test-support"]
+
+[dependencies]
+rustyprint = { workspace = true, features = ["serde"] }
+anyhow.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+# The tests use the optional features.
+rustyprint-cli = { path = ".", features = ["test-support"] }
+lopdf.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "rustyprint"
+path = "src/main.rs"
+doc = false

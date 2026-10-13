@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>corner-top-left-shape</title>
+<style>
+body { margin: 0 }
+div { width: 100px; height: 50px; background: blue }
+div { border-radius: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { corner-top-left-shape: bevel; layout-paint: "path(#0000ff)" }
+#b { corner-top-left-shape: superellipse(-2) }
+#c { corner-top-left-shape: round }
+</script>
+</head>
+<body>
+<div id=a style="corner-top-left-shape: bevel"></div>
+<div id=b style="corner-top-left-shape: superellipse(-2)"></div>
+<div id=c></div>
+</body>
+</html>

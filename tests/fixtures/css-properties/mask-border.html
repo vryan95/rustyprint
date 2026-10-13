@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-border</title>
+<style>
+body { margin: 0 }
+div { width: 10px; height: 10px; border: 10px solid; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-border-source: url("assets/frame.png"); mask-border-slice: 10; mask-border-width: 10px; mask-border-outset: 0; mask-border-repeat: stretch; mask-border-mode: alpha; layout-mask: "5 5 255, 15 15 0" }
+#b { mask-border-mode: luminance; mask-border-repeat: round; layout-mask: "5 5 54, 5 25 0" }
+</script>
+</head>
+<body>
+<div id=a style="mask-border: url(assets/frame.png) 10 / 10px"></div>
+<div id=b style="mask-border: url(assets/frame.png) round 10 / 10px luminance"></div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>hyphenate-character</title>
+<style>
+#t { hyphenate-character: "="; width: 10px }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { hyphenate-character: "="; layout-text: "hy=|phen=|ation" }
+</script>
+</head>
+<body>
+<div id=t>hy&shy;phen&shy;ation</div>
+</body>
+</html>

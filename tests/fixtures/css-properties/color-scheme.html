@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>color-scheme</title>
+<style>
+#t { color-scheme: light dark }
+#u { color-scheme: only dark }
+#v { color-scheme: dark; background-color: Canvas; color: CanvasText }
+#w { color-scheme: --brand light }
+#x { color-scheme: light only dark }
+</style>
+<script type="text/x-rustyprint-expect">
+#t { color-scheme: light dark }
+#u { color-scheme: dark only }
+#v { background-color: rgb(18, 18, 18); color: rgb(255, 255, 255) }
+#v span { color-scheme: dark }
+#w { color-scheme: --brand light }
+html { color-scheme: normal; color: rgb(0, 0, 0) }
+warning: invalid value for `color-scheme`
+</script>
+</head>
+<body>
+<div id=t></div><div id=u></div><div id=v><span>x</span></div><div id=w></div><div id=x></div>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<Shell Title="@($"{Sample.Title} · rustyprint")">
+  <nav class="crumbs"><a href="/">All samples</a></nav>
+
+  <section class="sample-header">
+    <div>
+      <h1>@Sample.Title</h1>
+      <p>@Sample.Summary</p>
+    </div>
+    <div class="actions">
+      <a href="/samples/@(Sample.Id).pdf" class="button" target="_blank">Open PDF</a>
+      <a href="/samples/@(Sample.Id).pdf?download=1" class="button secondary">Download</a>
+    </div>
+  </section>
+
+  <dl class="stats">
+    <div class="stat"><dt>Pages</dt><dd>@Format.Pages(Rendering.Pages)</dd></div>
+    <div class="stat"><dt>Size</dt><dd>@Format.Size(Rendering.Bytes)</dd></div>
+    <div class="stat"><dt>Rendered in</dt><dd>@Math.Round(Rendering.Elapsed.TotalMilliseconds) ms</dd></div>
+    <div class="stat"><dt>Warnings</dt><dd>@Rendering.Warnings.Count</dd></div>
+  </dl>
+
+  @if (Rendering.Warnings.Count > 0)
+  {
+    <ul class="warnings">
+      @foreach (var warning in Rendering.Warnings)
+      {
+        <li>@warning</li>
+      }
+    </ul>
+  }
+
+  <div class="compare">
+    <figure>
+      <figcaption>PDF from rustyprint</figcaption>
+      <iframe src="/samples/@(Sample.Id).pdf" title="@($"{Sample.Title} as PDF")"></iframe>
+    </figure>
+    <figure>
+      <figcaption>The same HTML in your browser</figcaption>
+      <iframe src="/samples/@Sample.Id/files/index.html" title="@($"{Sample.Title} as HTML")"></iframe>
+    </figure>
+  </div>
+
+  <section class="source">
+    <h2>Source</h2>
+    <p>
+      <code>index.html</code>, rendered with these assets:
+      @foreach (var path in Sample.AssetPaths)
+      {
+        <a href="/samples/@Sample.Id/files/@path" class="asset" target="_blank">@path</a>
+      }
+    </p>
+    <details>
+      <summary>Show the C# that renders it</summary>
+      <pre><code>@Snippet</code></pre>
+    </details>
+    <details>
+      <summary>Show index.html</summary>
+      <pre><code>@Sample.Html</code></pre>
+    </details>
+  </section>
+</Shell>
+
+@code {
+    [Parameter, EditorRequired] public Sample Sample { get; set; } = null!;
+
+    [Parameter, EditorRequired] public Rendering Rendering { get; set; } = null!;
+
+    // The C# an ASP.NET Core endpoint would use to render the sample.
+    private string Snippet =>
+        $"""
+        var dir = Path.Combine("samples", "{Sample.Id}");
+        var options = new RenderOptions();
+        {string.Join("\n", Sample.AssetPaths.Select(path => $"options.Assets.AddFile(\"{path}\", Path.Combine(dir, \"{path}\"));"))}
+        var html = await File.ReadAllTextAsync(Path.Combine(dir, "index.html"));
+        var output = await PdfRenderer.RenderAsync(html, options);
+        return Results.File(output.Pdf, "application/pdf");
+        """;
+}

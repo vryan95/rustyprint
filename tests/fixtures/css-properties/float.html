@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>float</title>
+<style>
+body { margin: 0; font-size: 16px; line-height: 20px }
+p { margin: 0 }
+.box { width: 300px }
+#a, #s, #i, #f { float: left }
+#b { float: right }
+#c { float: left }
+#d { float: inline-start }
+#t { margin: 0 }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { float: left; display: block; layout-x: 0px; layout-y: 0px }
+#b { float: right; layout-x: 250px; layout-y: 0px }
+#c { layout-x: 100px; layout-y: 30px }
+#t { layout-width: 300px; layout-lines: >1 }
+#s { float: left; display: block }
+#d { float: inline-start; layout-x: 280px }
+#e { float: none; position: absolute }
+#i { float: left }
+#f { layout-y: 80px }
+#h { layout-height: 60px }
+#w { layout-text: "a b c d|e f g h" }
+#pf { layout-page-y: 0px }
+</script>
+</head>
+<body>
+<div class=box><div id=a style="width: 100px; height: 50px"></div><div id=b style="width: 50px; height: 30px"></div>
+<div id=c style="width: 180px; height: 10px"></div>
+<p id=t>One two three four five six seven eight nine ten eleven twelve thirteen</p></div>
+<p><span id=s>floated span</span></p>
+<div class=box dir=rtl><div id=d style="width: 20px; height: 10px"></div></div>
+<div id=e style="position: absolute; float: left">abs</div>
+<p><img id=i align=left alt=""></p>
+<div class=box style="line-height: 20px"><span id=l>Line</span> <span id=f style="width: 20px; height: 20px"></span>after</div>
+<div id=h style="display: flow-root"><div style="float: left; width: 10px; height: 60px"></div></div>
+<div id=w style="width: 60px">a b c <span style="float: right; width: 10px; height: 10px"></span>d e f g h</div>
+<div style="break-before: page; height: 1100px"></div><div id=pf style="float: left; width: 50px; height: 50px"></div>
+</body>
+</html>

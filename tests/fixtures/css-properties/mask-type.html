@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>mask-type</title>
+<style>
+body { margin: 0 }
+div { width: 20px; height: 20px; background: blue }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { mask-type: alpha }
+#b { mask-type: luminance; layout-paint: "!group" }
+</script>
+</head>
+<body>
+<div id=a style="mask-type: alpha"></div>
+<div id=b></div>
+</body>
+</html>

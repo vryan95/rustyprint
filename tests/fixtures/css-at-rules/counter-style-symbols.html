@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>symbols</title>
+<style>
+@counter-style quoted { system: cyclic; symbols: "§" '¶'; suffix: " " }
+@counter-style idents { system: alphabetic; symbols: one two; suffix: " " }
+@counter-style empty { system: cyclic; symbols: ; }
+@counter-style pictures { system: cyclic; symbols: url(assets/red.png) "x"; suffix: " " }
+li.p { list-style-type: pictures }
+li.q { list-style-type: quoted }
+li.i { list-style-type: idents }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { layout-text: "§ a" }
+#b { layout-text: "¶ b" }
+#c { layout-text: "onetwo c" }
+#d { layout-text: " d"; layout-image: "-24 7 20 10" }
+#e { layout-text: "x e"; layout-image: none }
+warning: ignored `symbols` with an empty value
+warning: ignored @counter-style empty
+</script>
+</head>
+<body>
+<ol><li id=a class=q>a</li><li id=b class=q>b</li></ol>
+<ol start=4><li id=c class=i>c</li></ol>
+<ol><li id=d class=p>d</li><li id=e class=p>e</li></ol>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>scroll-margin-block-start</title>
+<style>
+body { font-size: 10px }
+#a { scroll-margin-block-start: 6px }
+#b { direction: rtl; scroll-margin-block-start: 8px }
+#c { writing-mode: vertical-rl; scroll-margin-block-start: 9px }
+#bad { scroll-margin-block-start: 5% }
+</style>
+<script type="text/x-rustyprint-expect">
+#a { scroll-margin-block-start: 6px; scroll-margin-top: 6px }
+#b { scroll-margin-top: 8px }
+#c { scroll-margin-block-start: 9px }
+html { scroll-margin-block-start: 0px }
+warning: invalid value for `scroll-margin-block-start`
+</script>
+</head>
+<body>
+<div id=a></div><div id=b></div><div id=c></div><div id=bad></div>
+</body>
+</html>
