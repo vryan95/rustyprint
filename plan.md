@@ -307,7 +307,7 @@ Until milestone 27, work was pushed straight to `master`. Since milestone 27, `m
 - **Web Platform Tests:** run the applicable `css/` and `html/rendering/` reftests and track the pass rate per module.
 - **Layout snapshot tests** (`insta`): a text dump of the positioned fragments for each fixture.
 - **Visual reference tests:** each PDF is rasterised (`pdftoppm`) and compared against approved PNGs.
-- **Determinism test:** the same input must produce a byte-identical PDF, from the core and from every front end: the CLI, the server, Ruby and .NET.
+- **Determinism test:** the same input must produce a byte-identical PDF, from the core and from every front end: the CLI, the server, Ruby and .NET (milestone 29; until then, only the core is tested).
 - **Options schema test:** `RenderOptions` accepts exactly what `schema/render-options.schema.json` describes, and the Ruby and .NET options are tested against the same schema.
 - **Binding tests:** the gem and the NuGet package each have their own test suite, run on every platform they ship for.
 - **Demo smoke tests:** CI starts each demo and renders every sample document through it.
@@ -347,7 +347,8 @@ The **Status** column is where the work stands: `todo` (not started), `partial` 
 | 25 | **Ruby gem** | done | `rustyprint` gem on `ffi`, releasing the GVL during renders, with a prebuilt gem for every platform; tested in CI and published to rubygems.org on release. `render pdf:` for Rails controllers. The shared sample documents, and a Ruby demo: a Rails app that renders an ERB invoice view as a PDF through `respond_to` and `render pdf:`, with the samples next to the browser's rendering, an HTML playground and a rake task that renders every sample. |
 | 26 | **.NET package** | done | `Rustyprint` NuGet package with sync and async rendering, typed options and exceptions, native libraries for every platform; tested in CI and published to nuget.org on release. A .NET demo: an ASP.NET Core app with the samples and an HTML playground, and a console command that renders every sample. |
 | 27 | **Protected master** | done | `master` protected on GitHub: changes arrive through pull requests, which merge only when the `CI result` check passes. Work moves from pushing to `master` to branches and pull requests. |
-| 28 | **First release** | partial | A licence, MIT or Apache-2.0, carried by every package and archive; the determinism test across every front end; documentation for each package: doc comments on the Ruby gem's public API, a reference for the HTTP service's API, and every README brought up to date for 1.0.0; and version 1.0.0 released through the pipeline. |
+| 28 | **First release** | partial | A licence, MIT or Apache-2.0, carried by every package and archive; documentation for each package: doc comments on the Ruby gem's public API, a reference for the HTTP service's API, and every README brought up to date for 1.0.0; and version 1.0.0 released through the pipeline. |
+| 29 | **Determinism across front ends** | todo | One reference document in `tests/determinism/`: HTML with an image, a web font and a stylesheet, its options as JSON, and `expected.sha256`, the SHA-256 of the PDF the core renders from it. A test per front end renders it its own way and compares the hash: the core in Rust, the CLI with `--options`, the server through a multipart request, Ruby in a spec and .NET in a test. CI runs them on Linux, Windows and macOS, so they also show the PDF is the same on every platform. When rendering changes on purpose, the tests fail naming the command that regenerates `expected.sha256`. |
 
 ## 9. Open questions
 
