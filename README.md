@@ -247,7 +247,7 @@ rustyprint 1.0.0 compared with [WeasyPrint](https://weasyprint.org) 70.0, a wide
 | Document | Pages | rustyprint | WeasyPrint | |
 | --- | --- | --- | --- | --- |
 | Invoice ([demos/samples/invoice](demos/samples/invoice/index.html)) | 3 | 65 ms, 22 MB | 1.32 s, 71 MB | 20× faster |
-| One-page report ([bench/report-one.html](bench/report-one.html)) | 1 | 28 ms, 18 MB | 1.59 s, 70 MB | 57× faster |
+| One-page report ([bench/report-one.html](bench/report-one.html)) | 1 | 28 ms, 18 MB | 1.15 s, 70 MB | 41× faster |
 | Long report ([bench/report-long.html](bench/report-long.html)) | 498 / 500 | 4.7 s, 497 MB | 43.6 s, 635 MB | 9× faster |
 
 Used as a library, without starting a process, rendering takes:
