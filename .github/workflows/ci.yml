@@ -310,8 +310,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          jobs=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?filter=latest&per_page=100" \
-            --jq '.jobs[] | [.name, .conclusion // .status] | @tsv')
+          # The API now and then answers with a server error, so it is asked up to three times.
+          for attempt in 1 2 3; do
+            if jobs=$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?filter=latest&per_page=100" \
+              --jq '.jobs[] | [.name, .conclusion // .status] | @tsv'); then
+              break
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "::error::Could not read the run's jobs from the GitHub API"
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
           this=$(printf '%s\n' "$jobs" | awk -F'\t' '$1 ~ /(^|\/ )CI result$/ && $2 == "in_progress" { print $1; exit }')
           if [ -z "$this" ]; then
             echo "::error::This job is not among the run's jobs"
