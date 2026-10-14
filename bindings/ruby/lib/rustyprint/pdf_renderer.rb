@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
-require "rack/mock_request"
+begin
+  require "rack/mock_request"
+rescue LoadError
+  # Rack 2 defines MockRequest in rack/mock.
+  require "rack/mock"
+end
 require_relative "asset_collector"
 
 module Rustyprint

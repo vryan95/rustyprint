@@ -1662,7 +1662,7 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "rustyprint"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "criterion",
  "image",
@@ -1681,7 +1681,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-cli"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -1692,7 +1692,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-css"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "cssparser",
  "moxcms",
@@ -1703,14 +1703,14 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-dom"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "html5ever",
 ]
 
 [[package]]
 name = "rustyprint-ffi"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "cbindgen",
  "cc",
@@ -1722,7 +1722,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-layout"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "harfrust",
  "hyphenation",
@@ -1740,7 +1740,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-pdf"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "lopdf",
  "miniz_oxide 0.9.1",
@@ -1753,7 +1753,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-server"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "anyhow",
  "axum",
@@ -1771,7 +1771,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-tests"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "libtest-mimic",
  "rustyprint-css",
