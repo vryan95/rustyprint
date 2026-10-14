@@ -417,7 +417,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "4.0"
-      - uses: rubygems/configure-rubygems-credentials@v2
+      - uses: rubygems/configure-rubygems-credentials@v2.1.0
       - name: Push the gems
         run: for gem in gems/*.gem; do gem push "$gem"; done
 
