@@ -759,7 +759,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "rustyprint-css",
  "rustyprint-dom",
@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-css"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "cssparser",
  "moxcms",
@@ -782,7 +782,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-dom"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "html5ever",
 ]
@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-layout"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "harfrust",
  "hyphenation",
@@ -817,7 +817,7 @@ dependencies = [
 
 [[package]]
 name = "rustyprint-pdf"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "miniz_oxide 0.9.1",
  "pdf-writer",
