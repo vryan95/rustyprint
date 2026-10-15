@@ -252,6 +252,12 @@ macro_rules! longhands {
         impl ComputedValues {
             /// Initial values of every property.
             pub fn initial() -> Self {
+                // Built once: many initial values are allocated lists.
+                static INITIAL: std::sync::OnceLock<ComputedValues> = std::sync::OnceLock::new();
+                INITIAL.get_or_init(Self::build_initial).clone()
+            }
+
+            fn build_initial() -> Self {
                 Self {
                     $($field: $initial,)+
                     custom: CustomProperties::default(),

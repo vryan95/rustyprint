@@ -191,7 +191,7 @@ impl<'a> Breaker<'a> {
             Some(s) => s.to_string(),
             None => {
                 let font = select(style).font;
-                if font.coverage("\u{2010}")[0] {
+                if font.covers('\u{2010}') {
                     "\u{2010}".into()
                 } else {
                     "-".into()
