@@ -305,7 +305,7 @@ jobs:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       # The project reads its version from Cargo.toml.
@@ -436,7 +436,7 @@ jobs:
         with:
           name: nuget
           path: nupkg
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       - uses: NuGet/login@v1
