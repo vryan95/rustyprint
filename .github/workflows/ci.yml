@@ -240,7 +240,7 @@ jobs:
         with:
           key: ffi
       # The tests run on the oldest .NET the package supports and the newest.
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             8.0.x
@@ -266,7 +266,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ffi
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       - run: dotnet format RustyprintDemo.slnx --verify-no-changes
