@@ -89,7 +89,14 @@ pub fn shape_range(
         .iter()
         .map(|f| harfrust::Feature::new(Tag::new(&f.tag), f.value, ..))
         .collect();
-    harfrust::shape(&shaper, &mut buffer, Options::new().features(&features))
+    let plan = font.shape_plan(
+        buffer.direction(),
+        buffer.script(),
+        buffer.language(),
+        &features,
+    );
+    let options = Options::new().plan(Some(&plan)).features(&features);
+    harfrust::shape(&shaper, &mut buffer, options)
         .expect("the buffer has a direction and is not shaped yet");
     let output = buffer;
 

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::fmt;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use harfrust::font::Blob;
 use skrifa::bitmap::{BitmapData, BitmapStrikes, Origin};
@@ -39,6 +39,20 @@ struct FontInner {
     shaping: harfrust::Font,
 }
 
+/// What a shape plan was compiled for.
+struct PlanKey {
+    coords: Vec<F2Dot14>,
+    direction: harfrust::Direction,
+    script: Option<harfrust::Script>,
+    language: Option<harfrust::Language>,
+    features: Vec<harfrust::Feature>,
+}
+
+/// The most shape plans a font file keeps. Plans differ only by instance, script, language
+/// and features, so documents rarely need more; the bound keeps a long-lived font from
+/// growing without limit.
+const MAX_PLANS: usize = 64;
+
 /// A parsed font file.
 struct FontFile {
     data: Blob,
@@ -59,8 +73,14 @@ struct FontFile {
     /// The colors of each `CPAL` palette, and whether it is meant for light (1) or dark (2)
     /// backgrounds.
     palettes: Vec<(Vec<Color>, u32)>,
+    /// Whether the font has horizontal and vertical metrics tables.
+    hmtx: bool,
+    vmtx: bool,
     /// The font at its default location.
     shaping: harfrust::Font,
+    /// Shape plans compiled for the font's instances, which shaping text with the same
+    /// segment properties and features reuses.
+    plans: Mutex<Vec<(PlanKey, Arc<harfrust::ShapePlan>)>>,
 }
 
 /// A variation axis of a variable font.
@@ -518,7 +538,10 @@ impl Font {
             axes,
             color,
             palettes: palettes(&font),
+            hmtx: font.hmtx().is_ok(),
+            vmtx: font.vmtx().is_ok(),
             shaping: shaping.clone(),
+            plans: Mutex::default(),
             data,
         };
         Ok(Self(Arc::new(FontInner {
@@ -746,6 +769,47 @@ impl Font {
         &self.0.shaping
     }
 
+    /// The shape plan for text with these segment properties and features, compiled once.
+    pub(crate) fn shape_plan(
+        &self,
+        direction: harfrust::Direction,
+        script: Option<harfrust::Script>,
+        language: Option<&harfrust::Language>,
+        features: &[harfrust::Feature],
+    ) -> Arc<harfrust::ShapePlan> {
+        let coords = &self.0.coords;
+        let matches = |key: &PlanKey| {
+            key.coords == *coords
+                && key.direction == direction
+                && key.script == script
+                && key.language.as_ref() == language
+                && key.features == features
+        };
+        let lock = || self.0.file.plans.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((_, plan)) = lock().iter().find(|(key, _)| matches(key)) {
+            return plan.clone();
+        }
+        let plan = Arc::new(harfrust::ShapePlan::new(
+            &self.0.shaping,
+            direction,
+            script,
+            language,
+            features,
+        ));
+        let mut plans = lock();
+        if plans.len() < MAX_PLANS && !plans.iter().any(|(key, _)| matches(key)) {
+            let key = PlanKey {
+                coords: coords.clone(),
+                direction,
+                script,
+                language: language.cloned(),
+                features: features.to_vec(),
+            };
+            plans.push((key, plan.clone()));
+        }
+        plan
+    }
+
     /// The glyph the font maps `c` to.
     pub fn glyph(&self, c: char) -> Option<u16> {
         self.0
@@ -757,7 +821,7 @@ impl Font {
 
     /// The horizontal advance of glyph `id` in font units, at the instance's variations.
     pub fn advance(&self, id: u16) -> Option<u16> {
-        if u32::from(id) >= self.0.shaping.num_glyphs() || self.font_ref().hmtx().is_err() {
+        if u32::from(id) >= self.0.shaping.num_glyphs() || !self.0.file.hmtx {
             return None;
         }
         let advance = self.0.shaping.glyph_metrics().h_advance_exact(id.into());
@@ -766,7 +830,7 @@ impl Font {
 
     /// The vertical advance of glyph `id` in font units, if the font has vertical metrics.
     pub fn vertical_advance(&self, id: u16) -> Option<u16> {
-        if u32::from(id) >= self.0.shaping.num_glyphs() || self.font_ref().vmtx().is_err() {
+        if u32::from(id) >= self.0.shaping.num_glyphs() || !self.0.file.vmtx {
             return None;
         }
         let advance = self.0.shaping.glyph_metrics().v_advance_exact(id.into());
@@ -846,12 +910,9 @@ impl Font {
         ranges.is_empty() || ranges.iter().any(|&(a, b)| (a..=b).contains(&c))
     }
 
-    /// Whether the font has a glyph for each character of `text` and is used for it.
-    pub fn coverage(&self, text: &str) -> Vec<bool> {
-        let charmap = self.0.shaping.charmap();
-        text.chars()
-            .map(|c| self.in_range(c) && charmap.map_unicode(c).is_some())
-            .collect()
+    /// Whether the font has a glyph for `c` and is used for it.
+    pub fn covers(&self, c: char) -> bool {
+        self.in_range(c) && self.0.shaping.charmap().map_unicode(c).is_some()
     }
 
     /// Whether the font has color glyphs.

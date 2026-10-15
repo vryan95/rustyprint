@@ -1340,10 +1340,7 @@ fn draws_in_color(font: &Font, c: char) -> bool {
 fn itemize(p: &Paragraph, span: &Span, choice: &FontChoice) -> Vec<Piece> {
     let text = &p.text[span.range.clone()];
     let primary = &choice.font;
-    let coverage = primary.coverage(text);
     let fallback_fonts = &choice.fallbacks;
-    let fallback_coverage: Vec<Vec<bool>> =
-        fallback_fonts.iter().map(|f| f.coverage(text)).collect();
     let style = &span.style;
     let synth_caps = match style.font_variant_caps {
         FontVariantCaps::SmallCaps | FontVariantCaps::PetiteCaps => {
@@ -1360,7 +1357,6 @@ fn itemize(p: &Paragraph, span: &Span, choice: &FontChoice) -> Vec<Piece> {
     );
     let combined = combined_bytes(style, text);
     let mut pieces: Vec<Piece> = Vec::new();
-    let mut char_index = 0;
     for (offset, grapheme) in text.grapheme_indices(true) {
         let start = span.range.start + offset;
         let end = start + grapheme.len();
@@ -1380,30 +1376,24 @@ fn itemize(p: &Paragraph, span: &Span, choice: &FontChoice) -> Vec<Piece> {
         {
             primary.clone()
         } else {
-            let candidates = std::iter::once((primary, coverage[char_index])).chain(
-                fallback_fonts
-                    .iter()
-                    .zip(&fallback_coverage)
-                    .map(|(f, cov)| (f, cov[char_index])),
-            );
-            let covering: Vec<&Font> = candidates
-                .filter(|(_, covered)| *covered)
-                .map(|(f, _)| f)
-                .collect();
+            let mut covering = std::iter::once(primary)
+                .chain(fallback_fonts)
+                .filter(|f| f.covers(first));
             // Emoji presentation prefers a font that draws the character in color, text
             // presentation one that does not (CSS Fonts 4 § 6.10).
-            let wanted = emoji_presentation(style.font_variant_emoji, grapheme);
-            let preferred = wanted.and_then(|color| {
-                covering
-                    .iter()
-                    .find(|f| draws_in_color(f, first) == color)
-                    .copied()
-            });
-            preferred
-                .or(covering.first().copied())
-                .map_or_else(|| primary.clone(), Font::clone)
+            let font = match emoji_presentation(style.font_variant_emoji, grapheme) {
+                Some(color) => {
+                    let covering: Vec<&Font> = covering.collect();
+                    covering
+                        .iter()
+                        .find(|f| draws_in_color(f, first) == color)
+                        .or(covering.first())
+                        .copied()
+                }
+                None => covering.next(),
+            };
+            font.unwrap_or(primary).clone()
         };
-        char_index += grapheme.chars().count();
         let small_caps = synth_caps && (first.is_lowercase() || (all_caps && first.is_uppercase()));
         let level = p.levels[start];
         let tab = first == '\t';

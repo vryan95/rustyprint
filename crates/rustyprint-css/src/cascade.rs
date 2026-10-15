@@ -2360,7 +2360,7 @@ impl Engine<'_> {
     ) -> ComputedValues {
         applicable.sort_by_key(|a| a.key);
         let initial = initial_values();
-        let mut style = ComputedValues::initial();
+        let mut style = initial.clone();
         style.font_rules = parent.font_rules.clone();
 
         // Custom properties first: other values substitute them.
@@ -2386,10 +2386,9 @@ impl Engine<'_> {
             }
         };
         for name in custom_names {
-            let winner = cascade_winner(
-                &applicable,
-                |d| matches!(d, PropertyDeclaration::Custom { name: n, .. } if &**n == name),
-            );
+            let winner = cascade_winner(applicable.iter().filter(|a| {
+                matches!(a.declaration, PropertyDeclaration::Custom { name: n, .. } if &**n == name)
+            }));
             let value = match winner.map(|a| a.declaration) {
                 Some(PropertyDeclaration::Custom {
                     value: CustomValue::Value(value),
@@ -2441,8 +2440,9 @@ impl Engine<'_> {
 
         // Writing mode and direction decide which physical property a logical one maps to.
         for &id in EARLY {
-            let winner = cascade_winner(&applicable, |d| d.id() == Some(id));
-            self.apply(&mut style, id, winner, &ctx, &initial, element);
+            let winner =
+                cascade_winner(applicable.iter().filter(|a| a.declaration.id() == Some(id)));
+            self.apply(&mut style, id, winner, &ctx, initial, element);
             // Inherited lengths were zoomed for the parent: they also take this element's zoom.
             let inherits = winner.is_none_or(|w| {
                 matches!(
@@ -2530,22 +2530,31 @@ impl Engine<'_> {
             }
         }
         let (writing_mode, direction) = (style.writing_mode, style.direction);
+        // A physical property's value comes from it or any logical property mapping to it:
+        // the declarations by the physical property they set, each in cascade order.
+        let mut by_property: Vec<(LonghandId, &Applicable)> = applicable
+            .iter()
+            .filter_map(|a| Some((a.declaration.id()?.to_physical(writing_mode, direction), a)))
+            .collect();
+        by_property.sort_by_key(|(id, _)| *id);
         for &id in LonghandId::ALL {
             if EARLY.contains(&id) || id.is_logical() {
                 continue;
             }
-            // A physical property's value comes from it or any logical property mapping to it.
-            let winner = cascade_winner(&applicable, |d| {
-                d.id()
-                    .is_some_and(|d_id| d_id.to_physical(writing_mode, direction) == id)
-            });
+            let start = by_property.partition_point(|(p, _)| *p < id);
+            let end = by_property.partition_point(|(p, _)| *p <= id);
+            let winner = cascade_winner(by_property[start..end].iter().map(|(_, a)| *a));
+            // The style starts from the initial values, which reset properties keep.
+            if winner.is_none() && !id.inherited() {
+                continue;
+            }
             match winner.map(|w| w.declaration) {
                 // A winning logical declaration sets the physical property.
                 Some(declaration) if declaration.id().is_some_and(|d| d != id) => {
                     let mapped = map_declaration(declaration, id);
-                    self.apply_declaration(&mut style, id, &mapped, &ctx, &initial, element);
+                    self.apply_declaration(&mut style, id, &mapped, &ctx, initial, element);
                 }
-                _ => self.apply(&mut style, id, winner, &ctx, &initial, element),
+                _ => self.apply(&mut style, id, winner, &ctx, initial, element),
             }
         }
         fixup(&mut style, parent);
@@ -2657,18 +2666,14 @@ fn animation_entry(declaration: &PropertyDeclaration) -> Applicable<'_> {
     }
 }
 
-/// The highest-priority declaration among those `select` accepts, following `revert`
+/// The highest-priority declaration among `candidates`, in cascade order, following `revert`
 /// (back to the previous origin) and `revert-layer` (back to the previous layer).
-fn cascade_winner<'a, 'r>(
-    applicable: &'a [Applicable<'r>],
-    select: impl Fn(&PropertyDeclaration) -> bool,
+fn cascade_winner<'a, 'r: 'a>(
+    candidates: impl DoubleEndedIterator<Item = &'a Applicable<'r>>,
 ) -> Option<&'a Applicable<'r>> {
     let mut below_origin: Option<Origin> = None;
     let mut below_layer: Option<(u8, bool, u32)> = None;
-    for candidate in applicable.iter().rev() {
-        if !select(candidate.declaration) {
-            continue;
-        }
+    for candidate in candidates.rev() {
         if below_origin.is_some_and(|origin| origin_group(candidate.origin) >= origin_group(origin))
         {
             continue;
@@ -2728,9 +2733,9 @@ fn map_declaration(declaration: &PropertyDeclaration, id: LonghandId) -> Propert
     }
 }
 
-fn initial_values() -> ComputedValues {
+fn initial_values() -> &'static ComputedValues {
     static INITIAL: OnceLock<ComputedValues> = OnceLock::new();
-    INITIAL.get_or_init(ComputedValues::initial).clone()
+    INITIAL.get_or_init(ComputedValues::initial)
 }
 
 /// Computed-value rules that depend on several properties.

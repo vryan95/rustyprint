@@ -118,6 +118,15 @@ pub(crate) type Spans<'a> = &'a dyn Fn(NodeId, &str) -> Option<u32>;
 
 /// A copy of a style without borders, for table parts whose borders do not apply.
 fn without_borders(style: &Arc<ComputedValues>) -> Arc<ComputedValues> {
+    let widths = [
+        style.border_top_width,
+        style.border_right_width,
+        style.border_bottom_width,
+        style.border_left_width,
+    ];
+    if widths == [0.0; 4] {
+        return style.clone();
+    }
     let mut style = ComputedValues::clone(style);
     style.border_top_width = 0.0;
     style.border_right_width = 0.0;
