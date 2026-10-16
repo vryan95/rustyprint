@@ -84,7 +84,7 @@ RSpec.describe Rustyprint do
     end
 
     it "lets other Ruby threads run while it renders" do
-      html = "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>" * 3_000
+      html = "<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>" * 10_000
       ticks = []
       render = Thread.new do
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
