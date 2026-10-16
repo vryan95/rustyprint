@@ -33,6 +33,12 @@ const MARKS_AREA: f32 = 24.0;
 /// Zlib compression level for streams.
 const COMPRESSION_LEVEL: u8 = 6;
 
+/// The most threads that compress content streams.
+const MAX_COMPRESSION_THREADS: usize = 8;
+
+/// Pages whose content streams wait for compression, per compressing thread.
+const PAGES_PER_THREAD: usize = 4;
+
 /// Errors returned by [`write`].
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -119,7 +125,45 @@ impl Refs {
     }
 }
 
+/// How many threads compress content streams: one per core, up to
+/// [`MAX_COMPRESSION_THREADS`].
+fn compression_threads() -> usize {
+    std::thread::available_parallelism()
+        .map_or(1, std::num::NonZero::get)
+        .min(MAX_COMPRESSION_THREADS)
+}
+
+/// Compresses each stream, on up to `threads` threads; the results keep their order.
+fn compress_all(streams: Vec<Vec<u8>>, threads: usize) -> Vec<Vec<u8>> {
+    let compress = |data: &Vec<u8>| compress_to_vec_zlib(data, COMPRESSION_LEVEL);
+    if threads < 2 || streams.len() < 2 {
+        return streams.iter().map(compress).collect();
+    }
+    let per_thread = streams.len().div_ceil(threads);
+    std::thread::scope(|scope| {
+        let workers: Vec<_> = streams
+            .chunks(per_thread)
+            .map(|chunk| scope.spawn(move || chunk.iter().map(compress).collect::<Vec<_>>()))
+            .collect();
+        workers
+            .into_iter()
+            .flat_map(|worker| match worker.join() {
+                Ok(compressed) => compressed,
+                Err(panic) => std::panic::resume_unwind(panic),
+            })
+            .collect()
+    })
+}
+
 impl Writer {
+    /// Compresses content streams and writes them under their IDs.
+    fn write_streams(&mut self, pending: Vec<(Ref, Vec<u8>)>, threads: usize) {
+        let (ids, streams): (Vec<Ref>, Vec<Vec<u8>>) = pending.into_iter().unzip();
+        for (id, data) in ids.into_iter().zip(compress_all(streams, threads)) {
+            self.pdf.stream(id, &data).filter(Filter::FlateDecode);
+        }
+    }
+
     fn write(&mut self, document: &Document) -> Result<(), Error> {
         let catalog_id = self.refs.next();
         let page_tree_id = self.refs.next();
@@ -157,8 +201,15 @@ impl Writer {
                 .push((format!("Cs{index}"), id, profile.components));
         }
         self.palette.device_cmyk = document.device_cmyk;
+        // Content streams are compressed in parallel, a batch of pages at a time, and written
+        // after their pages under the IDs taken in page order.
+        let threads = compression_threads();
+        let mut pending: Vec<(Ref, Vec<u8>)> = Vec::new();
         for (page, &page_id) in document.pages.iter().zip(&page_ids) {
             rustyprint_dom::budget::check_deadline();
+            if pending.len() >= threads * PAGES_PER_THREAD {
+                self.write_streams(std::mem::take(&mut pending), threads);
+            }
             let width = page.size.width * PX_TO_PT;
             let height = page.size.height * PX_TO_PT;
 
@@ -171,10 +222,7 @@ impl Writer {
             let mut used = Resources::default();
             self.render(&mut content, &mut used, &page.items, height);
             let content_id = self.refs.next();
-            let data = compress_to_vec_zlib(&content.finish(), COMPRESSION_LEVEL);
-            self.pdf
-                .stream(content_id, &data)
-                .filter(Filter::FlateDecode);
+            pending.push((content_id, content.finish().into_vec()));
 
             // Content is drawn from the trim box's corner; the media box grows around it for
             // the bleed and the marks.
@@ -206,6 +254,7 @@ impl Writer {
                 &self.palette,
             );
         }
+        self.write_streams(pending, threads);
 
         for (page, ids) in document.pages.iter().zip(&annotations) {
             let height = page.size.height * PX_TO_PT;

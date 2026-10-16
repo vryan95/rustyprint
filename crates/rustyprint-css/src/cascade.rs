@@ -211,6 +211,15 @@ pub fn compute_styles_in(
         root: None,
         containers,
         ancestors: std::cell::RefCell::new(Vec::new()),
+        share: rules.keyframes.is_empty() && rules.position_try.is_empty() && containers.is_empty(),
+        custom_reads_element: rules.custom_reads_element
+            || document.descendants(document.root()).any(|node| {
+                document
+                    .element(node)
+                    .and_then(|e| e.attr("style"))
+                    .is_some_and(reads_element)
+            }),
+        shared: std::cell::RefCell::default(),
     };
     styles.color_profiles = rules.color_profiles.clone();
     crate::color_profile::with_profiles(&rules.color_profiles, || {
@@ -320,6 +329,12 @@ struct CompiledRule {
     /// The `@container` rules around the rule.
     container: Option<Arc<ContainerChain>>,
     order: u32,
+    /// Whether a declaration uses a function that depends on the element, such as
+    /// `sibling-index()`: elements that match the rule compute values of their own.
+    reads_element: bool,
+    /// Whether a declaration uses custom properties or functions, which can carry such
+    /// functions from elsewhere.
+    reads_custom: bool,
 }
 
 /// The conditions of the `@container` rules around a style rule, outermost first: every
@@ -358,6 +373,9 @@ struct Rules {
     custom_media: HashMap<String, CustomMedia>,
     /// The color profiles that loaded, in cascade order.
     color_profiles: Arc<[ColorProfile]>,
+    /// Whether a custom property or custom function uses a function that depends on the
+    /// element, which values that use them then depend on too.
+    custom_reads_element: bool,
 }
 
 /// A custom property registered by `@property`.
@@ -504,6 +522,7 @@ impl<'a> Collector<'a> {
             layers: LayerTable::default(),
             order: 0,
             warnings,
+            custom_reads_element: false,
         };
         for sheet in &self.sheets {
             if sheet.origin != Origin::UserAgent {
@@ -596,6 +615,7 @@ impl<'a> Collector<'a> {
             .into_iter()
             .map(|rule| (rule.name, Arc::new(rule.function)))
             .collect();
+        let custom_reads_element = flattener.custom_reads_element;
         let mut rules = Rules {
             rules: flattener.rules,
             by_id: HashMap::new(),
@@ -613,6 +633,7 @@ impl<'a> Collector<'a> {
             functions,
             custom_media,
             color_profiles: color_profiles.into(),
+            custom_reads_element,
         };
         for (index, rule) in rules.rules.iter().enumerate() {
             let key = rule.selector.compounds.last().and_then(|compound| {
@@ -997,6 +1018,8 @@ struct Flattener<'a> {
     layers: LayerTable,
     order: u32,
     warnings: Vec<StyleWarning>,
+    /// See [`Rules::custom_reads_element`].
+    custom_reads_element: bool,
 }
 
 impl Flattener<'_> {
@@ -1012,6 +1035,15 @@ impl Flattener<'_> {
             match rule {
                 CssRule::Style(style) => {
                     let declarations = self.compile_declarations(&style.declarations, ctx);
+                    // A custom property keeps such functions as text, for the elements that
+                    // use it to compute.
+                    let (custom, other): (Vec<&Declaration>, Vec<&Declaration>) = style
+                        .declarations
+                        .iter()
+                        .partition(|d| d.name.starts_with("--"));
+                    self.custom_reads_element |= custom.iter().any(|d| reads_element(&d.value));
+                    let reads_element = other.iter().any(|d| reads_element(&d.value));
+                    let reads_custom = other.iter().any(|d| reads_custom(&d.value));
                     if !declarations.is_empty() {
                         let declarations: Arc<[_]> = declarations.into();
                         for selector in &style.selectors.0 {
@@ -1024,6 +1056,8 @@ impl Flattener<'_> {
                                 scope: scope.cloned(),
                                 container: container.clone(),
                                 order: self.order,
+                                reads_element,
+                                reads_custom,
                             });
                         }
                         self.order += 1;
@@ -1344,6 +1378,8 @@ impl Flattener<'_> {
                     }
                 }
                 CssRule::Function { name, function } => {
+                    // Function bodies are not looked into.
+                    self.custom_reads_element = true;
                     self.functions.push(CompiledFunction {
                         origin: ctx.origin,
                         layer,
@@ -1550,9 +1586,9 @@ impl Animated {
 /// An element's style, the styles of its pseudo-elements, and its styles with the
 /// `@position-try` rules it names applied.
 type ElementStyles = (
-    ComputedValues,
-    Vec<(PseudoElement, ComputedValues)>,
-    Vec<(Arc<str>, ComputedValues)>,
+    Arc<ComputedValues>,
+    Vec<(PseudoElement, Arc<ComputedValues>)>,
+    Vec<(Arc<str>, Arc<ComputedValues>)>,
 );
 
 /// A declaration that applies to an element, with its priority.
@@ -1574,6 +1610,27 @@ impl<'r> Applicable<'r> {
     }
 }
 
+/// Whether CSS text uses a function whose value depends on the element it is computed for.
+fn reads_element(text: &str) -> bool {
+    let text = text.to_ascii_lowercase();
+    ["sibling-index", "sibling-count", "random(", "attr("]
+        .iter()
+        .any(|function| text.contains(function))
+}
+
+/// Whether CSS text uses custom properties (`var(--x)`) or custom functions (`--f()`).
+fn reads_custom(text: &str) -> bool {
+    text.contains("--")
+}
+
+/// What elements that share a style have in common: the same parent style, by address,
+/// and the same matched rules.
+#[derive(PartialEq, Eq, Hash)]
+struct ShareKey {
+    parent: usize,
+    rules: Vec<(usize, u32)>,
+}
+
 struct Engine<'a> {
     document: &'a Document,
     rules: &'a Rules,
@@ -1584,6 +1641,14 @@ struct Engine<'a> {
     containers: &'a ContainerSizes,
     /// The ancestors of the element being styled, with their styles, nearest last.
     ancestors: std::cell::RefCell<Vec<(NodeId, Arc<ComputedValues>)>>,
+    /// Whether elements may share styles. Animations, `@position-try` rules and the sizes
+    /// of size containers make styles depend on more than the rules an element matches.
+    share: bool,
+    /// Whether custom properties can carry functions that depend on the element: see
+    /// [`Rules::custom_reads_element`]. Style attributes count too.
+    custom_reads_element: bool,
+    /// The styles computed so far for elements that may share them.
+    shared: std::cell::RefCell<HashMap<ShareKey, ElementStyles>>,
 }
 
 impl Engine<'_> {
@@ -1727,22 +1792,18 @@ impl Engine<'_> {
     }
 
     fn style_tree(&mut self, node: NodeId, parent: &Arc<ComputedValues>, styles: &mut Styles) {
-        for child in self.document.children(node).collect::<Vec<_>>() {
-            if self.document.element(child).is_none() {
-                continue;
-            }
-            let (style, pseudo, tries) = self.style_element(child, parent, styles);
-            let style = Arc::new(style);
+        let children: Vec<NodeId> = self.document.element_children(node).collect();
+        let count = children.len() as u32;
+        for (index, child) in (1..).zip(children) {
+            let (style, pseudo, tries) = self.style_element(child, parent, styles, (index, count));
             for (name, variant) in tries {
-                styles.position_try.insert((child, name), Arc::new(variant));
+                styles.position_try.insert((child, name), variant);
             }
             if self.root.is_none() {
                 self.root = Some(style.clone());
             }
             for (kind, pseudo_style) in pseudo {
-                styles
-                    .pseudo_elements
-                    .insert((child, kind), Arc::new(pseudo_style));
+                styles.pseudo_elements.insert((child, kind), pseudo_style);
             }
             styles.elements.insert(child, style.clone());
             styles.size_containers |= style.container_type.size.is_some();
@@ -1752,18 +1813,67 @@ impl Engine<'_> {
         }
     }
 
-    /// Computes an element's style and the styles of its pseudo-elements.
+    /// Computes an element's style and the styles of its pseudo-elements, or takes them from
+    /// an element that matched the same rules under the same parent style. `siblings` is
+    /// `(sibling-index(), sibling-count())`.
     fn style_element(
         &self,
         element: NodeId,
         parent: &ComputedValues,
         styles: &mut Styles,
+        siblings: (u32, u32),
     ) -> ElementStyles {
         rustyprint_dom::budget::check_deadline();
         let hints = self.hints(element);
         let attribute = self.style_attribute(element, styles);
         let matched = self.matching_rules(element);
+        // Attributes and functions that depend on the element give it values of its own.
+        let shareable = self.share
+            && hints.is_empty()
+            && attribute.is_empty()
+            && matched.iter().all(|(index, _)| {
+                let rule = &self.rules.rules[*index];
+                !rule.reads_element && !(rule.reads_custom && self.custom_reads_element)
+            });
+        let key = shareable.then(|| ShareKey {
+            parent: std::ptr::from_ref(parent) as usize,
+            rules: matched.clone(),
+        });
+        if let Some(shared) = key
+            .as_ref()
+            .and_then(|key| self.shared.borrow().get(key).cloned())
+        {
+            return shared;
+        }
+        let (style, pseudo, tries) =
+            self.compute_element(element, parent, siblings, &hints, &attribute, matched);
+        let computed: ElementStyles = (
+            Arc::new(style),
+            pseudo.into_iter().map(|(k, s)| (k, Arc::new(s))).collect(),
+            tries.into_iter().map(|(n, s)| (n, Arc::new(s))).collect(),
+        );
+        if let Some(key) = key {
+            self.shared.borrow_mut().insert(key, computed.clone());
+        }
+        computed
+    }
 
+    /// Computes an element's style and the styles of its pseudo-elements and `@position-try`
+    /// variants, from the declarations that apply to it.
+    #[allow(clippy::type_complexity)]
+    fn compute_element(
+        &self,
+        element: NodeId,
+        parent: &ComputedValues,
+        siblings: (u32, u32),
+        hints: &[PropertyDeclaration],
+        attribute: &[(PropertyDeclaration, bool)],
+        matched: Vec<(usize, u32)>,
+    ) -> (
+        ComputedValues,
+        Vec<(PseudoElement, ComputedValues)>,
+        Vec<(Arc<str>, ComputedValues)>,
+    ) {
         let mut applicable: Vec<Applicable> = Vec::new();
         let mut pseudo_rules: Vec<(PseudoElement, Applicable)> = Vec::new();
         // Rules of pseudo-elements in `@container` rules, which query once the element is
@@ -1798,7 +1908,7 @@ impl Engine<'_> {
                 }
             }
         }
-        for declaration in &hints {
+        for declaration in hints {
             applicable.push(Applicable {
                 declaration,
                 key: CascadeKey {
@@ -1813,7 +1923,7 @@ impl Engine<'_> {
                 important: false,
             });
         }
-        for (declaration, important) in &attribute {
+        for (declaration, important) in attribute {
             applicable.push(Applicable {
                 declaration,
                 key: CascadeKey {
@@ -1829,7 +1939,6 @@ impl Engine<'_> {
             });
         }
 
-        let siblings = self.sibling_position(element);
         // The declarations again, for styles with `@position-try` rules applied.
         let saved: Vec<Applicable> = if self.rules.position_try.is_empty() {
             Vec::new()
@@ -2118,17 +2227,6 @@ impl Engine<'_> {
             }
         }
         None
-    }
-
-    /// `(sibling-index(), sibling-count())`.
-    fn sibling_position(&self, element: NodeId) -> (u32, u32) {
-        let doc = self.document;
-        let Some(parent) = doc.node(element).parent() else {
-            return (1, 1);
-        };
-        let siblings: Vec<NodeId> = doc.element_children(parent).collect();
-        let index = siblings.iter().position(|&s| s == element).unwrap_or(0);
-        (index as u32 + 1, siblings.len() as u32)
     }
 
     /// Runs the cascade and computes values, with the animations the style names applied as
