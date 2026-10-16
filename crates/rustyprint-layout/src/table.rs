@@ -2,6 +2,7 @@
 //! grid of cells, collapsed borders, column widths, row heights and breaking rows across
 //! pages with repeated headers and footers.
 
+use std::collections::HashMap;
 use std::ops::Range;
 use std::sync::{Arc, Mutex};
 
@@ -413,6 +414,13 @@ struct Edge {
 }
 
 impl Edge {
+    /// Whether two edges draw the same border, whatever they came from.
+    fn draws_as(&self, other: &Edge) -> bool {
+        self.width.to_bits() == other.width.to_bits()
+            && self.style == other.style
+            && self.color == other.color
+    }
+
     const NONE: Edge = Edge {
         width: 0.0,
         style: BorderStyle::None,
@@ -643,6 +651,11 @@ fn collapse_borders(table: &mut Table) {
     let widest = |edges: &mut dyn Iterator<Item = Edge>| {
         edges.fold(Edge::NONE, |a, b| if b.width > a.width { b } else { a })
     };
+    // Cells with the same style and the same borders share their new style: the styles made
+    // from each style, by its address. Each entry keeps the style it came from, so that
+    // address is not reused while this runs.
+    type Halved = (Arc<ComputedValues>, [Edge; 4], Arc<ComputedValues>);
+    let mut halved: HashMap<usize, Vec<Halved>> = HashMap::new();
     let mut first = 0;
     for group in &mut table.groups {
         for (r, row) in group.rows.iter_mut().enumerate() {
@@ -656,7 +669,18 @@ fn collapse_borders(table: &mut Table) {
                     widest(&mut columns.clone().map(|c| horizontal[rows.end][c])),
                     widest(&mut rows.clone().map(|r| vertical[r][columns.start])),
                 ];
-                cell.block.style = Arc::new(with_half_borders(&cell.block.style, sides));
+                let base = &cell.block.style;
+                let made = halved.entry(Arc::as_ptr(base) as usize).or_default();
+                let same =
+                    |(_, edges, _): &&Halved| edges.iter().zip(&sides).all(|(a, b)| a.draws_as(b));
+                cell.block.style = match made.iter().find(same) {
+                    Some((_, _, style)) => style.clone(),
+                    None => {
+                        let style = Arc::new(with_half_borders(base, sides));
+                        made.push((base.clone(), sides, style.clone()));
+                        style
+                    }
+                };
             }
             row.style = without_borders(&row.style);
         }
@@ -2059,5 +2083,69 @@ fn part_fragment(
         replaced: None,
         legend: None,
         out_of_flow: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Images;
+    use crate::boxes::BlockContents;
+    use rustyprint_css::{StyleOptions, compute_styles};
+    use rustyprint_dom::Document;
+
+    /// The first table in `html`.
+    fn table(html: &str) -> Table {
+        fn find(block: &BlockBox) -> Option<&Table> {
+            match &block.contents {
+                BlockContents::Table(table) => Some(table),
+                BlockContents::Blocks(children) => children.iter().find_map(find),
+                _ => None,
+            }
+        }
+        let document = Document::parse(html);
+        let load = |_: &str| None;
+        let styles = compute_styles(
+            &document,
+            &StyleOptions {
+                page_size: (800.0, 1000.0),
+                stylesheet: None,
+                load: &load,
+                font_metrics: None,
+                load_font: None,
+            },
+        );
+        let root = crate::boxes::build(&document, &styles, &Images::none()).unwrap();
+        find(&root).expect("a table").clone()
+    }
+
+    #[test]
+    fn cells_with_the_same_collapsed_borders_share_a_style() {
+        let rows = "<tr><td>a</td><td>b</td></tr>".repeat(4);
+        let table = table(&format!(
+            "<style>table {{ border-collapse: collapse }} td {{ border: 2px solid red }}</style>\
+             <table>{rows}</table>"
+        ));
+        let rows = &table.groups[0].rows;
+        // Inner rows have the same borders on every side.
+        assert!(Arc::ptr_eq(
+            &rows[1].cells[0].block.style,
+            &rows[2].cells[0].block.style
+        ));
+        assert!(Arc::ptr_eq(
+            &rows[1].cells[1].block.style,
+            &rows[2].cells[1].block.style
+        ));
+        let style = &rows[1].cells[0].block.style;
+        assert_eq!(
+            [
+                style.border_top_width,
+                style.border_right_width,
+                style.border_bottom_width,
+                style.border_left_width,
+            ],
+            [1.0; 4]
+        );
+        assert_eq!(style.border_top_style, BorderStyle::Solid);
     }
 }

@@ -313,6 +313,107 @@ fn pseudo_elements() {
 }
 
 #[test]
+fn sibling_functions_count_element_siblings() {
+    let html = "<style>
+        html { margin-left: calc(sibling-index() * 7px) }
+        div * { margin-left: calc(sibling-index() * 10px); margin-right: calc(sibling-count() * 1px) }
+        #c::before { content: ''; margin-left: calc(sibling-index() * 10px) }
+        </style><div><!--x--> text <p id=a></p> text <span id=b><i id=d></i></span><!--x--><p id=c></p> tail</div>";
+    let (doc, styles) = style_with(html, None, &[]);
+    let html_style = styles.get(doc.document_element().unwrap()).unwrap();
+    assert_eq!(margin(&html_style.margin_left), 7.0);
+    // Text and comments between elements are not siblings.
+    for (id, index) in [("a", 1.0), ("b", 2.0), ("c", 3.0)] {
+        let style = by_id(&doc, &styles, id);
+        assert_eq!(margin(&style.margin_left), index * 10.0, "#{id}");
+        assert_eq!(margin(&style.margin_right), 3.0, "#{id}");
+    }
+    // Each parent counts its own children.
+    let d = by_id(&doc, &styles, "d");
+    assert_eq!(
+        (margin(&d.margin_left), margin(&d.margin_right)),
+        (10.0, 1.0)
+    );
+    // A pseudo-element takes its originating element's position.
+    let c = doc
+        .descendants(doc.root())
+        .find(|&n| doc.element(n).is_some_and(|e| e.id() == Some("c")))
+        .unwrap();
+    let before = styles.pseudo(c, &PseudoElement::Before).unwrap();
+    assert_eq!(margin(&before.margin_left), 30.0);
+}
+
+/// The styles of every element named `name`, in document order.
+fn all_named(document: &Document, styles: &Styles, name: &str) -> Vec<Arc<ComputedValues>> {
+    document
+        .descendants(document.root())
+        .filter(|&n| document.element(n).is_some_and(|e| &*e.name.local == name))
+        .map(|n| styles.get(n).unwrap().clone())
+        .collect()
+}
+
+/// Whether every style in `list` differs from the one before it.
+fn all_differ(list: &[Arc<ComputedValues>]) -> bool {
+    list.windows(2).all(|pair| *pair[0] != *pair[1])
+}
+
+#[test]
+fn elements_with_the_same_rules_share_a_style() {
+    let html = "<style>td { padding: 2px } .n { text-align: right }</style>
+        <table><tr><td>a</td><td class=n>1</td></tr><tr><td>b</td><td class=n>2</td></tr></table>
+        <p>one</p><p>two</p><p>three</p>";
+    let (doc, styles) = style_with(html, None, &[]);
+    let p = all_named(&doc, &styles, "p");
+    assert!(Arc::ptr_eq(&p[0], &p[1]) && Arc::ptr_eq(&p[1], &p[2]));
+    // Cells of different rows share too: the rows share a style.
+    let td = all_named(&doc, &styles, "td");
+    assert!(Arc::ptr_eq(&td[0], &td[2]));
+    assert!(Arc::ptr_eq(&td[1], &td[3]));
+    assert!(!Arc::ptr_eq(&td[0], &td[1]));
+    assert_eq!(td[1].text_align, TextAlign::Right);
+    assert_ne!(td[0].text_align, TextAlign::Right);
+}
+
+#[test]
+fn element_specific_values_are_not_shared() {
+    let siblings = "<p></p>".repeat(6);
+    let cases = [
+        // Functions of the element itself.
+        "p { width: calc(sibling-index() * 10px) }".to_owned(),
+        "p { width: calc(10px * (sibling-count() - sibling-index())) }".to_owned(),
+        "p { width: random(1px, 1000000px) }".to_owned(),
+        // Custom properties carry them to where they are used.
+        "div { --w: calc(sibling-index() * 10px) } p { width: var(--w) }".to_owned(),
+        "@function --w() { result: calc(sibling-index() * 10px) } p { width: --w() }".to_owned(),
+    ];
+    for css in &cases {
+        let html = format!("<style>{css}</style><div>{siblings}</div>");
+        let (doc, styles) = style_with(&html, None, &[]);
+        assert!(all_differ(&all_named(&doc, &styles, "p")), "{css}");
+    }
+    // `attr()`, style attributes and presentational hints read the element's attributes.
+    let html = "<style>p { margin-left: attr(data-x px) }</style>
+        <p data-x=1></p><p data-x=2></p><p data-x=3></p>";
+    let (doc, styles) = style_with(html, None, &[]);
+    assert!(all_differ(&all_named(&doc, &styles, "p")));
+    let html = "<style>p::before { content: attr(data-x) }</style><p data-x=1></p><p data-x=2></p>";
+    let (doc, styles) = style_with(html, None, &[]);
+    let before: Vec<_> = doc
+        .descendants(doc.root())
+        .filter(|&n| doc.element(n).is_some_and(|e| &*e.name.local == "p"))
+        .map(|n| styles.pseudo(n, &PseudoElement::Before).unwrap().clone())
+        .collect();
+    assert!(all_differ(&before));
+    let html = "<div style='--w: calc(sibling-index() * 10px)'><p></p><p></p></div>
+        <style>p { width: var(--w) }</style>";
+    let (doc, styles) = style_with(html, None, &[]);
+    assert!(all_differ(&all_named(&doc, &styles, "p")));
+    let html = "<p style='color: red'></p><p style='color: blue'></p><p align=center></p><p></p>";
+    let (doc, styles) = style_with(html, None, &[]);
+    assert!(all_differ(&all_named(&doc, &styles, "p")));
+}
+
+#[test]
 fn root_is_blockified() {
     let html = "<style>html { display: inline }</style>";
     let (doc, styles) = style_with(html, None, &[]);

@@ -1,5 +1,5 @@
-//! Render times for three typical documents: a one-page letter, a 20-page report and an
-//! invoice with a 200-row table.
+//! Render times for four documents: a one-page letter, a 20-page report, an invoice with a
+//! 200-row table and a book of 3,000 paragraphs, whose body has thousands of children.
 //!
 //! ```text
 //! cargo bench -p rustyprint --bench render
@@ -67,6 +67,24 @@ fn invoice() -> String {
     )
 }
 
+fn book() -> String {
+    // Every fourth word emphasised, so the body's children lie apart in the DOM, as in real
+    // documents.
+    let paragraph = PARAGRAPH
+        .split(' ')
+        .enumerate()
+        .map(|(i, word)| match i % 4 {
+            1 => format!("<em>{word}</em>"),
+            _ => word.to_owned(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    let body = (0..3000)
+        .map(|_| format!("<p>{paragraph}</p>\n"))
+        .collect::<String>();
+    format!("{STYLE}<h1>A long book</h1>\n{body}")
+}
+
 fn pages(html: &str) -> usize {
     let pdf = render(html, &RenderOptions::default())
         .expect("renders")
@@ -82,6 +100,7 @@ fn benches(c: &mut Criterion) {
         ("letter", letter()),
         ("report", report()),
         ("invoice", invoice()),
+        ("book", book()),
     ];
     let options = RenderOptions::default();
     for (name, html) in &documents {

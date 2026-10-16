@@ -598,5 +598,22 @@ mod tests {
         let a = render(html, &RenderOptions::default()).unwrap().pdf;
         let b = render(html, &RenderOptions::default()).unwrap().pdf;
         assert_eq!(a, b);
+        let html = "<p style='break-after: page'>Page</p>".repeat(50);
+        let a = render(&html, &RenderOptions::default()).unwrap().pdf;
+        let b = render(&html, &RenderOptions::default()).unwrap().pdf;
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn pages_keep_their_own_content() {
+        let html: String = (1..=50)
+            .map(|n| format!("<p style='break-after: page'>Page number {n}.</p>"))
+            .collect();
+        let doc = parse(&render(&html, &RenderOptions::default()).unwrap().pdf);
+        assert_eq!(doc.get_pages().len(), 50);
+        for n in 1..=50 {
+            let text = doc.extract_text(&[n]).unwrap();
+            assert!(text.contains(&format!("number {n}.")), "page {n}: {text:?}");
+        }
     }
 }

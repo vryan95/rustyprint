@@ -242,21 +242,22 @@ The options are the same JSON as `--options` takes. [crates/rustyprint-ffi/READM
 
 ## Performance
 
-rustyprint 1.0.3 compared with [WeasyPrint](https://weasyprint.org) 70.0, a widely used HTML-to-PDF converter, rendering the same documents with the same Noto fonts. Each run starts a new process, as a command-line conversion does, so start-up time counts. Times are medians; memory is the most the process was seen to use, sampled every 5 ms.
+rustyprint 1.0.4 compared with [WeasyPrint](https://weasyprint.org) 70.0, a widely used HTML-to-PDF converter, rendering the same documents with the same Noto fonts. Each run starts a new process, as a command-line conversion does, so start-up time counts. Times are medians; memory is the most the process was seen to use, sampled every 5 ms.
 
 | Document | Pages | rustyprint | WeasyPrint | |
 | --- | --- | --- | --- | --- |
-| Invoice ([demos/samples/invoice](demos/samples/invoice/index.html)) | 3 | 43 ms, 22 MB | 1.44 s, 72 MB | 33× faster |
-| One-page report ([bench/report-one.html](bench/report-one.html)) | 1 | 22 ms, 18 MB | 1.08 s, 72 MB | 48× faster |
-| Long report ([bench/report-long.html](bench/report-long.html)) | 498 / 500 | 2.8 s, 454 MB | 43.3 s, 653 MB | 15× faster |
+| Invoice ([demos/samples/invoice](demos/samples/invoice/index.html)) | 3 | 33 ms, 21 MB | 1.03 s, 75 MB | 31× faster |
+| One-page report ([bench/report-one.html](bench/report-one.html)) | 1 | 17 ms, 18 MB | 0.93 s, 74 MB | 53× faster |
+| Long report ([bench/report-long.html](bench/report-long.html)) | 498 / 500 | 1.6 s, 195 MB | 38.2 s, 628 MB | 25× faster |
 
 Used as a library, without starting a process, rendering takes:
 
 | Document | Pages | Time |
 | --- | --- | --- |
 | Letter | 1 | 4 ms |
-| Report | 21 | 45 ms |
-| Invoice with a 200-row table | 6 | 55 ms |
+| Report | 21 | 38 ms |
+| Invoice with a 200-row table | 6 | 30 ms |
+| Book of 3,000 paragraphs | 250 | 0.78 s |
 
 Measured on an AMD Ryzen 7 5700U laptop in October 2026: the comparison on Linux in Docker on WSL 2, the library times on Linux on WSL 2. To run the comparison yourself, with WeasyPrint and the Python package `psutil` installed:
 
