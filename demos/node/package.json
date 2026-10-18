@@ -1,0 +1,19 @@
+{
+  "name": "rustyprint-demo",
+  "private": true,
+  "description": "An Express app that uses the rustyprint package from bindings/node as an app would.",
+  "license": "MIT OR Apache-2.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "render-samples": "node render-samples.js"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "rustyprint": "file:../../bindings/node"
+  }
+}
