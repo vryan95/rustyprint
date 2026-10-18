@@ -35,6 +35,7 @@ jobs:
     outputs:
       ruby: ${{ github.event_name != 'pull_request' || steps.filter.outputs.ruby == 'true' }}
       dotnet: ${{ github.event_name != 'pull_request' || steps.filter.outputs.dotnet == 'true' }}
+      node: ${{ github.event_name != 'pull_request' || steps.filter.outputs.node == 'true' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -56,6 +57,14 @@ jobs:
               - bindings/dotnet/**
               - demos/samples/**
               - demos/dotnet/**
+              - .github/workflows/ci.yml
+            node:
+              - crates/**
+              - Cargo.*
+              - schema/**
+              - bindings/node/**
+              - demos/samples/**
+              - demos/node/**
               - .github/workflows/ci.yml
 
   checks:
@@ -285,12 +294,91 @@ jobs:
             echo "$path: $(wc -c < out.pdf) bytes"
           done
 
+  node:
+    name: Node.js package (${{ matrix.os }}, Node.js ${{ matrix.node }})
+    needs: changes
+    if: needs.changes.outputs.node == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The oldest and newest Node.js LTS on Linux, and the newest elsewhere.
+          - { os: ubuntu-latest, node: "22" }
+          - { os: ubuntu-latest, node: "24" }
+          - { os: macos-latest, node: "24" }
+          - { os: windows-latest, node: "24" }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: bindings/node
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ffi
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: bindings/node/package-lock.json
+      - run: npm ci
+      # Builds the native library with Cargo, then runs the tests against it.
+      - run: npm test
+      - run: npm run check-types
+
+  node-demo:
+    name: Node.js demo
+    needs: changes
+    if: needs.changes.outputs.node == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: demos/node
+    env:
+      RUSTYPRINT_LIBRARY: ${{ github.workspace }}/target/release/librustyprint_ffi.so
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ffi
+      - name: Build the native library
+        run: cargo build --release --locked -p rustyprint-ffi
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: |
+            bindings/node/package-lock.json
+            demos/node/package-lock.json
+      # The demo depends on the package by a link, which uses the package's own dependencies.
+      - run: npm ci
+        working-directory: bindings/node
+      - run: npm ci
+      - name: Test the demo
+        run: npm test
+      - name: Render every sample from the command line
+        run: npm run render-samples
+      - name: Render every sample and invoice through the server
+        run: |
+          PORT=3000 npm start > server.log 2>&1 &
+          for _ in $(seq 1 60); do curl -sf -o /dev/null localhost:3000/up && break; sleep 1; done
+          for path in /samples/invoice.pdf /samples/report.pdf /samples/letter.pdf                       /invoices/2026-0412.pdf /invoices/2026-0413.pdf; do
+            curl -sf -o out.pdf "localhost:3000$path" && head -c 5 out.pdf | grep -q '%PDF-'               || { echo "::error::$path did not render"; cat server.log; exit 1; }
+            echo "$path: $(wc -c < out.pdf) bytes"
+          done
+
   # One check for branch protection to require, so adding or renaming jobs does not mean
   # changing the protection rule.
   result:
     name: CI result
     if: always()
-    needs: [changes, checks, test, dependencies, image, ruby, ruby-demo, dotnet, dotnet-demo]
+    needs: [changes, checks, test, dependencies, image, ruby, ruby-demo, dotnet, dotnet-demo, node, node-demo]
     runs-on: ubuntu-latest
     # To read the conclusion of every job in the run: the run's check suite, then its check runs.
     permissions:
