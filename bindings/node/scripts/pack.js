@@ -3,11 +3,11 @@
 // Lays out the npm packages a release publishes, ready for `npm pack`: one per platform with its
 // native library, and rustyprint itself, depending on them all as optional dependencies.
 //
-//   node scripts/pack.js <libraries> <out>
+//   node scripts/pack.js <archives> <out>
 //
-// <libraries> holds each platform's library as <target>/<file>, as the release workflow unpacks
-// the rustyprint-native archives. <out> gets a directory per package: rustyprint/,
-// linux-x64-gnu/ and so on.
+// <archives> holds the release's rustyprint-native archives, unpacked: a directory
+// rustyprint-native-<version>-<target> for each platform, with its library. <out> gets a
+// directory per package: rustyprint/, linux-x64-gnu/ and so on.
 //
 // The optional dependencies are written here rather than in package.json: a release raises the
 // version before those packages exist on npm, and lockfiles made in this repository would
@@ -35,10 +35,11 @@ function copyLicenses (dir, { fonts = false } = {}) {
   if (fonts) fs.copyFileSync(path.join(REPO, 'fonts/OFL.txt'), path.join(dir, 'OFL.txt'))
 }
 
-function layOutPlatform (main, platform, libraries, out) {
+function layOutPlatform (main, platform, archives, out) {
   const dir = path.join(out, platform.name.split('/')[1])
   fs.mkdirSync(dir, { recursive: true })
-  fs.copyFileSync(path.join(libraries, platform.target, platform.library), path.join(dir, platform.library))
+  const archive = path.join(archives, `rustyprint-native-${main.version}-${platform.target}`)
+  fs.copyFileSync(path.join(archive, platform.library), path.join(dir, platform.library))
   copyLicenses(dir, { fonts: true })
   fs.writeFileSync(path.join(dir, 'README.md'), `# ${platform.name}
 
@@ -77,13 +78,13 @@ function layOutMain (main, out) {
   writeJson(path.join(dir, 'package.json'), manifest)
 }
 
-function main ([libraries, out] = process.argv.slice(2)) {
-  if (!libraries || !out) {
-    console.error('usage: node scripts/pack.js <libraries> <out>')
+function main ([archives, out] = process.argv.slice(2)) {
+  if (!archives || !out) {
+    console.error('usage: node scripts/pack.js <archives> <out>')
     process.exit(2)
   }
   const manifest = readJson(path.join(PACKAGE, 'package.json'))
-  for (const platform of PLATFORMS) layOutPlatform(manifest, platform, libraries, out)
+  for (const platform of PLATFORMS) layOutPlatform(manifest, platform, archives, out)
   layOutMain(manifest, out)
 }
 

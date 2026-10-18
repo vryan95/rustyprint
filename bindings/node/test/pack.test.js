@@ -15,16 +15,17 @@ describe('the packages a release publishes', () => {
   let work
   let out
 
-  // Lays out the packages from a stand-in library per platform.
+  // Lays out the packages from unpacked archives with a stand-in library each.
   before(() => {
     work = fs.mkdtempSync(path.join(os.tmpdir(), 'rustyprint-pack-'))
-    const libraries = path.join(work, 'libraries')
+    const archives = path.join(work, 'archives')
     out = path.join(work, 'out')
     for (const platform of PLATFORMS) {
-      fs.mkdirSync(path.join(libraries, platform.target), { recursive: true })
-      fs.writeFileSync(path.join(libraries, platform.target, platform.library), platform.target)
+      const archive = path.join(archives, `rustyprint-native-${manifest.version}-${platform.target}`)
+      fs.mkdirSync(archive, { recursive: true })
+      fs.writeFileSync(path.join(archive, platform.library), platform.target)
     }
-    execFileSync(process.execPath, [SCRIPT, libraries, out])
+    execFileSync(process.execPath, [SCRIPT, archives, out])
   })
 
   after(() => fs.rmSync(work, { recursive: true, force: true }))
