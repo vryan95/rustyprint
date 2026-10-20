@@ -578,5 +578,5 @@ jobs:
               echo "$name@$VERSION is already published"
               continue
             fi
-            npm publish "$tarball" "${flags[@]}"
+            npm publish "./$tarball" "${flags[@]}"
           done
