@@ -7,12 +7,19 @@
 # Run it by hand from the Actions tab for a dry run: it builds every archive, the image, the gems,
 # the NuGet package and the npm packages, keeping the archives and packages as the run's
 # artifacts, without publishing anything.
+# To recover npm publishing, supply npm_recovery_run with a completed tag release run ID.
+# This publishes that run's npm artifact and skips all builds and other publishers.
 name: Release
 
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
   workflow_dispatch:
+    inputs:
+      npm_recovery_run:
+        description: 'Publish only npm, using artifacts from this release run ID (blank = dry run)'
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -25,6 +32,7 @@ env:
 jobs:
   version:
     name: Version
+    if: ${{ !inputs.npm_recovery_run }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -45,6 +53,7 @@ jobs:
 
   ci:
     name: CI
+    if: ${{ !inputs.npm_recovery_run }}
     uses: ./.github/workflows/ci.yml
     # A called workflow gets no more than these; CI's `changes` job reads pull requests, and its
     # `result` job the run's check runs.
@@ -538,31 +547,71 @@ jobs:
       - name: Push the package
         run: dotnet nuget push nupkg/*.nupkg --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json
 
-  # npmjs.com trusts this workflow (trusted publishing), so no token is stored, and each package
-  # gets a provenance statement. The platform packages go first, so that rustyprint never points
-  # at one that is not there yet, and a package already published is skipped, so that a run that
-  # failed halfway can be run again.
+  # Resolve recovery versions from the original release, independently of master's version.
+  npm-recovery:
+    name: Validate npm recovery source
+    if: github.event_name == 'workflow_dispatch' && inputs.npm_recovery_run != ''
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      version: ${{ steps.source.outputs.version }}
+      prerelease: ${{ steps.source.outputs.prerelease }}
+    steps:
+      - name: Read the original release run
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_RUN: ${{ inputs.npm_recovery_run }}
+        run: |
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]] || { echo '::error::Enter a numeric release run ID'; exit 1; }
+          gh api "repos/$GH_REPO/actions/runs/$SOURCE_RUN" > source.json
+          node <<'NODE'
+          const fs = require('node:fs')
+          const run = JSON.parse(fs.readFileSync('source.json', 'utf8'))
+          if (run.event !== 'push' || run.path !== '.github/workflows/release.yml' ||
+              run.status !== 'completed' || !/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(run.head_branch)) {
+            throw new Error('Source must be a completed tagged release run from release.yml')
+          }
+          const version = run.head_branch.slice(1)
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,
+            `version=${version}\nprerelease=${version.includes('-')}\n`)
+          NODE
+
+  # Keep recovery in this workflow to reuse npm's trusted-publisher identity.
+  # Publish platform packages first and skip versions that are already published.
   npm-publish:
     name: Publish the npm packages
-    if: github.ref_type == 'tag'
-    needs: [version, ci, npm, npm-try, release]
+    if: >-
+      always() && !cancelled() &&
+      ((needs.npm-recovery.result == 'success') ||
+       (github.ref_type == 'tag' && !inputs.npm_recovery_run &&
+        needs.version.result == 'success' && needs.ci.result == 'success' &&
+        needs.npm.result == 'success' && needs.npm-try.result == 'success' &&
+        needs.release.result == 'success'))
+    needs: [version, ci, npm, npm-try, release, npm-recovery]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+      actions: read
     steps:
       - uses: actions/download-artifact@v8
         with:
           name: npm
           path: npm
+          run-id: ${{ inputs.npm_recovery_run || github.run_id }}
+          github-token: ${{ github.token }}
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
           registry-url: https://registry.npmjs.org
       - name: Publish the packages
         env:
-          VERSION: ${{ needs.version.outputs.version }}
-          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+          VERSION: ${{ needs.npm-recovery.outputs.version || needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.npm-recovery.outputs.prerelease || needs.version.outputs.prerelease }}
         run: |
           node -e '
             const [major, minor, patch] = process.argv[1].split(".").map(Number)
