@@ -1,6 +1,6 @@
 # rustyprint native library
 
-`rustyprint-ffi` is rustyprint as a shared library with a C ABI, for programs in C and other languages that can call C. The Ruby gem and the NuGet package are built on it. The fonts rustyprint needs are built in, so the library is a single file.
+`rustyprint-ffi` is rustyprint as a shared library with a C ABI, for programs in C and other languages that can call C. The Ruby gem and the NuGet and npm packages are built on it. The fonts rustyprint needs are built in, so the library is a single file.
 
 | Platform | Library |
 | --- | --- |

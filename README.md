@@ -16,6 +16,7 @@ The trackers ([html-elements.md](html-elements.md) and the `css-*.md` files) lis
 | [An HTTP service](#run-the-http-service) | `docker run -p 8080:8080 ghcr.io/vryan95/rustyprint-server` |
 | [A Ruby gem](#use-it-from-ruby) | `gem install rustyprint` |
 | [A NuGet package](#use-it-from-net) | `dotnet add package Rustyprint` |
+| [An npm package](#use-it-from-nodejs) | `npm install rustyprint` |
 | [A Rust library](#use-it-from-rust) | A Git dependency |
 | [A C library](#use-it-from-c) | An archive from the [Releases page](https://github.com/vryan95/rustyprint/releases) |
 
@@ -97,7 +98,7 @@ Run `rustyprint --help` for the full list.
 
 ### Options as JSON
 
-`--options` takes the same JSON options the HTTP service and the Ruby and .NET packages take. [schema/render-options.schema.json](schema/render-options.schema.json) describes every field. All fields are optional:
+`--options` takes the same JSON options the HTTP service and the Ruby, .NET and Node.js packages take. [schema/render-options.schema.json](schema/render-options.schema.json) describes every field. All fields are optional:
 
 ```json
 {
@@ -197,6 +198,24 @@ File.WriteAllBytes("invoice.pdf", output.Pdf);
 
 Install it with `dotnet add package Rustyprint`. [bindings/dotnet/README.md](bindings/dotnet/README.md) describes the options, errors and use in ASP.NET Core, and [demos/dotnet](demos/dotnet) is an ASP.NET Core app that uses it.
 
+## Use it from Node.js
+
+The `rustyprint` npm package, for Node.js 22 and newer, with the native library in a package for each platform that npm installs along with it. Renders run on worker threads, so the event loop keeps running.
+
+```js
+const fs = require('node:fs')
+const { render } = require('rustyprint')
+
+const { pdf, warnings } = await render(html, {
+  pageSize: 'A4',
+  margin: '15mm',
+  assets: { 'logo.png': fs.readFileSync('public/logo.png') }
+})
+fs.writeFileSync('invoice.pdf', pdf)
+```
+
+Install it with `npm install rustyprint`. [bindings/node/README.md](bindings/node/README.md) describes the options, errors, threads and platforms, and [demos/node](demos/node) is an Express app that uses it.
+
 ## Use it from Rust
 
 The `rustyprint` crate is the engine itself. It is not published on crates.io, so depend on it through Git, at a release's tag:
@@ -223,7 +242,7 @@ for warning in &output.warnings {
 
 ## Use it from C
 
-`rustyprint-ffi` is rustyprint as a shared library with a C ABI, for C and any language that can call C; the Ruby gem and the NuGet package are built on it. Each release has it for every platform as `rustyprint-native-<version>-<target>.tar.gz` (`.zip` for Windows), with the header, or build it with `cargo build --release -p rustyprint-ffi`.
+`rustyprint-ffi` is rustyprint as a shared library with a C ABI, for C and any language that can call C; the Ruby gem and the NuGet and npm packages are built on it. Each release has it for every platform as `rustyprint-native-<version>-<target>.tar.gz` (`.zip` for Windows), with the header, or build it with `cargo build --release -p rustyprint-ffi`.
 
 ```c
 rp_request *request = rp_request_new(options_json, strlen(options_json));
@@ -296,7 +315,7 @@ cargo fmt --all --check
 cargo deny check
 ```
 
-and, for the packages, `bundle exec rake` in [bindings/ruby](bindings/ruby) (the tests and the documentation check) and `dotnet test` in [bindings/dotnet](bindings/dotnet).
+and, for the packages, `bundle exec rake` in [bindings/ruby](bindings/ruby) (the tests and the documentation check), `dotnet test` in [bindings/dotnet](bindings/dotnet), and `npm test` and `npm run check-types` in [bindings/node](bindings/node).
 
 The fixture suite has one HTML file in [tests/fixtures/](tests/fixtures/) for every row of the trackers, with its expectations inside it. After changing a tracker or a milestone in the plan, regenerate the progress page with `cargo run -p rustyprint-tests --bin progress`. [CLAUDE.md](CLAUDE.md) has more about how the work is organised.
 

@@ -1,12 +1,12 @@
 # rustyprint — Plan
 
-A lightweight Rust engine that converts HTML and CSS to PDF with its own renderer. It ships as a command-line tool, an HTTP service, a Ruby gem and a NuGet package, all built on the same core.
+A lightweight Rust engine that converts HTML and CSS to PDF with its own renderer. It ships as a command-line tool, an HTTP service, a Ruby gem, a NuGet package and an npm package, all built on the same core.
 
 ## 1. Goals
 
 - Support every element in the [HTML5 specification (W3C Working Draft, 5 April 2011)](https://www.w3.org/TR/2011/WD-html5-20110405/), rendered as static, paginated PDF.
 - Support the CSS in the [MDN CSS reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference): the standard properties, selectors, at-rules, functions and value types that apply to HTML content.
-- Ship a single static binary with fast startup, low memory and no external runtime, and the same engine as a native library for Ruby and .NET.
+- Ship a single static binary with fast startup, low memory and no external runtime, and the same engine as a native library for Ruby, .NET and Node.js.
 - Produce deterministic output: the same input always gives a byte-identical PDF.
 
 ## 2. Build vs. reuse
@@ -89,7 +89,7 @@ These files track implementation status, each with the milestone that covers eve
 
 ## 6. Front ends and packaging
 
-Every front end is a thin layer over the `rustyprint` crate. The CLI and the server link it directly. Ruby and .NET load it through `rustyprint-ffi`, a native library with a C ABI, so both packages share one native build per platform. Everything lives in this repository and is released together under one version.
+Every front end is a thin layer over the `rustyprint` crate. The CLI and the server link it directly. Ruby, .NET and Node.js load it through `rustyprint-ffi`, a native library with a C ABI, so the packages share one native build per platform. Everything lives in this repository and is released together under one version.
 
 ### Workspace layout
 
@@ -109,11 +109,13 @@ rustyprint/
 │  └─ rustyprint-tests/          # fixture suite: one test per tracker row
 ├─ bindings/                     # not part of the Cargo workspace
 │  ├─ ruby/                      # the `rustyprint` gem: gemspec, lib/, spec/, Rakefile
-│  └─ dotnet/                    # the `Rustyprint` NuGet package: solution, src/, tests/
+│  ├─ dotnet/                    # the `Rustyprint` NuGet package: solution, src/, tests/
+│  └─ node/                      # the `rustyprint` npm package: lib/, test/, scripts/
 ├─ demos/                        # demo projects that use the packages; not published
 │  ├─ samples/                   # sample documents with their assets, shared by the demos
 │  ├─ rails/                     # Rails app using the gem
-│  └─ dotnet/                    # ASP.NET Core app and console command using the package
+│  ├─ dotnet/                    # ASP.NET Core app and console command using the package
+│  └─ node/                      # Express app and command using the npm package
 ├─ schema/
 │  └─ render-options.schema.json # the JSON render options, shared by every front end
 ├─ docker/                       # server image
@@ -244,6 +246,23 @@ RenderOutput output = await PdfRenderer.RenderAsync(html, options, cancellationT
 - The exceptions are `InvalidOptionsException`, `LimitExceededException`, `RenderTimeoutException` and `InternalRenderException`, each with a `Kind`.
 - The package's version is read from `Cargo.toml`. Building the project builds the native library with Cargo for the current platform; the release workflow packs the libraries of every platform instead.
 
+### Node.js package
+
+`rustyprint` on npm, for Node.js 22 and newer, CommonJS with TypeScript types, which ES modules import too. It calls the native library through koffi, an FFI library with prebuilt binaries for every platform, so installing needs no compiler, and wraps it in `render(html, options)` and `renderSync(...)`, with the JSON options in camelCase (or snake_case) and a `RustyprintError` hierarchy.
+
+```js
+const { pdf, warnings } = await render(html, {
+  pageSize: 'A4',
+  margin: '15mm',
+  assets: { 'logo.png': fs.readFileSync('public/logo.png') }
+})
+```
+
+- `render` renders on a pool of worker threads, at most `os.availableParallelism()` at once, or the `concurrency` of a renderer from `createRenderer`. Not through koffi's asynchronous calls: those run on libuv's thread pool, four threads shared with file system, DNS, crypto and zlib calls, and a render would hold one for its whole length. An `AbortSignal` stops a render that has not started; the render deadline bounds one that has.
+- The native libraries ship in a package per platform, `@rustyprint/<platform>`, which `rustyprint` lists as optional dependencies, so npm installs only the one whose `os`, `cpu` and `libc` match the machine. On Linux the package looks for the library for the C library it runs on first, then the other, since Bun and older npm install both. The main thread finds the library once and hands its path to the workers; `RUSTYPRINT_LIBRARY` overrides it.
+- The optional dependencies are written when the release packs the packages, not in `package.json`, so that raising the version never makes the repository's lockfiles depend on packages not yet published.
+- The package's version is in its `package.json`, and a test checks it against `Cargo.toml`. `npm test` builds the native library with Cargo for the current platform; the release workflow packs the libraries of every platform instead, and installs each platform's package on a machine of that platform, in Alpine for musl, before publishing.
+
 ### Demo projects
 
 Each package comes with a demo project that shows rustyprint at work, using the package as its users would:
@@ -257,6 +276,8 @@ Each package comes with a demo project that shows rustyprint at work, using the 
 
 - **.NET demo** in `demos/dotnet/`: the same in an ASP.NET Core app, rendering with `RenderAsync`, and a console command, `dotnet run -- render-samples`, that writes every sample to a PDF. It references the package project in `bindings/dotnet`. Its invoice is a Razor component, rendered to HTML with `HtmlRenderer`, whose stylesheet and logo are found in the app's static files by the paths the HTML uses.
 
+- **Node.js demo** in `demos/node/`: the same in an Express app, rendering with `render`, and `npm run render-samples`, which writes every sample to a PDF. It depends on the package in `bindings/node` by a `file:` link. Its invoice is a JavaScript template literal, whose stylesheet and logo are found in the app's static files by the paths the HTML uses, as in the .NET demo.
+
 Each demo has a README with the commands to run it. CI starts each demo and renders every sample through it, so the demos keep working as the packages change. The demos are not published.
 
 ### Continuous integration
@@ -265,7 +286,7 @@ The repository is on GitHub, and GitHub Actions runs every check. `.github/workf
 
 - **Checks:** `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, and `progress.html` being up to date.
 - **Tests:** `cargo test --workspace`, including the fixture suite, on Linux, Windows and macOS, with the toolchain pinned to the workspace's `rust-version`.
-- **Bindings:** the Ruby and .NET test suites, each against a native library built in the same run. The demos are started and render every sample. Jobs run only when their part changed: a change under `bindings/ruby/`, `demos/samples/` or `demos/rails/` runs the Ruby jobs, one under `bindings/dotnet/`, `demos/samples/` or `demos/dotnet/` the .NET jobs, and a change under `crates/` runs everything.
+- **Bindings:** the Ruby, .NET and Node.js test suites, each against a native library built in the same run. The demos are started and render every sample. Jobs run only when their part changed: a change under `bindings/ruby/`, `demos/samples/` or `demos/rails/` runs the Ruby jobs, one under `bindings/dotnet/`, `demos/samples/` or `demos/dotnet/` the .NET jobs, one under `bindings/node/`, `demos/samples/` or `demos/node/` the Node.js jobs, and a change under `crates/` runs everything.
 - **Dependencies:** `cargo deny` (configured in `deny.toml`) for licences, security advisories, banned crates and crate sources. Unmaintained crates fail it too, except the known ones it lists with the reason for each.
 - **Speed:** `Swatinem/rust-cache` caches builds, and a newer run on the same branch cancels an older one.
 
@@ -278,15 +299,15 @@ Until milestone 27, work was pushed straight to `master`. Since milestone 27, `m
 
 ### Releases
 
-- The workspace version is the version of every crate, the gem and the NuGet package.
+- The workspace version is the version of every crate, the gem, the NuGet package and the npm packages.
 - Pushing a tag `vX.Y.Z` runs `.github/workflows/release.yml`. It first checks that the tag matches the workspace version, then runs the CI checks, then builds and publishes. A version with a suffix, such as `1.2.0-rc.1`, is published as a prerelease. Run by hand from the Actions tab, the workflow is a dry run: it builds every archive and keeps them as the run's artifacts, without a release.
 - **Builds** run on the standard x64 runners (`ubuntu-latest`, `windows-latest`) and `macos-latest`, so they work in a private repository too; the arm64 Linux and Windows builds and the x64 macOS build are cross-compiled. The Linux builds use `cargo-zigbuild`: the glibc ones run on glibc 2.17 and later, and the `musl` ones are static. Each build that can run on its runner renders a document before it is packaged.
 - **CLI archives:** `rustyprint-<version>-<target>.tar.gz` (`.zip` for Windows), holding the program, the README, rustyprint's licences and the fonts' licence, each with a `.sha256` file, and `SHA256SUMS` for all of them. Targets: `x86_64` and `aarch64` for `unknown-linux-gnu`, `unknown-linux-musl`, `apple-darwin` and `pc-windows-msvc`.
-- **Artifacts:** CLI archives with SHA-256 checksums on a GitHub Release, the server image on GitHub Container Registry, the native libraries attached to the release, the NuGet package on nuget.org and the platform gems on rubygems.org.
-- **Credentials:** nuget.org and rubygems.org use trusted publishing (OIDC) from the release workflow, and GitHub Container Registry uses the workflow's own token, so no long-lived API keys are stored in the repository.
+- **Artifacts:** CLI archives with SHA-256 checksums on a GitHub Release, the server image on GitHub Container Registry, the native libraries attached to the release, the NuGet package on nuget.org, the platform gems on rubygems.org, and `rustyprint` and its platform packages on npmjs.com, each platform's tried on a machine of that platform before publishing.
+- **Credentials:** nuget.org, rubygems.org and npmjs.com use trusted publishing (OIDC) from the release workflow, and GitHub Container Registry uses the workflow's own token, so no long-lived API keys are stored in the repository.
 - Release notes come from the merged pull requests since the previous tag.
 - Each front end's milestone adds its artifacts to the release workflow, so the CLI can ship before the packages exist.
-- Locally, `rake compile` in `bindings/ruby` and the build of `bindings/dotnet` build the native library for the current platform only.
+- Locally, `rake compile` in `bindings/ruby`, the build of `bindings/dotnet` and `npm run compile` in `bindings/node` build the native library for the current platform only.
 
 ### Security
 
@@ -307,9 +328,9 @@ Until milestone 27, work was pushed straight to `master`. Since milestone 27, `m
 - **Web Platform Tests:** run the applicable `css/` and `html/rendering/` reftests and track the pass rate per module.
 - **Layout snapshot tests** (`insta`): a text dump of the positioned fragments for each fixture.
 - **Visual reference tests:** each PDF is rasterised (`pdftoppm`) and compared against approved PNGs.
-- **Determinism test:** the same input must produce a byte-identical PDF, from the core and from every front end: the CLI, the server, Ruby and .NET.
-- **Options schema test:** `RenderOptions` accepts exactly what `schema/render-options.schema.json` describes, and the Ruby and .NET options are tested against the same schema.
-- **Binding tests:** the gem and the NuGet package each have their own test suite, run on every platform they ship for.
+- **Determinism test:** the same input must produce a byte-identical PDF, from the core and from every front end: the CLI, the server, Ruby, .NET and Node.js.
+- **Options schema test:** `RenderOptions` accepts exactly what `schema/render-options.schema.json` describes, and the Ruby, .NET and Node.js options are tested against the same schema.
+- **Binding tests:** the gem and the NuGet and npm packages each have their own test suite, run on every platform they ship for.
 - **Demo smoke tests:** CI starts each demo and renders every sample document through it.
 - **Fuzzing** nightly in CI.
 - **Benchmarks** (`criterion`): a 1-page letter, a 20-page report and an invoice with a 200-row table.
@@ -348,13 +369,14 @@ The **Status** column is where the work stands: `todo` (not started), `partial` 
 | 26 | **.NET package** | done | `Rustyprint` NuGet package with sync and async rendering, typed options and exceptions, native libraries for every platform; tested in CI and published to nuget.org on release. A .NET demo: an ASP.NET Core app with the samples and an HTML playground, and a console command that renders every sample. |
 | 27 | **Protected master** | done | `master` protected on GitHub: changes arrive through pull requests, which merge only when the `CI result` check passes. Work moves from pushing to `master` to branches and pull requests. |
 | 28 | **First release** | done | A licence, MIT or Apache-2.0, carried by every package and archive; documentation for each package: doc comments on the Ruby gem's public API, a reference for the HTTP service's API, and every README brought up to date for 1.0.0; and version 1.0.0 released through the pipeline. |
+| 30 | **Node.js package** | done | `rustyprint` npm package on koffi, rendering on worker threads so the event loop keeps running, with sync rendering, typed options and errors, and TypeScript types; a package per platform holding its native library, which npm picks by `os`, `cpu` and `libc`, tried on a machine of each platform and published to npmjs.com on release. A Node.js demo: an Express app with the samples, invoices from a template and an HTML playground, and a command that renders every sample. |
 
 ## 9. Open questions
 
 1. **Fonts:** Noto Serif, Noto Sans (regular, bold, italic and bold italic) and Noto Sans Mono (regular and bold) are bundled under the SIL Open Font License; `serif`, the initial family, maps to Noto Serif. Should more scripts be bundled (CJK, Arabic, Hebrew), and should system fonts be used as well?
 2. **Package size:** the bundled fonts make every binary and native library about 22 MB. Should the packages also come in a slim build that loads fonts from a directory?
 3. **Platforms:** are all six platforms needed for the first release, or are Linux x64, Windows x64 and macOS arm64 enough to start?
-4. **Package names:** `rustyprint` on RubyGems and `Rustyprint` on NuGet were both free on 13 October 2026. They are taken by the first publish.
+4. **Package names:** `rustyprint` on RubyGems and `Rustyprint` on NuGet were both free on 13 October 2026. They are taken by the first publish. On npm, `rustyprint` and the `@rustyprint` scope, for the platform packages, were reserved with placeholder packages on 16 October 2026.
 5. **crates.io:** should the crates be published for Rust users? crates.io needs every engine crate published, or merged into one crate first; otherwise they are marked `publish = false`.
 6. **Repository visibility:** decided on 13 October 2026: the repository is public, so the standard GitHub-hosted runners cost no Actions minutes.
 7. **Dependencies held back:** `hyphenation` reads its embedded dictionaries with the unmaintained `bincode` (RUSTSEC-2025-0141). It stays, listed in `deny.toml`: no document data reaches `bincode`, and the maintained `hypher` has 48 of its 78 dictionaries. `moxcms` stays on 0.8 to share one copy with `image`, and `subsetter` still uses an older `skrifa`, so two versions of the font-reading crates are built. Dependabot proposes each update when it becomes possible.

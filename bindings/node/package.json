@@ -1,0 +1,39 @@
+{
+  "name": "rustyprint",
+  "version": "1.0.4",
+  "description": "HTML and CSS to PDF, with a layout engine written in Rust: no browser, no external runtime.",
+  "keywords": ["pdf", "html", "css", "html-to-pdf", "paged-media"],
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vryan95/rustyprint.git",
+    "directory": "bindings/node"
+  },
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["index.js", "index.d.ts", "lib/", "LICENSE-MIT", "LICENSE-APACHE"],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "compile": "node scripts/compile.js",
+    "pretest": "node scripts/compile.js",
+    "test": "node --test --test-concurrency=1 test/*.test.js test/*.test.mjs",
+    "check-types": "tsc --noEmit --strict --module nodenext --moduleResolution nodenext test/types.ts"
+  },
+  "dependencies": {
+    "detect-libc": "^2.1.2",
+    "koffi": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2"
+  }
+}

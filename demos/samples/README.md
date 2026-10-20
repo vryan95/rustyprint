@@ -14,6 +14,6 @@ Render one with the command-line tool, which resolves the relative URLs against 
 rustyprint demos/samples/report/index.html -o report.pdf
 ```
 
-The Ruby and .NET demos pass each sample's files to the renderer as assets, by the path the HTML uses.
+The Ruby, .NET and Node.js demos pass each sample's files to the renderer as assets, by the path the HTML uses.
 
 The company, people and figures are made up. The fonts are under the SIL Open Font License: Noto, which rustyprint bundles, and Caveat ([letter/fonts/OFL.txt](letter/fonts/OFL.txt)). The logo and charts were drawn for these samples.

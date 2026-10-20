@@ -1,12 +1,12 @@
 # Publishes a release when a version tag such as `v1.2.3` is pushed: checks that the tag matches
 # the workspace version, runs CI, builds the command-line tool and the native library for every
 # platform and creates a GitHub Release with the archives, their checksums and release notes,
-# publishes the server image to GitHub Container Registry, the Ruby gems to rubygems.org and the
-# NuGet package to nuget.org.
+# publishes the server image to GitHub Container Registry, the Ruby gems to rubygems.org, the
+# NuGet package to nuget.org and the npm packages to npmjs.com.
 #
-# Run it by hand from the Actions tab for a dry run: it builds every archive, the image, the gems
-# and the NuGet package, keeping the archives and packages as the run's artifacts, without
-# publishing anything.
+# Run it by hand from the Actions tab for a dry run: it builds every archive, the image, the gems,
+# the NuGet package and the npm packages, keeping the archives and packages as the run's
+# artifacts, without publishing anything.
 name: Release
 
 on:
@@ -370,6 +370,98 @@ jobs:
           path: nupkg/*.nupkg
           if-no-files-found: error
 
+  # rustyprint and a package per platform holding its native library, which rustyprint depends
+  # on as optional dependencies, so that npm installs only the one for the machine.
+  npm:
+    name: npm packages
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bindings/node
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: The package version matches the workspace version
+        run: |
+          package=$(node -p "require('./package.json').version")
+          if [ "$package" != "$VERSION" ]; then
+            echo "::error::The npm package has version $package, Cargo.toml $VERSION"
+            exit 1
+          fi
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: archive-*
+          path: dist
+          merge-multiple: true
+      - name: Unpack the native libraries
+        working-directory: dist
+        run: |
+          mkdir -p "$RUNNER_TEMP/native"
+          for archive in rustyprint-native-*.zip; do unzip -q "$archive" -d "$RUNNER_TEMP/native"; done
+          for archive in rustyprint-native-*.tar.gz; do tar -xzf "$archive" -C "$RUNNER_TEMP/native"; done
+          ls "$RUNNER_TEMP/native"
+      - name: Pack
+        run: |
+          node scripts/pack.js "$RUNNER_TEMP/native" "$RUNNER_TEMP/packages"
+          mkdir -p "$GITHUB_WORKSPACE/npm"
+          for dir in "$RUNNER_TEMP"/packages/*/; do (cd "$dir" && npm pack --pack-destination "$GITHUB_WORKSPACE/npm"); done
+          ls -l "$GITHUB_WORKSPACE/npm"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm
+          path: npm/*.tgz
+          if-no-files-found: error
+
+  # The npm packages installed as an app would, on a machine of each platform: npm must pick the
+  # platform's package by its os, cpu and libc, and its library must load and render.
+  npm-try:
+    name: Try the npm packages (${{ matrix.platform }})
+    needs: [version, npm]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: linux-x64-gnu, os: ubuntu-latest }
+          - { platform: linux-arm64-gnu, os: ubuntu-24.04-arm }
+          - { platform: linux-x64-musl, os: ubuntu-latest, alpine: true }
+          - { platform: linux-arm64-musl, os: ubuntu-24.04-arm, alpine: true }
+          # The last Intel macOS image, supported until August 2027.
+          - { platform: darwin-x64, os: macos-15-intel }
+          - { platform: darwin-arm64, os: macos-latest }
+          - { platform: win32-x64-msvc, os: windows-latest }
+          - { platform: win32-arm64-msvc, os: windows-11-arm }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm
+          path: npm
+      - if: ${{ !matrix.alpine }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+      - name: Install and render
+        if: ${{ !matrix.alpine }}
+        shell: bash
+        run: |
+          node bindings/node/scripts/try.js setup npm "$RUNNER_TEMP/try"
+          (cd "$RUNNER_TEMP/try" && npm install --no-audit --no-fund)
+          node bindings/node/scripts/try.js check "$RUNNER_TEMP/try" ${{ matrix.platform }}
+      # JavaScript actions do not run in Alpine containers on arm64 runners, so the step runs one.
+      - name: Install and render in Alpine
+        if: ${{ matrix.alpine }}
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work node:24-alpine sh -ec '
+            node bindings/node/scripts/try.js setup npm /tmp/try
+            (cd /tmp/try && npm install --no-audit --no-fund)
+            node bindings/node/scripts/try.js check /tmp/try ${{ matrix.platform }}'
+
   release:
     name: Publish
     if: github.ref_type == 'tag'
@@ -445,3 +537,46 @@ jobs:
           user: ${{ vars.NUGET_USER }}
       - name: Push the package
         run: dotnet nuget push nupkg/*.nupkg --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json
+
+  # npmjs.com trusts this workflow (trusted publishing), so no token is stored, and each package
+  # gets a provenance statement. The platform packages go first, so that rustyprint never points
+  # at one that is not there yet, and a package already published is skipped, so that a run that
+  # failed halfway can be run again.
+  npm-publish:
+    name: Publish the npm packages
+    if: github.ref_type == 'tag'
+    needs: [version, ci, npm, npm-try, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm
+          path: npm
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+      - name: Publish the packages
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        run: |
+          node -e '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number)
+            if (major < 11 || (major === 11 && (minor < 5 || (minor === 5 && patch < 1)))) {
+              console.log(`::error::npm ${process.argv[1]} is older than 11.5.1, which trusted publishing needs`)
+              process.exit(1)
+            }' "$(npm --version)"
+          flags=(--access public)
+          if [ "$PRERELEASE" = true ]; then flags+=(--tag next); fi
+          for tarball in npm/rustyprint-*-"$VERSION".tgz npm/rustyprint-"$VERSION".tgz; do
+            name=$(tar -xzOf "$tarball" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0)).name')
+            if [ "$(npm view "$name@$VERSION" version 2> /dev/null)" = "$VERSION" ]; then
+              echo "$name@$VERSION is already published"
+              continue
+            fi
+            npm publish "$tarball" "${flags[@]}"
+          done
