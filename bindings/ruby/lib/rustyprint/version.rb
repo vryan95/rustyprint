@@ -2,5 +2,5 @@
 
 module Rustyprint
   # The workspace version in Cargo.toml, which every rustyprint package shares.
-  VERSION = "1.0.4"
+  VERSION = "1.1.0"
 end
