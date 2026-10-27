@@ -17,7 +17,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use crate::boxes::{BlockBox, InlineItem};
 use crate::display::Upright;
-use crate::fonts::{FontChoice, select};
+use crate::fonts::{self, FontChoice, select};
 use crate::fragment::{BoxFragment, Sides};
 use crate::text::{Feature, Glyph, ShapeOptions, shape_range};
 use crate::{Font, flow};
@@ -1356,6 +1356,16 @@ fn itemize(p: &Paragraph, span: &Span, choice: &FontChoice) -> Vec<Piece> {
         FontVariantCaps::AllSmallCaps | FontVariantCaps::AllPetiteCaps
     );
     let combined = combined_bytes(style, text);
+    // Bundled script fonts already chosen in this span, as the style asks for them.
+    let mut script_fonts: Vec<Font> = Vec::new();
+    let mut script_fallback = |c: char| {
+        if let Some(font) = script_fonts.iter().find(|f| f.covers(c)) {
+            return Some(font.clone());
+        }
+        let font = fonts::script_fallback(style, c)?;
+        script_fonts.push(font.clone());
+        Some(font)
+    };
     let mut pieces: Vec<Piece> = Vec::new();
     for (offset, grapheme) in text.grapheme_indices(true) {
         let start = span.range.start + offset;
@@ -1392,7 +1402,10 @@ fn itemize(p: &Paragraph, span: &Span, choice: &FontChoice) -> Vec<Piece> {
                 }
                 None => covering.next(),
             };
-            font.unwrap_or(primary).clone()
+            match font {
+                Some(font) => font.clone(),
+                None => script_fallback(first).unwrap_or_else(|| primary.clone()),
+            }
         };
         let small_caps = synth_caps && (first.is_lowercase() || (all_caps && first.is_uppercase()));
         let level = p.levels[start];

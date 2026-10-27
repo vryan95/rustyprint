@@ -15,6 +15,18 @@ class Sample
       features: [ "Title page with its own page style", "Table of contents with page numbers and leaders",
                   "Page headers and footers", "Charts as images, and tables" ]
     },
+    "report-ar" => {
+      summary: "A six-page quarterly report in Arabic, laid out right to left.",
+      features: [ "Arabic text in the bundled Noto Naskh Arabic and Noto Sans Arabic, without @font-face",
+                  "Right-to-left tables, lists and page margin boxes", "Arabic-Indic page numbers and list numbers",
+                  "Latin names within Arabic lines" ]
+    },
+    "report-zh" => {
+      summary: "A seven-page quarterly report in Simplified Chinese, with a page of vertical text.",
+      features: [ "Chinese text in the bundled Noto Sans SC, without @font-face",
+                  "Chairman's letter set top to bottom with writing-mode: vertical-rl",
+                  "Page numbers as 第 1 页，共 7 页 and list numbers as 一、二、", "Bar chart drawn with CSS" ]
+    },
     "letter" => {
       summary: "A one-page letter signed in a handwriting web font.",
       features: [ "Web font loaded with @font-face (Caveat)" ]

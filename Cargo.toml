@@ -11,10 +11,10 @@ license = "MIT OR Apache-2.0"
 publish = false
 
 [workspace.dependencies]
-rustyprint = { path = "crates/rustyprint" }
+rustyprint = { path = "crates/rustyprint", default-features = false }
 rustyprint-css = { path = "crates/rustyprint-css" }
 rustyprint-dom = { path = "crates/rustyprint-dom" }
-rustyprint-layout = { path = "crates/rustyprint-layout" }
+rustyprint-layout = { path = "crates/rustyprint-layout", default-features = false }
 rustyprint-pdf = { path = "crates/rustyprint-pdf" }
 
 anyhow = "1.0.104"

@@ -57,7 +57,7 @@ Every failure is a `RustyprintError`, with a subclass and a `kind` for each kind
 
 ## Platforms
 
-The native library, about 22 MB with its fonts, comes in a package of its own for each platform. `rustyprint` lists them all as optional dependencies, and npm installs only the one whose operating system, CPU and C library match the machine:
+The native library, about 31 MB with its fonts, comes in a package of its own for each platform. `rustyprint` lists them all as optional dependencies, and npm installs only the one whose operating system, CPU and C library match the machine:
 
 | Platform | Package |
 | --- | --- |

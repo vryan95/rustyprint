@@ -39,15 +39,18 @@ impl FontResource {
         }
     }
 
-    /// Records that `glyph` is used to show `text` and returns its CID.
-    pub fn use_glyph(&mut self, glyph: u16, text: &str) -> u16 {
+    /// Records that `glyph` is used to show `text` and returns its CID, and whether the
+    /// ToUnicode map gives that text: a glyph maps to the first text it shows.
+    pub fn use_glyph(&mut self, glyph: u16, text: &str) -> (u16, bool) {
         let cid = self.remapper.remap(glyph);
-        if !text.is_empty() {
-            self.to_unicode
-                .entry(cid)
-                .or_insert_with(|| text.to_owned());
+        if text.is_empty() {
+            return (cid, true);
         }
-        cid
+        let mapped = self
+            .to_unicode
+            .entry(cid)
+            .or_insert_with(|| text.to_owned());
+        (cid, mapped == text)
     }
 
     /// Advance width of `glyph` in thousandths of an em.

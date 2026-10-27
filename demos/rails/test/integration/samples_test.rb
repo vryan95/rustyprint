@@ -4,8 +4,8 @@ class SamplesTest < ActionDispatch::IntegrationTest
   test "the home page lists every sample" do
     get root_path
     assert_response :success
-    assert_select ".sample-card", 3
-    %w[invoice report letter].each do |id|
+    assert_select ".sample-card", 5
+    %w[invoice report report-ar report-zh letter].each do |id|
       assert_select "a[href=?]", sample_path(id)
       assert_select "a[href=?]", sample_path(id, format: :pdf)
     end
@@ -22,7 +22,7 @@ class SamplesTest < ActionDispatch::IntegrationTest
   end
 
   test "each sample renders to a PDF with the pages it is meant to have" do
-    { "invoice" => 3, "report" => 8, "letter" => 1 }.each do |id, pages|
+    { "invoice" => 3, "report" => 8, "report-ar" => 6, "report-zh" => 7, "letter" => 1 }.each do |id, pages|
       get sample_path(id, format: :pdf)
       assert_response :success
       assert_equal "application/pdf", response.media_type

@@ -10,8 +10,8 @@ describe('samples', () => {
 
   it('the home page lists every sample', async () => {
     const html = await app.text('/')
-    assert.equal(html.match(/class="sample-card"/g).length, 3)
-    for (const id of ['invoice', 'report', 'letter']) {
+    assert.equal(html.match(/class="sample-card"/g).length, 5)
+    for (const id of ['invoice', 'report', 'report-ar', 'report-zh', 'letter']) {
       assert.ok(html.includes(`href="/samples/${id}"`), id)
       assert.ok(html.includes(`href="/samples/${id}.pdf"`), id)
     }
@@ -27,7 +27,7 @@ describe('samples', () => {
     assert.ok(html.includes('await render(html, { assets })'))
   })
 
-  for (const [id, pages] of [['invoice', 3], ['report', 8], ['letter', 1]]) {
+  for (const [id, pages] of [['invoice', 3], ['report', 8], ['report-ar', 6], ['report-zh', 7], ['letter', 1]]) {
     it(`${id} renders to a PDF of ${pages} ${pages === 1 ? 'page' : 'pages'}`, async () => {
       const response = await app.get(`/samples/${id}.pdf`)
       assert.equal(response.status, 200)

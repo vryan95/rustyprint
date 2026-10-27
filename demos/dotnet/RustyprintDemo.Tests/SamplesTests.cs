@@ -13,8 +13,8 @@ public class SamplesTests(DemoApp app) : IClassFixture<DemoApp>
     public async Task The_home_page_lists_every_sample()
     {
         var html = await _client.GetStringAsync("/", Cancel);
-        Assert.Equal(3, Regex.Count(html, "class=\"sample-card\""));
-        foreach (var id in new[] { "invoice", "report", "letter" })
+        Assert.Equal(5, Regex.Count(html, "class=\"sample-card\""));
+        foreach (var id in new[] { "invoice", "report", "report-ar", "report-zh", "letter" })
         {
             Assert.Contains($"href=\"/samples/{id}\"", html, StringComparison.Ordinal);
             Assert.Contains($"href=\"/samples/{id}.pdf\"", html, StringComparison.Ordinal);
@@ -36,6 +36,8 @@ public class SamplesTests(DemoApp app) : IClassFixture<DemoApp>
     [Theory]
     [InlineData("invoice", 3)]
     [InlineData("report", 8)]
+    [InlineData("report-ar", 6)]
+    [InlineData("report-zh", 7)]
     [InlineData("letter", 1)]
     public async Task Each_sample_renders_to_a_pdf_with_the_pages_it_is_meant_to_have(string id, int pages)
     {

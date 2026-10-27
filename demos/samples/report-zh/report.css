@@ -1,0 +1,251 @@
+/* The report sample in Simplified Chinese: the bundled Noto Sans SC, CJK line breaking,
+   counters in the page footer and a page of vertical text. */
+
+@page {
+  size: A4;
+  margin: 24mm 20mm 22mm;
+
+  @top-left {
+    content: "北风贸易公司";
+    font: bold 8pt "Noto Sans SC", sans-serif;
+    color: #1f3a60;
+    border-bottom: 0.5pt solid #c9d1dc;
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+  }
+
+  @top-right {
+    content: "2026 年第三季度报告";
+    font: 8pt "Noto Sans SC", sans-serif;
+    color: #6e6e6e;
+    border-bottom: 0.5pt solid #c9d1dc;
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+  }
+
+  @bottom-center {
+    content: "第 " counter(page) " 页，共 " counter(pages) " 页";
+    font: 8pt "Noto Sans SC", sans-serif;
+    color: #6e6e6e;
+  }
+}
+
+/* The title page has no header or footer. */
+@page title {
+  margin: 0;
+
+  @top-left { content: none; border: none; }
+  @top-right { content: none; border: none; }
+  @bottom-center { content: none; }
+}
+
+body {
+  font: 10.5pt/1.8 "Noto Sans SC", sans-serif;
+  color: #222;
+  margin: 0;
+  text-align: justify;
+  line-break: strict;
+}
+
+.title-page {
+  page: title;
+  height: 297mm;
+  box-sizing: border-box;
+  padding: 70mm 24mm 0;
+  background: linear-gradient(160deg, #1f3a60 0%, #1f3a60 55%, #2a9d8f 100%);
+  color: white;
+  text-align: left;
+}
+
+.title-page .kicker {
+  letter-spacing: 0.3em;
+  font-size: 11pt;
+  color: #e9c46a;
+}
+
+.title-page h1 {
+  color: white;
+  font-size: 34pt;
+  line-height: 1.3;
+  margin: 4mm 0 8mm;
+}
+
+.title-page p {
+  font-size: 12pt;
+  max-width: 130mm;
+}
+
+h1, h2, h3 {
+  color: #1f3a60;
+  text-align: left;
+  break-after: avoid;
+}
+
+main h2 {
+  font-size: 17pt;
+  margin: 0 0 4mm;
+  padding-bottom: 2mm;
+  border-bottom: 1.5pt solid #2a9d8f;
+  break-before: page;
+}
+
+main h3 {
+  font-size: 12pt;
+  margin: 6mm 0 2mm;
+}
+
+p {
+  margin: 0 0 3mm;
+  text-indent: 2em;
+}
+
+nav.toc {
+  break-before: page;
+}
+
+nav.toc h2 {
+  font-size: 17pt;
+  margin: 0 0 6mm;
+}
+
+nav.toc ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+nav.toc li {
+  margin: 0 0 2.5mm;
+}
+
+nav.toc li li {
+  margin: 1.5mm 0 0 2em;
+  font-size: 9.5pt;
+  color: #444;
+}
+
+nav.toc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+nav.toc a::after {
+  content: leader(dotted) target-counter(attr(href url), page);
+}
+
+/* A bar chart drawn with CSS: each bar's height is its share of the tallest. */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4mm;
+  height: 50mm;
+  margin: 6mm 0 2mm;
+  padding: 0 2mm;
+  border-bottom: 0.75pt solid #1f3a60;
+  break-inside: avoid;
+}
+
+.chart .bar {
+  flex: 1;
+  background: #9fb3cc;
+  color: #1f3a60;
+  font-size: 8pt;
+  text-align: center;
+}
+
+.chart .bar.current {
+  background: #1f3a60;
+  color: white;
+}
+
+.chart-labels {
+  display: flex;
+  gap: 4mm;
+  padding: 0 2mm;
+  font-size: 8pt;
+  color: #6e6e6e;
+  text-align: center;
+}
+
+.chart-labels span {
+  flex: 1;
+}
+
+.caption {
+  font-size: 8.5pt;
+  color: #6e6e6e;
+  margin: 2mm 0 6mm;
+  text-indent: 0;
+}
+
+table.figures {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9pt;
+  margin: 4mm 0;
+  break-inside: avoid;
+}
+
+table.figures th,
+table.figures td {
+  padding: 1.5mm 2mm;
+  border-bottom: 0.5pt solid #d9dee5;
+  text-align: right;
+}
+
+table.figures th:first-child,
+table.figures td:first-child {
+  text-align: left;
+}
+
+table.figures thead th {
+  border-bottom: 1pt solid #1f3a60;
+}
+
+.callout {
+  margin: 5mm 0;
+  padding: 3mm 5mm;
+  background: #fdf6e3;
+  border-left: 3pt solid #e9c46a;
+  font-size: 9.5pt;
+  text-align: left;
+  break-inside: avoid;
+}
+
+/* The chairman's letter, set top to bottom and right to left as in traditional typesetting. */
+.letter {
+  break-before: page;
+  writing-mode: vertical-rl;
+  height: 230mm;
+  font-size: 12pt;
+  line-height: 2;
+  text-align: start;
+}
+
+.letter h2 {
+  font-size: 17pt;
+  margin: 0 0 0 8mm;
+  border: none;
+  break-before: auto;
+}
+
+.letter p {
+  text-indent: 2em;
+  margin: 0 0 0 2mm;
+}
+
+.letter .signature {
+  text-align: end;
+  text-indent: 0;
+  margin-right: 6mm;
+}
+
+ol.motions {
+  margin: 3mm 0;
+  padding-left: 2em;
+  list-style: cjk-decimal;
+}
+
+ol.motions li {
+  margin-bottom: 2mm;
+}

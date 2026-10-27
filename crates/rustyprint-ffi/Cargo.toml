@@ -14,6 +14,9 @@ name = "rustyprint_ffi"
 crate-type = ["cdylib", "rlib"]
 
 [features]
+default = ["cjk"]
+# Bundles Noto Sans SC (7.8 MB as WOFF2) for Chinese, Japanese and Korean text.
+cjk = ["rustyprint/cjk"]
 # Makes rendering panic on a `<!--rustyprint:panic-->` comment, to test internal errors.
 test-support = ["rustyprint/test-support"]
 

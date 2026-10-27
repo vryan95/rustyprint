@@ -57,6 +57,116 @@ static FAMILIES: [Family; 3] = [
     },
 ];
 
+/// A bundled variable font for a script the Latin families lack, tried when no other font
+/// covers a character.
+struct ScriptFont {
+    name: &'static str,
+    data: &'static [u8],
+    /// The blocks it is for, inclusive; it is only parsed when one of them is needed.
+    ranges: &'static [(u32, u32)],
+    /// Whether it stands in for sans-serif and monospace text rather than serif.
+    sans: bool,
+}
+
+const ARABIC: &[(u32, u32)] = &[
+    (0x0600, 0x06FF),
+    (0x0750, 0x077F),
+    (0x0870, 0x08FF),
+    (0xFB50, 0xFDFF),
+    (0xFE70, 0xFEFF),
+];
+
+#[cfg(feature = "cjk")]
+const CJK: &[(u32, u32)] = &[
+    (0x1100, 0x11FF),
+    (0x2E80, 0x2FDF),
+    (0x2FF0, 0x9FFF),
+    (0xA960, 0xA97F),
+    (0xAC00, 0xD7FF),
+    (0xF900, 0xFAFF),
+    (0xFE10, 0xFE1F),
+    (0xFE30, 0xFE4F),
+    (0xFF00, 0xFFEF),
+    (0x1F200, 0x1F2FF),
+    (0x20000, 0x3FFFF),
+];
+
+static SCRIPT_FONTS: &[ScriptFont] = &[
+    ScriptFont {
+        name: "Noto Naskh Arabic",
+        data: include_bytes!("../../../fonts/NotoNaskhArabic.ttf"),
+        ranges: ARABIC,
+        sans: false,
+    },
+    ScriptFont {
+        name: "Noto Sans Arabic",
+        data: include_bytes!("../../../fonts/NotoSansArabic.ttf"),
+        ranges: ARABIC,
+        sans: true,
+    },
+    // Simplified Chinese glyphs, also used for Han characters in other languages. Stored as
+    // WOFF2, less than half the size, and decompressed the first time it is needed.
+    #[cfg(feature = "cjk")]
+    ScriptFont {
+        name: "Noto Sans SC",
+        data: include_bytes!("../../../fonts/NotoSansSC.woff2"),
+        ranges: CJK,
+        sans: true,
+    },
+];
+
+/// The parsed script font, shared so the PDF embeds each font once.
+fn script_face(index: usize) -> Font {
+    static FONTS: OnceLock<Vec<OnceLock<Font>>> = OnceLock::new();
+    let fonts = FONTS.get_or_init(|| SCRIPT_FONTS.iter().map(|_| OnceLock::new()).collect());
+    fonts[index]
+        .get_or_init(|| {
+            let data = SCRIPT_FONTS[index].data;
+            match crate::font::decompress(data).expect("bundled fonts are valid") {
+                Some(decompressed) => Font::new(decompressed, 0),
+                None => Font::new(Cow::Borrowed(data), 0),
+            }
+            .expect("bundled fonts are valid")
+        })
+        .clone()
+}
+
+/// The bundled script font with a family name, or the full or PostScript name of its regular
+/// face, without loading any of them.
+fn script_font_named(name: &str) -> Option<usize> {
+    SCRIPT_FONTS.iter().position(|font| {
+        let postscript = font.name.replace(' ', "");
+        name.eq_ignore_ascii_case(font.name)
+            || name.eq_ignore_ascii_case(&format!("{} Regular", font.name))
+            || name.eq_ignore_ascii_case(&format!("{postscript}-Regular"))
+    })
+}
+
+/// The bundled script font for a character none of a style's fonts cover, used as the style
+/// asks: the one matching the style's generic family, serif or sans-serif, comes first.
+pub fn script_fallback(style: &ComputedValues, c: char) -> Option<Font> {
+    let code = u32::from(c);
+    let sans = style
+        .font_family
+        .iter()
+        .find_map(family_index)
+        .is_some_and(|family| family != SERIF);
+    let mut candidates: Vec<usize> = (0..SCRIPT_FONTS.len())
+        .filter(|&i| {
+            SCRIPT_FONTS[i]
+                .ranges
+                .iter()
+                .any(|&(lo, hi)| (lo..=hi).contains(&code))
+        })
+        .collect();
+    candidates.sort_by_key(|&i| SCRIPT_FONTS[i].sans != sans);
+    candidates
+        .into_iter()
+        .map(|i| (i, script_face(i)))
+        .find(|(_, font)| font.covers(c))
+        .map(|(i, font)| instance(style, &font, None, SCRIPT_FONTS[i].name))
+}
+
 /// The parsed face, shared so the PDF embeds each font once.
 fn face(family: usize, face: usize) -> Font {
     static FONTS: OnceLock<Vec<Vec<Font>>> = OnceLock::new();
@@ -146,6 +256,11 @@ pub fn select(style: &ComputedValues) -> FontChoice {
             FamilyName::Named(name) if style.font_rules.defines(name) => {
                 fonts.extend(web_fonts(style, name));
             }
+            FamilyName::Named(name) if script_font_named(name).is_some() => {
+                let index = script_font_named(name).expect("matched above");
+                let font = script_face(index);
+                fonts.push(instance(style, &font, None, SCRIPT_FONTS[index].name));
+            }
             other => {
                 if let Some(index) = family_index(other) {
                     let font = bundled_face(index, style.font_weight, style.font_style);
@@ -231,6 +346,9 @@ fn face_font(face: &FontFace) -> Option<Font> {
 
 /// A bundled face by its full or PostScript name, for `local()`.
 fn local(name: &str) -> Option<Font> {
+    if let Some(index) = script_font_named(name) {
+        return Some(script_face(index));
+    }
     (0..FAMILIES.len())
         .flat_map(|family| (0..4).map(move |index| face(family, index)))
         .find(|font| {

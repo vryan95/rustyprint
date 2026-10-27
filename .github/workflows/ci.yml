@@ -221,7 +221,7 @@ jobs:
         run: |
           bin/rails server -p 3000 > log/server.log 2>&1 &
           for _ in $(seq 1 60); do curl -sf -o /dev/null localhost:3000/up && break; sleep 1; done
-          for path in /samples/invoice.pdf /samples/report.pdf /samples/letter.pdf \
+          for path in /samples/invoice.pdf /samples/report.pdf /samples/report-ar.pdf /samples/report-zh.pdf /samples/letter.pdf \
                       /invoices/2026-0412.pdf /invoices/2026-0413.pdf; do
             curl -sf -o out.pdf "localhost:3000$path" && head -c 5 out.pdf | grep -q '%PDF-' \
               || { echo "::error::$path did not render"; cat log/server.log; exit 1; }
@@ -287,7 +287,7 @@ jobs:
         run: |
           dotnet run --project RustyprintDemo --no-build --urls http://localhost:5000 > server.log 2>&1 &
           for _ in $(seq 1 60); do curl -sf -o /dev/null localhost:5000/up && break; sleep 1; done
-          for path in /samples/invoice.pdf /samples/report.pdf /samples/letter.pdf \
+          for path in /samples/invoice.pdf /samples/report.pdf /samples/report-ar.pdf /samples/report-zh.pdf /samples/letter.pdf \
                       /invoices/2026-0412.pdf /invoices/2026-0413.pdf; do
             curl -sf -o out.pdf "localhost:5000$path" && head -c 5 out.pdf | grep -q '%PDF-' \
               || { echo "::error::$path did not render"; cat server.log; exit 1; }
@@ -368,7 +368,7 @@ jobs:
         run: |
           PORT=3000 npm start > server.log 2>&1 &
           for _ in $(seq 1 60); do curl -sf -o /dev/null localhost:3000/up && break; sleep 1; done
-          for path in /samples/invoice.pdf /samples/report.pdf /samples/letter.pdf                       /invoices/2026-0412.pdf /invoices/2026-0413.pdf; do
+          for path in /samples/invoice.pdf /samples/report.pdf /samples/report-ar.pdf /samples/report-zh.pdf /samples/letter.pdf                       /invoices/2026-0412.pdf /invoices/2026-0413.pdf; do
             curl -sf -o out.pdf "localhost:3000$path" && head -c 5 out.pdf | grep -q '%PDF-'               || { echo "::error::$path did not render"; cat server.log; exit 1; }
             echo "$path: $(wc -c < out.pdf) bytes"
           done

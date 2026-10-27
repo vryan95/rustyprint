@@ -11,7 +11,7 @@ publish = false
 libtest-mimic.workspace = true
 rustyprint-css.workspace = true
 rustyprint-dom.workspace = true
-rustyprint-layout.workspace = true
+rustyprint-layout = { workspace = true, features = ["cjk"] }
 
 [[test]]
 name = "fixtures"

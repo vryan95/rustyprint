@@ -1,0 +1,233 @@
+/* The report sample in Arabic: right-to-left layout with the bundled Noto Naskh Arabic and
+   Noto Sans Arabic, Arabic-Indic page numbers, and Latin names and figures within the text. */
+
+@page {
+  size: A4;
+  margin: 24mm 20mm 22mm;
+
+  /* The company name sits on the side where a right-to-left line starts. */
+  @top-right {
+    content: "شركة نورثويند للتجارة";
+    font: bold 9pt "Noto Sans Arabic", sans-serif;
+    color: #1f3a60;
+    border-bottom: 0.5pt solid #c9d1dc;
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+  }
+
+  @top-left {
+    content: "التقرير الفصلي، الربع الثالث ٢٠٢٦";
+    font: 9pt "Noto Sans Arabic", sans-serif;
+    color: #6e6e6e;
+    border-bottom: 0.5pt solid #c9d1dc;
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+  }
+
+  @bottom-center {
+    content: "صفحة " counter(page, arabic-indic) " من " counter(pages, arabic-indic);
+    font: 9pt "Noto Sans Arabic", sans-serif;
+    color: #6e6e6e;
+  }
+}
+
+/* The title page has no header or footer. */
+@page title {
+  margin: 0;
+
+  @top-right { content: none; border: none; }
+  @top-left { content: none; border: none; }
+  @bottom-center { content: none; }
+}
+
+body {
+  font: 11.5pt/1.8 "Noto Naskh Arabic", serif;
+  color: #222;
+  margin: 0;
+  text-align: justify;
+}
+
+.title-page {
+  page: title;
+  height: 297mm;
+  box-sizing: border-box;
+  padding: 70mm 24mm 0;
+  background: linear-gradient(200deg, #1f3a60 0%, #1f3a60 55%, #2a9d8f 100%);
+  color: white;
+  font-family: "Noto Sans Arabic", sans-serif;
+  text-align: start;
+}
+
+/* No letter-spacing: it would pull the joined letters apart. */
+.title-page .kicker {
+  font-size: 12pt;
+  color: #e9c46a;
+}
+
+.title-page h1 {
+  color: white;
+  font-size: 34pt;
+  line-height: 1.4;
+  margin: 4mm 0 8mm;
+}
+
+.title-page p {
+  font-size: 13pt;
+  max-width: 130mm;
+}
+
+h1, h2, h3 {
+  font-family: "Noto Sans Arabic", sans-serif;
+  color: #1f3a60;
+  text-align: start;
+  break-after: avoid;
+}
+
+main h2 {
+  font-size: 18pt;
+  margin: 0 0 4mm;
+  padding-bottom: 2mm;
+  border-bottom: 1.5pt solid #2a9d8f;
+  break-before: page;
+}
+
+main h3 {
+  font-size: 13pt;
+  margin: 6mm 0 2mm;
+}
+
+p {
+  margin: 0 0 3mm;
+}
+
+nav.toc {
+  break-before: page;
+  font-family: "Noto Sans Arabic", sans-serif;
+}
+
+nav.toc h2 {
+  font-size: 18pt;
+  margin: 0 0 6mm;
+}
+
+nav.toc ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+nav.toc li {
+  margin: 0 0 2.5mm;
+}
+
+nav.toc li li {
+  margin-block: 1.5mm 0;
+  margin-inline: 6mm 0;
+  font-size: 10.5pt;
+  color: #444;
+}
+
+nav.toc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+nav.toc a::after {
+  content: leader(dotted) target-counter(attr(href url), page, arabic-indic);
+}
+
+/* A bar chart drawn with CSS, running from right to left like the text. */
+.chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4mm;
+  height: 42mm;
+  margin: 6mm 0 2mm;
+  padding: 0 2mm;
+  border-bottom: 0.75pt solid #1f3a60;
+  font-family: "Noto Sans Arabic", sans-serif;
+  break-inside: avoid;
+}
+
+.chart .bar {
+  flex: 1;
+  background: #9fb3cc;
+  color: #1f3a60;
+  font-size: 9pt;
+  text-align: center;
+}
+
+.chart .bar.current {
+  background: #1f3a60;
+  color: white;
+}
+
+.chart-labels {
+  display: flex;
+  gap: 4mm;
+  padding: 0 2mm;
+  font: 8.5pt/1.5 "Noto Sans Arabic", sans-serif;
+  color: #6e6e6e;
+  text-align: center;
+}
+
+.chart-labels span {
+  flex: 1;
+}
+
+.caption {
+  font: 9.5pt/1.5 "Noto Sans Arabic", sans-serif;
+  color: #6e6e6e;
+  margin: 2mm 0 6mm;
+}
+
+table.figures {
+  width: 100%;
+  border-collapse: collapse;
+  font: 10pt/1.5 "Noto Sans Arabic", sans-serif;
+  margin: 4mm 0;
+  break-inside: avoid;
+}
+
+table.figures th,
+table.figures td {
+  padding: 1.5mm 2mm;
+  border-bottom: 0.5pt solid #d9dee5;
+  text-align: end;
+}
+
+table.figures th:first-child,
+table.figures td:first-child {
+  text-align: start;
+}
+
+table.figures thead th {
+  border-bottom: 1pt solid #1f3a60;
+}
+
+.callout {
+  margin: 5mm 0;
+  padding: 3mm 5mm;
+  background: #fdf6e3;
+  border-inline-start: 3pt solid #e9c46a;
+  font-family: "Noto Sans Arabic", sans-serif;
+  font-size: 11pt;
+  text-align: start;
+  break-inside: avoid;
+}
+
+ol.motions {
+  margin: 3mm 0;
+  padding-inline-start: 2em;
+  list-style: arabic-indic;
+}
+
+ol.motions li {
+  margin-bottom: 2mm;
+}
+
+/* Latin names keep their own font and run left to right within the Arabic lines. */
+.latin {
+  font-family: "Noto Sans", sans-serif;
+  font-size: 0.85em;
+}
