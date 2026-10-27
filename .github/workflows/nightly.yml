@@ -39,11 +39,14 @@ jobs:
           key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
           restore-keys: fuzz-corpus-${{ matrix.target }}-
       # The fixtures seed the corpus with documents that reach every part of the engine.
+      # `+nightly` overrides rust-toolchain.toml, which pins the stable release. The prebuilt
+      # cargo-fuzz is a musl binary that would build for musl, which AddressSanitizer lacks.
       - name: Fuzz for 10 minutes
         working-directory: fuzz
         run: |
           mkdir -p corpus/${{ matrix.target }}
-          cargo fuzz run ${{ matrix.target }} corpus/${{ matrix.target }} ../tests/fixtures \
+          cargo +nightly fuzz run --target x86_64-unknown-linux-gnu ${{ matrix.target }} \
+            corpus/${{ matrix.target }} ../tests/fixtures \
             -- -max_total_time=600 -timeout=30 -rss_limit_mb=4096
       - name: Keep the crashing input
         if: failure()
