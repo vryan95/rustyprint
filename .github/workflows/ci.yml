@@ -416,7 +416,8 @@ jobs:
             fi
             sleep $((attempt * 15))
           done
-          this=$(printf '%s\n' "$jobs" | awk -F'\t' '$1 ~ /(^|\/ )CI result$/ && $2 == "in_progress" { print $1; exit }')
+          # The API can still report this job as queued while it runs, so any unfinished state counts.
+          this=$(printf '%s\n' "$jobs" | awk -F'\t' '$1 ~ /(^|\/ )CI result$/ && $2 ~ /^(in_progress|queued|waiting|pending|requested)$/ { print $1; exit }')
           if [ -z "$this" ]; then
             echo "::error::This job is not among the run's jobs"
             exit 1
