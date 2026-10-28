@@ -853,40 +853,71 @@ impl Writer {
         self.fonts.len() - 1
     }
 
-    /// The glyphs of a run as `TJ` segments by rise, and the index of the run's font.
-    fn positioned(&mut self, run: &TextRun) -> (usize, Vec<(f32, Vec<Positioned>)>) {
+    /// The glyphs of a run as `TJ` items, and the index of the run's font.
+    fn positioned(&mut self, run: &TextRun) -> (usize, Vec<Positioned>) {
         let index = self.font_index(&run.font);
         let resource = &mut self.fonts[index];
 
         // Glyph positions are written in thousandths of an em, the unit of `TJ` adjustments.
         let to_em = 1000.0 / (run.size * run.font.size_adjust());
-        let mut segments: Vec<(f32, Vec<Positioned>)> = Vec::new();
-        for glyph in &run.glyphs {
-            let rise = -glyph.y_offset * PX_TO_PT;
-            if segments.last().is_none_or(|(r, _)| *r != rise) {
-                segments.push((rise, Vec::new()));
+        let mut items = Vec::new();
+        // Text rise outlasts the text object, so every run sets it.
+        let mut rise = f32::NAN;
+        let mut start = 0;
+        while start < run.glyphs.len() {
+            let range = run.glyphs[start].text.clone();
+            let end = start
+                + run.glyphs[start..]
+                    .iter()
+                    .take_while(|g| g.text == range)
+                    .count();
+            let cluster = &run.glyphs[start..end];
+            let text = &run.text[range];
+            // The cluster's text goes to its glyph with the widest advance: marks, such as
+            // Arabic dots, have none and are shared between letters.
+            let base = (0..cluster.len())
+                .rev()
+                .max_by(|&a, &b| {
+                    let advance = |i: usize| cluster[i].x_advance.abs();
+                    advance(a).total_cmp(&advance(b))
+                })
+                .expect("clusters are not empty");
+            let mut mapped = cluster.len() == 1;
+            let cluster_start = items.len();
+            for (i, glyph) in cluster.iter().enumerate() {
+                let glyph_rise = -glyph.y_offset * PX_TO_PT;
+                if glyph_rise != rise {
+                    rise = glyph_rise;
+                    items.push(Positioned::Rise(rise));
+                }
+                let (cid, maps_to_text) =
+                    resource.use_glyph(glyph.id, if i == base { text } else { "" });
+                mapped &= maps_to_text;
+                let width = resource.width(glyph.id);
+                let x_offset = glyph.x_offset * to_em;
+                let advance = glyph.x_advance * to_em;
+                if x_offset != 0.0 {
+                    items.push(Positioned::Adjust(-x_offset));
+                }
+                items.push(Positioned::Glyph(cid));
+                let adjust = width - advance + x_offset;
+                if adjust.abs() > 1e-3 {
+                    items.push(Positioned::Adjust(adjust));
+                }
             }
-            let items = &mut segments.last_mut().expect("pushed above").1;
-
-            let cid = resource.use_glyph(glyph.id, &run.text[glyph.text.clone()]);
-            let width = resource.width(glyph.id);
-            let x_offset = glyph.x_offset * to_em;
-            let advance = glyph.x_advance * to_em;
-            if x_offset != 0.0 {
-                items.push(Positioned::Adjust(-x_offset));
+            // Text the font's ToUnicode map cannot give is copied from the content instead.
+            if !mapped && !text.is_empty() {
+                items.insert(cluster_start, Positioned::ActualText(text.to_owned()));
+                items.push(Positioned::EndActualText);
             }
-            items.push(Positioned::Glyph(cid));
-            let adjust = width - advance + x_offset;
-            if adjust.abs() > 1e-3 {
-                items.push(Positioned::Adjust(adjust));
-            }
+            start = end;
         }
-        (index, segments)
+        (index, items)
     }
 
     /// Paints a text run and returns the index of the font it used.
     fn text(&mut self, content: &mut Content, page_height: f32, run: &TextRun) -> usize {
-        let (index, segments) = self.positioned(run);
+        let (index, items) = self.positioned(run);
         let name = self.fonts[index].name.clone();
 
         // Which passes paint the glyphs: a stroke painted first needs its own pass.
@@ -925,7 +956,7 @@ impl Writer {
             if mode != TextRenderingMode::Fill {
                 content.set_text_rendering_mode(mode);
             }
-            show(content, &name, run, page_height, &segments);
+            show(content, &name, run, page_height, &items);
             if mode != TextRenderingMode::Fill {
                 content.set_text_rendering_mode(TextRenderingMode::Fill);
             }
@@ -947,9 +978,9 @@ impl Writer {
         content.begin_text();
         content.set_text_rendering_mode(TextRenderingMode::Clip);
         for run in runs {
-            let (index, segments) = self.positioned(run);
+            let (index, items) = self.positioned(run);
             let name = self.fonts[index].name.clone();
-            show(content, &name, run, page_height, &segments);
+            show(content, &name, run, page_height, &items);
             if !fonts.contains(&index) {
                 fonts.push(index);
             }
@@ -1185,13 +1216,7 @@ fn image_matrix(orientation: u8, x: f32, y: f32, w: f32, h: f32) -> [f32; 6] {
 }
 
 /// Shows the positioned glyphs of `run` in the font resource `font`, inside a text object.
-fn show(
-    content: &mut Content,
-    font: &str,
-    run: &TextRun,
-    page_height: f32,
-    segments: &[(f32, Vec<Positioned>)],
-) {
+fn show(content: &mut Content, font: &str, run: &TextRun, page_height: f32, items: &[Positioned]) {
     let skew = run.oblique.to_radians().tan();
     content.set_font(
         Name(font.as_bytes()),
@@ -1205,16 +1230,40 @@ fn show(
         run.origin.x * PX_TO_PT,
         page_height - run.origin.y * PX_TO_PT,
     ]);
-    for (rise, items) in segments {
-        content.set_rise(*rise);
-        let mut show = content.show_positioned();
-        let mut writer = show.items();
-        for item in items {
-            match *item {
-                Positioned::Glyph(cid) => writer.show(Str(&cid.to_be_bytes())),
-                Positioned::Adjust(amount) => writer.adjust(amount),
-            };
+    let mut rest = items;
+    while let Some(item) = rest.first() {
+        match item {
+            Positioned::Rise(rise) => {
+                content.set_rise(*rise);
+            }
+            Positioned::ActualText(text) => {
+                content
+                    .begin_marked_content_with_properties(Name(b"Span"))
+                    .properties()
+                    .actual_text(TextStr(text));
+            }
+            Positioned::EndActualText => {
+                content.end_marked_content();
+            }
+            Positioned::Glyph(_) | Positioned::Adjust(_) => {
+                let count = rest
+                    .iter()
+                    .take_while(|item| matches!(item, Positioned::Glyph(_) | Positioned::Adjust(_)))
+                    .count();
+                let mut show = content.show_positioned();
+                let mut writer = show.items();
+                for item in &rest[..count] {
+                    match *item {
+                        Positioned::Glyph(cid) => writer.show(Str(&cid.to_be_bytes())),
+                        Positioned::Adjust(amount) => writer.adjust(amount),
+                        _ => unreachable!("only glyphs and adjustments are counted"),
+                    };
+                }
+                rest = &rest[count..];
+                continue;
+            }
         }
+        rest = &rest[1..];
     }
 }
 
@@ -1377,8 +1426,13 @@ fn alpha_name(alpha: u8) -> String {
     format!("A{alpha}")
 }
 
-/// An item of a `TJ` array.
+/// An item of a `TJ` array, or what goes between `TJ` operators.
 enum Positioned {
     Glyph(u16),
     Adjust(f32),
+    /// The text rise of the glyphs that follow, in points.
+    Rise(f32),
+    /// Starts a span of glyphs that copy as this text.
+    ActualText(String),
+    EndActualText,
 }
