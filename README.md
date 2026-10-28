@@ -222,7 +222,7 @@ The `rustyprint` crate is the engine itself. It is not published on crates.io, s
 
 ```toml
 [dependencies]
-rustyprint = { git = "https://github.com/vryan95/rustyprint", tag = "v1.1.0", features = ["serde"] }
+rustyprint = { git = "https://github.com/vryan95/rustyprint", tag = "v1.2.0", features = ["serde"] }
 ```
 
 The `serde` feature adds `RenderOptions::from_json`, for options as JSON; without it, build `RenderOptions` in code.
