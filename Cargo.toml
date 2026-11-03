@@ -30,7 +30,7 @@ http-body-util = "0.1.5"
 hyphenation = { version = "0.8.4", features = ["embed_all"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
 libtest-mimic = "0.8.2"
-lopdf = "0.45.0"
+lopdf = "0.46.0"
 miniz_oxide = "0.9.1"
 # The version `image` uses, so that the two share one copy; 0.9 waits for `image` to move.
 moxcms = "0.8.1"
