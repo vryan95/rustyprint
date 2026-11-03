@@ -24,7 +24,7 @@ cc = "1.8.0"
 clap = { version = "4.6.7", features = ["derive"] }
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 cssparser = "0.38.0"
-harfrust = "0.14.0"
+harfrust = "0.15.0"
 html5ever = "0.40.1"
 http-body-util = "0.1.5"
 hyphenation = { version = "0.8.4", features = ["embed_all"] }
