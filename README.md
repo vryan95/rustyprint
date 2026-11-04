@@ -175,7 +175,7 @@ The response is the PDF, with the warnings in its headers. [crates/rustyprint-se
 
 ## Use it from Ruby
 
-The `rustyprint` gem, for Ruby 3.2 and newer, with the native library built into a gem for each platform. In Rails it adds `render pdf:` to controllers.
+The `rustyprint` gem, for Ruby 3.2 and newer, with the native library built into a gem for Linux, macOS and Windows on x64 and arm64. Other platforms get a source gem, which needs `RUSTYPRINT_LIBRARY` to point at a library built from source ([platforms](bindings/ruby/README.md#platforms)). In Rails it adds `render pdf:` to controllers.
 
 ```ruby
 output = Rustyprint.render(html, page_size: "A4", margin: "15mm",

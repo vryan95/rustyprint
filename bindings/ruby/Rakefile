@@ -48,6 +48,19 @@ ensure
   FileUtils.rm_f(LICENSES.keys)
 end
 
+desc "Build the source gem, for the ruby platform, which has no native library"
+task :source do
+  spec = Gem::Specification.load("rustyprint.gemspec")
+  native = spec.files.grep(%r{native/})
+  abort "The source gem must not hold a native library, but has #{native.join(', ')}" if native.any?
+  # Only installs without a platform gem get the source gem, so only they see this.
+  spec.post_install_message = "rustyprint has no prebuilt native library for this platform. Set " \
+                              "RUSTYPRINT_LIBRARY to one built from source, or see " \
+                              "https://github.com/vryan95/rustyprint/tree/master/bindings/ruby#platforms."
+  FileUtils.mkdir_p("pkg")
+  FileUtils.mv(Gem::Package.build(spec), "pkg")
+end
+
 desc "Fail unless every public class, module, method and constant has documentation"
 task :docs do
   stats = IO.popen(%w[yard stats --list-undoc], &:read)
