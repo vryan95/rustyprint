@@ -206,25 +206,43 @@ fn fixed_backgrounds_repeat_on_every_page() {
 }
 
 #[test]
-fn without_a_doctype_lines_of_small_nested_text_are_as_tall_as_the_text() {
-    // The line height calculation quirk: in a page without a doctype, a line whose text is all
-    // in a smaller nested span is as tall as that text, not the block's own 40px line height.
-    let body = "<style>body { margin: 0; font-size: 20px; line-height: 2 }</style>\
-                <p style='--id: p; margin: 0'><span style='font-size: 8px'>one</span><br>\
-                <span style='font-size: 8px'>two</span></p>";
+fn without_a_doctype_a_line_whose_text_is_all_nested_does_not_get_the_blocks_line_height() {
+    // The line height calculation quirk: the block has no text of its own on these lines, so
+    // its 40px line height does not count; the spans' own 10px line height does.
+    let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }\
+                span { font-size: 8px; line-height: 10px }</style>\
+                <p style='--id: p; margin: 0'><span>one</span><br><span>two</span></p>";
     let standards = pages_of(&format!("<!DOCTYPE html>{body}"));
     let quirks = pages_of(body);
     assert!(find(&standards[0], "p").rect.height >= 80.0);
-    assert!(
-        find(&quirks[0], "p").rect.height < 30.0,
-        "{}",
-        find(&quirks[0], "p").rect.height
-    );
+    let height = find(&quirks[0], "p").rect.height;
+    assert!(height < 30.0, "{height}");
 }
 
 #[test]
 fn without_a_doctype_lines_with_the_blocks_own_text_keep_its_line_height() {
-    let body = "<style>body { margin: 0; font-size: 20px; line-height: 2 }</style>\
+    let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }</style>\
                 <p style='--id: p; margin: 0'>own <span style='font-size: 8px'>small</span></p>";
     assert!(find(&pages_of(body)[0], "p").rect.height >= 40.0);
+}
+
+#[test]
+fn without_a_doctype_a_line_holding_only_a_br_keeps_the_blocks_line_height() {
+    let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }</style>\
+                <p style='--id: p; margin: 0'><br><span style='font-size: 8px'></span></p>";
+    assert!(find(&pages_of(body)[0], "p").rect.height >= 40.0);
+}
+
+#[test]
+fn without_a_doctype_tables_do_not_inherit_the_pages_font_size() {
+    // Quirks mode resets a table's font size and line height (HTML § 15.3).
+    let body = "<style>body { margin: 0; font-size: 40px; line-height: 2 }\
+                td { padding: 0 }</style>\
+                <table style='border-spacing: 0'><tr><td style='--id: c'>text</td></tr></table>";
+    let standards = find(&pages_of(&format!("<!DOCTYPE html>{body}"))[0], "c")
+        .rect
+        .height;
+    let quirks = find(&pages_of(body)[0], "c").rect.height;
+    assert!(standards >= 80.0, "{standards}");
+    assert!(quirks < 30.0, "{quirks}");
 }
