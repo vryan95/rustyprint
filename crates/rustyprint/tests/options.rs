@@ -132,6 +132,12 @@ fn title_and_stylesheet() {
 }
 
 #[test]
+fn shrink_to_fit_is_off_unless_asked_for() {
+    assert!(!json("{}").shrink_to_fit);
+    assert!(json(r#"{"shrink_to_fit": true}"#).shrink_to_fit);
+}
+
+#[test]
 fn remote_hosts_keep_the_default_fetch_limits() {
     let options = json(r#"{"remote": {"allowed_hosts": ["cdn.example.com"], "allow_http": true}}"#);
     let expected = Remote {
@@ -248,6 +254,7 @@ fn schema_describes_every_option() {
             "margin",
             "page_size",
             "remote",
+            "shrink_to_fit",
             "stylesheet",
             "title"
         ])

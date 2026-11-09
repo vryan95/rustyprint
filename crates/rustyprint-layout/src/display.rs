@@ -127,6 +127,12 @@ pub struct Page {
 }
 
 impl Page {
+    /// The bounds of everything the page paints, with transforms applied and clips ignored,
+    /// in page coordinates.
+    pub fn content_bounds(&self) -> Option<Rect> {
+        crate::raster::bounds(&self.items)
+    }
+
     /// A page of `size` without bleed, marks or rotation.
     pub fn new(size: Size, items: Vec<DisplayItem>) -> Self {
         Self {
