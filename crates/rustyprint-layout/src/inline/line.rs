@@ -624,7 +624,16 @@ impl LineContext<'_> {
         let mut box_anchor: Vec<Option<usize>> = vec![None; p.boxes.len()];
         // Special anchors (top, bottom, center), indexed by unit: (unit kind, its anchor).
         let mut anchors: Vec<(Anchor, f32, f32)> = Vec::new();
-        let mut root_extent = root.bounds();
+        // The line height calculation quirk (Quirks Mode § 3.3): in quirks mode a line whose
+        // text is all inside nested inline boxes is as tall as those boxes, without the
+        // block's own strut, as browsers lay out pages without a doctype.
+        let nested_only = pieces.iter().any(|piece| piece.inline_box != 0)
+            && !pieces.iter().any(|piece| {
+                piece.inline_box == 0
+                    && matches!(piece.kind, Kind::Text { .. } | Kind::Extra { .. })
+            });
+        let quirk = super::quirks() && nested_only;
+        let mut root_extent = if quirk { (0.0, 0.0) } else { root.bounds() };
 
         let align = |style: &ComputedValues,
                      parent: &BoxMetrics,
@@ -659,7 +668,12 @@ impl LineContext<'_> {
             let ib = &p.boxes[b];
             let m = &self.metrics[b];
             let parent = ib.parent;
-            let (top, bottom) = m.bounds();
+            // In the quirk, the nested boxes count their text, not their line height.
+            let (top, bottom) = if quirk {
+                (-m.ascent, m.descent)
+            } else {
+                m.bounds()
+            };
             match align(
                 &ib.style,
                 &self.metrics[parent],

@@ -198,6 +198,7 @@ pub fn layout_pages(
     page: &PageOptions,
     images: &Images,
 ) -> Vec<LaidPage> {
+    inline::set_quirks(document.quirks_mode() != rustyprint_dom::QuirksMode::NoQuirks);
     let (built, mut pages) = paginated(document, styles, page, images);
     let running = built.running;
     let order = document

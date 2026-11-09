@@ -532,3 +532,18 @@ fn trim_text_box(
     }
     height
 }
+
+thread_local! {
+    /// Whether the document being laid out on this thread is in quirks or limited-quirks
+    /// mode, for the line height calculation quirk.
+    static QUIRKS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Records whether the document laid out next on this thread is in quirks mode.
+pub(crate) fn set_quirks(quirks: bool) {
+    QUIRKS.with(|q| q.set(quirks));
+}
+
+pub(crate) fn quirks() -> bool {
+    QUIRKS.with(std::cell::Cell::get)
+}
