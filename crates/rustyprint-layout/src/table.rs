@@ -1687,7 +1687,14 @@ pub(crate) fn layout(
             let fits = y + heights[r] + vs + tail + bottom <= f.available + EPSILON;
             // The rest of a broken row, or a row too tall for a page of its own, breaks
             // inside its cells.
+            // A row with a forced break inside a cell breaks there, fitting or not.
+            let forces_inside = splittable(r)
+                && row_of_grid(table, r)
+                    .cells
+                    .iter()
+                    .any(|cell| flow::has_forced_break(&cell.block));
             if (i == start && partial.is_some())
+                || forces_inside
                 || (!fits && placed == 0 && f.at_top && splittable(r))
             {
                 let space = (f.available - y - tail - vs).max(0.0);
