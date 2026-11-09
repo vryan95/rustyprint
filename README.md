@@ -288,7 +288,7 @@ and the library benchmarks with `cargo bench -p rustyprint --bench render`. CI r
 
 ## Fonts
 
-rustyprint bundles Noto Sans, Noto Serif and Noto Sans Mono, under the SIL Open Font License ([fonts/OFL.txt](fonts/OFL.txt)): `serif`, the initial font, is Noto Serif. For characters these lack, it falls back to Noto Naskh Arabic (Noto Sans Arabic for sans-serif text) and Noto Sans SC, so Arabic and Chinese text renders without any `@font-face`. Han characters in Japanese or Korean text also use the Simplified Chinese glyphs. Noto Sans SC adds 7.8 MB; building with `--no-default-features` leaves it out. Other fonts come from `@font-face` rules, in TrueType, OpenType, WOFF or WOFF2. System fonts are not used, so a document renders the same on every machine.
+rustyprint bundles Noto Sans, Noto Serif and Noto Sans Mono, under the SIL Open Font License ([fonts/OFL.txt](fonts/OFL.txt)): `serif`, the initial font, is Noto Serif. For characters these lack, it falls back to Noto Naskh Arabic (Noto Sans Arabic for sans-serif text) and Noto Sans SC, so Arabic and Chinese text renders without any `@font-face`. Han characters in Japanese or Korean text also use the Simplified Chinese glyphs. Emoji, which none of these cover, fall back to Noto Color Emoji and are drawn in color. Noto Sans SC adds 7.8 MB and Noto Color Emoji 5 MB; building with `--no-default-features` leaves both out, or turn off just the `cjk` or `emoji` feature. Other fonts come from `@font-face` rules, in TrueType, OpenType, WOFF or WOFF2. System fonts are not used, so a document renders the same on every machine.
 
 ## Development
 
