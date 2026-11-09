@@ -1,0 +1,13 @@
+/* Rendering in quirks mode (HTML § 15.3): rules that apply only to documents without a doctype. */
+table {
+  font-weight: initial;
+  font-style: initial;
+  font-variant: initial;
+  font-size: initial;
+  line-height: initial;
+  white-space: initial;
+  text-align: initial;
+}
+input:not([type=image i]), textarea { box-sizing: border-box; }
+img[align=left i] { margin-right: 3px; }
+img[align=right i] { margin-left: 3px; }

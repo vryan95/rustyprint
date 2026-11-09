@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
 use rustyprint_css::properties::types::{
-    AlignmentBaseline, BaselineShift, DecorationLength, Direction, LineHeight, Paint, TextAlign,
-    TextAlignLast, TextDecorationSkipInk, TextDecorationStyle, TextJustify,
+    AlignmentBaseline, BaselineShift, DecorationLength, Direction, LengthPercentage, LineHeight,
+    Paint, TextAlign, TextAlignLast, TextDecorationSkipInk, TextDecorationStyle, TextJustify,
 };
 use rustyprint_css::values::AbsoluteColor;
 
@@ -58,6 +58,13 @@ impl BoxMetrics {
             superscript: px(m.superscript_offset),
             font,
         }
+    }
+
+    /// The bounds the box would have with a line-height of zero: a point half way between its
+    /// ascent and descent.
+    fn zero_line_height_bounds(&self) -> (f32, f32) {
+        let middle = (self.descent - self.ascent) / 2.0;
+        (middle, middle)
     }
 
     /// The top and bottom of the box's layout bounds around its baseline (CSS 2.1 § 10.8.1).
@@ -225,7 +232,16 @@ impl LineContext<'_> {
         }
 
         // Vertical alignment.
-        let baselines = self.baselines(&visual);
+        // A line holding nothing but a forced break still has the block's line height, as
+        // browsers give an empty line made by a <br>.
+        let only_break = p.text[line.start..line.end].ends_with('\n')
+            && !visual.iter().any(|piece| {
+                matches!(
+                    piece.kind,
+                    Kind::Text { .. } | Kind::Extra { .. } | Kind::Atomic(_)
+                ) && !p.text[piece.pos..].starts_with('\n')
+            });
+        let baselines = self.baselines(&visual, only_break);
         let (top, bottom) = baselines.extent;
         let items = self.build(&visual, 0, &baselines.boxes, &baselines.atomics, -top);
         LineFragment {
@@ -600,7 +616,7 @@ impl LineContext<'_> {
 
     /// Baselines of every inline box and atomic inline on the line, relative to the root
     /// inline box's baseline, and the line's extent (CSS 2.1 § 10.8, CSS Inline 3 § 4).
-    fn baselines(&self, pieces: &[Piece]) -> Baselines {
+    fn baselines(&self, pieces: &[Piece], only_break: bool) -> Baselines {
         let p = self.p;
         let root = &self.metrics[0];
         // Units are the inline boxes and atomic inlines on the line.
@@ -624,7 +640,28 @@ impl LineContext<'_> {
         let mut box_anchor: Vec<Option<usize>> = vec![None; p.boxes.len()];
         // Special anchors (top, bottom, center), indexed by unit: (unit kind, its anchor).
         let mut anchors: Vec<(Anchor, f32, f32)> = Vec::new();
-        let mut root_extent = root.bounds();
+        // The line height calculation quirk (Quirks Mode § 3.3): in quirks mode an inline box,
+        // the root included, with no text, image or vertical border or padding of its own on
+        // this line acts as if its line-height were zero, as browsers lay out pages without a
+        // doctype.
+        let quirks = super::quirks();
+        let owns_content = |b: usize| {
+            pieces.iter().any(|piece| {
+                piece.inline_box == b
+                    && matches!(
+                        piece.kind,
+                        Kind::Text { .. } | Kind::Extra { .. } | Kind::Atomic(_)
+                    )
+            })
+        };
+        let collapses = |b: usize| {
+            quirks && !owns_content(b) && (b == 0 || !has_vertical_edges(&p.boxes[b].style))
+        };
+        let mut root_extent = if collapses(0) && !only_break {
+            root.zero_line_height_bounds()
+        } else {
+            root.bounds()
+        };
 
         let align = |style: &ComputedValues,
                      parent: &BoxMetrics,
@@ -659,7 +696,11 @@ impl LineContext<'_> {
             let ib = &p.boxes[b];
             let m = &self.metrics[b];
             let parent = ib.parent;
-            let (top, bottom) = m.bounds();
+            let (top, bottom) = if collapses(b) {
+                m.zero_line_height_bounds()
+            } else {
+                m.bounds()
+            };
             match align(
                 &ib.style,
                 &self.metrics[parent],
@@ -1246,6 +1287,16 @@ fn offset_items(items: &mut [LineItem], dx: f32, dy: f32) {
             }
         }
     }
+}
+
+/// Whether an inline box has a vertical border or padding, which keeps its line height in the
+/// line height calculation quirk.
+fn has_vertical_edges(style: &ComputedValues) -> bool {
+    let length = |v: &LengthPercentage| v.as_length().unwrap_or(0.0);
+    style.border_top_width > 0.0
+        || style.border_bottom_width > 0.0
+        || length(&style.padding_top) > 0.0
+        || length(&style.padding_bottom) > 0.0
 }
 
 #[cfg(test)]
