@@ -179,3 +179,22 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+fn a_float_inside_a_paragraph_counts_towards_its_table_cells_width() {
+    // The cell holds only a 300px float in a paragraph; the other cell has a long text that
+    // would take all the room. The float's cell must still be wide enough for it.
+    let pages = pages(
+        "<table style='width: 100%; border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>&nbsp; \
+         <span style='float: left; width: 300px; max-width: 100%; height: 10px; --id: f'></span></p></td>\
+         <td style='padding: 0'>A long title that would take the whole width of the table \
+         if it could, and more besides, so that the other column is squeezed</td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(cell >= 300.0, "the float's cell is {cell} wide");
+    // Like a logo with `max-width: 100%`, the float is not squeezed by its cell.
+    let float = find(&pages[0], "f").rect.width;
+    assert!(float >= 300.0, "the float is {float} wide");
+}
