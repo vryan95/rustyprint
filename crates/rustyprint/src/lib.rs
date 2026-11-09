@@ -39,6 +39,10 @@ pub struct RenderOptions {
     pub page_size: Size,
     /// Page margins in CSS pixels.
     pub margin: Sides,
+    /// Shrinks content that is wider than the page to fit it, as a browser's print does,
+    /// instead of letting it run off the right edge. Never enlarges, and never below
+    /// [`MIN_SHRINK_TO_FIT`].
+    pub shrink_to_fit: bool,
     /// Files the document can refer to, such as linked stylesheets and images.
     pub assets: Assets,
     /// Bounds on the work a render may do.
@@ -52,6 +56,7 @@ impl Default for RenderOptions {
             title: None,
             page_size: Size::A4,
             margin: Sides::all(2.0 * options::CM),
+            shrink_to_fit: false,
             assets: Assets::default(),
             limits: Limits::default(),
         }
@@ -155,6 +160,10 @@ pub enum Error {
     Internal(String),
 }
 
+/// The smallest scale [`RenderOptions::shrink_to_fit`] applies, so that a document far wider
+/// than the page stays readable.
+pub const MIN_SHRINK_TO_FIT: f32 = 0.4;
+
 /// The stack of the thread each render runs on. Layout recurses for every level of nesting,
 /// using tens of kilobytes of stack per level, which would overflow the 1 MB stacks of the
 /// Windows main thread and of Ruby and .NET threads. The stack is reserved rather than
@@ -239,24 +248,39 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     let load_font = |url: &str| get(url);
     let load_file = |url: &str| get(url);
     let images = Images::new(&load_file).with_max_pixels(options.limits.max_image_pixels);
-    let styles = rustyprint_layout::style(
-        &document,
-        &StyleOptions {
-            page_size: (area.width, area.height),
-            stylesheet: options.stylesheet.as_deref(),
-            load: &load,
-            font_metrics: Some(&rustyprint_layout::font_metrics),
-            load_font: Some(&load_font),
-        },
-        &page,
-        &images,
-    );
+    let lay_out = |stylesheet: Option<&str>| {
+        let styles = rustyprint_layout::style(
+            &document,
+            &StyleOptions {
+                page_size: (area.width, area.height),
+                stylesheet,
+                load: &load,
+                font_metrics: Some(&rustyprint_layout::font_metrics),
+                load_font: Some(&load_font),
+            },
+            &page,
+            &images,
+        );
+        let laid_out = layout(&document, &styles, &page, &images);
+        (styles, laid_out)
+    };
+    let (mut styles, mut laid_out) = lay_out(options.stylesheet.as_deref());
+    if options.shrink_to_fit
+        && let Some(scale) = shrink_to_fit_scale(&laid_out, &page)
+    {
+        // Laid out again at the scale that fits, as a browser's print does: a zoom on the
+        // root scales every length, so lines and tables reflow to the narrower width.
+        let zoomed = format!(
+            "{}\nhtml {{ zoom: {scale} }}",
+            options.stylesheet.as_deref().unwrap_or("")
+        );
+        (styles, laid_out) = lay_out(Some(&zoomed));
+    }
     let mut warnings: Vec<String> = styles
         .warnings
         .iter()
         .map(|w| format!("{}:{}: {}", w.source, w.warning.line, w.warning.message))
         .collect();
-    let mut laid_out = layout(&document, &styles, &page, &images);
     warnings.extend(loader.warnings());
     warnings.extend(images.warnings());
     if options.title.is_some() {
@@ -264,6 +288,27 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     }
     let pdf = rustyprint_pdf::write(&laid_out).map_err(|e| Error::Internal(e.to_string()))?;
     Ok(Output { pdf, warnings })
+}
+
+/// The scale that makes what the pages paint fit between the page's left and right margins,
+/// or `None` when it already fits (within a pixel, so rounding does not rescale).
+fn shrink_to_fit_scale(
+    laid_out: &rustyprint_layout::display::Document,
+    page: &PageOptions,
+) -> Option<f32> {
+    let printable = page.size.width - page.margin.left - page.margin.right;
+    let right = laid_out
+        .pages
+        .iter()
+        .filter_map(|p| p.content_bounds())
+        .map(|bounds| bounds.right())
+        .fold(f32::MIN, f32::max);
+    let content = right - page.margin.left;
+    if printable <= 0.0 || content <= printable + 1.0 {
+        return None;
+    }
+    let scale = (printable / content).max(MIN_SHRINK_TO_FIT);
+    (scale < 0.99).then_some(scale)
 }
 
 #[cfg(test)]
@@ -287,6 +332,41 @@ mod tests {
         assert!(text.contains("Title"), "{text:?}");
         assert!(text.contains("bold"), "{text:?}");
         assert!(output.warnings.is_empty());
+    }
+
+    #[test]
+    fn shrink_to_fit_scales_content_wider_than_the_page_down_to_fit_it() {
+        // Twice the printable width of A4 with 2cm margins, and taller than one page: it
+        // takes two pages as it is, and fits on one at half the size.
+        let printable = Size::A4.width - 4.0 * options::CM;
+        let html = format!(
+            "<style>body {{ margin: 0 }}</style><div style='width: {}px; height: 1900px; background: #eee'></div>",
+            printable * 2.0
+        );
+        let pages = |shrink_to_fit| {
+            let options = RenderOptions {
+                shrink_to_fit,
+                ..RenderOptions::default()
+            };
+            parse(&render(&html, &options).unwrap().pdf)
+                .get_pages()
+                .len()
+        };
+        assert_eq!(pages(false), 2);
+        assert_eq!(pages(true), 1);
+    }
+
+    #[test]
+    fn shrink_to_fit_leaves_content_that_fits_alone() {
+        let html = "<p>Fits.</p>".repeat(80);
+        let pages = |shrink_to_fit| {
+            let options = RenderOptions {
+                shrink_to_fit,
+                ..RenderOptions::default()
+            };
+            render(&html, &options).unwrap().pdf
+        };
+        assert_eq!(pages(false), pages(true));
     }
 
     #[test]

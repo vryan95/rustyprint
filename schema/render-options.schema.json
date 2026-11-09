@@ -41,6 +41,10 @@
       "description": "A stylesheet applied after the document's own styles.",
       "type": "string"
     },
+    "shrink_to_fit": {
+      "description": "Shrink content wider than the page to fit it, as a browser's print does, instead of letting it run off the right edge. Never enlarges, never below 0.4. Default: false.",
+      "type": "boolean"
+    },
     "remote": {
       "description": "Hosts that absolute URLs may be fetched from. Without it, nothing is fetched from the network.",
       "type": "object",
