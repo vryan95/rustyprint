@@ -292,6 +292,19 @@ pub(crate) fn forced_between(
     }
 }
 
+/// Whether a forced page break separates two boxes anywhere in `block`'s block flow.
+pub(crate) fn has_forced_break(block: &BlockBox) -> bool {
+    match &block.contents {
+        BlockContents::Blocks(children) => {
+            children
+                .windows(2)
+                .any(|pair| forced_between(&pair[0], &pair[1], false).is_some())
+                || children.iter().any(has_forced_break)
+        }
+        _ => false,
+    }
+}
+
 /// The used page name where a box's content starts.
 fn start_page(block: &BlockBox) -> Option<&Arc<str>> {
     match &block.contents {
@@ -723,6 +736,9 @@ fn layout_flow(
     // Breaking across pages. `break-inside: avoid` keeps the box whole unless it starts a
     // page, where it has to break.
     let columns = fragmentainer.is_some_and(|f| f.columns);
+    // Laid out without pages (a table cell measured before its row is placed), a forced
+    // break has nowhere to go: the content after it stays in this box.
+    let paged = fragmentainer.is_some();
     let avoid_inside = if columns {
         style.break_inside.avoids_column()
     } else {
@@ -828,7 +844,8 @@ fn layout_flow(
                 } else {
                     None
                 };
-                if index > start
+                if paged
+                    && index > start
                     && let Some(side) = forced_between(&blocks[index - 1], child, columns)
                 {
                     break_token = Some(BreakToken {

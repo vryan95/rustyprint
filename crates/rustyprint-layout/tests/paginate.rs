@@ -179,3 +179,21 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+fn a_forced_break_inside_a_table_cell_moves_the_rest_of_the_cell_to_the_next_page() {
+    // The row fits on the first page; the break inside its cell still ends the page, and
+    // what follows the break is kept, on the next page.
+    let pages = pages(
+        "<table><tr><td>\
+         <div style='--id: a; height: 10px'></div>\
+         <div style='break-after: page'></div>\
+         <div style='--id: b; height: 10px'></div>\
+         </td></tr></table>\
+         <div style='--id: c; height: 10px'></div>",
+    );
+    assert_eq!(pages.len(), 2);
+    find(&pages[0], "a");
+    find(&pages[1], "b");
+    find(&pages[1], "c");
+}
