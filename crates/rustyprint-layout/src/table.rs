@@ -879,8 +879,9 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
             .chain(column.group.map(|g| &table.column_groups[g].style));
         for style in styles {
             match cell_width(style) {
+                // A width is what the column prefers, not a minimum: the table may
+                // still squeeze it down to its content (CSS Tables 3 § 3.9.1).
                 CellWidth::Fixed(w) if !c.fixed[i] => {
-                    c.min[i] = c.min[i].max(w);
                     c.max[i] = c.max[i].max(w);
                     c.fixed[i] = true;
                 }
@@ -895,11 +896,10 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
         let style = &cell.block.style;
         let (content_min, content_max) = flow::intrinsic_content(&cell.block);
         let extra = horizontal_extra(style);
-        let (mut min, mut max) = (content_min + extra, content_max + extra);
+        let (min, mut max) = (content_min + extra, content_max + extra);
         let mut fixed = false;
         match cell_width(style) {
             CellWidth::Fixed(w) => {
-                min = min.max(w);
                 max = min.max(w);
                 fixed = true;
             }

@@ -179,3 +179,29 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+fn a_cell_width_wider_than_the_table_allows_is_squeezed_to_fit_as_browsers_do() {
+    // The cells ask for 700px in a table capped at the 400px page. A cell's width is what its
+    // column prefers, not a minimum, so the columns shrink to fit instead of running off the page.
+    let pages = pages(
+        "<table style='--id: t; width: 100%; max-width: 100%; border-collapse: collapse'><tr>\
+         <td style='--id: a; width: 300px; padding: 0'>A</td>\
+         <td style='--id: b; width: 200px; padding: 0'>B</td>\
+         <td style='--id: c; width: 200px; padding: 0'>C</td>\
+         </tr></table>",
+    );
+    let table = find(&pages[0], "t");
+    assert!(
+        table.rect.width <= PAGE.width + 0.01,
+        "table is {} wide",
+        table.rect.width
+    );
+    let cells: f32 = ["a", "b", "c"]
+        .iter()
+        .map(|id| find(&pages[0], id).rect.width)
+        .sum();
+    assert!(cells <= PAGE.width + 0.01, "cells take {cells}");
+    // The space is still shared in proportion to what the cells asked for.
+    assert!(find(&pages[0], "a").rect.width > find(&pages[0], "b").rect.width);
+}
