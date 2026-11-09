@@ -345,14 +345,30 @@ pub(crate) fn intrinsic(items: &[InlineItem], container: &Arc<ComputedValues>) -
     let has_atomics = items.iter().any(|i| matches!(i, InlineItem::Atomic(_)));
     let p = Paragraph::build(items, container, 0.0, 0.0);
     let (min, max) = Breaker::new(&p).intrinsic(indent);
-    if !has_atomics {
-        return (min, max);
-    }
-    // Atomic inlines are as narrow as they get for the minimum and unconstrained for the
-    // maximum.
-    let wide = Paragraph::build(items, container, UNLIMITED, 0.0);
-    let (_, max) = Breaker::new(&wide).intrinsic(indent);
-    (min, max)
+    let (min, max) = if has_atomics {
+        // Atomic inlines are as narrow as they get for the minimum and unconstrained for the
+        // maximum.
+        let wide = Paragraph::build(items, container, UNLIMITED, 0.0);
+        (min, Breaker::new(&wide).intrinsic(indent).1)
+    } else {
+        (min, max)
+    };
+    // Floats are not on the lines, but the paragraph must be wide enough for each of them,
+    // and at its widest they sit beside its lines.
+    items
+        .iter()
+        .filter_map(|item| match item {
+            InlineItem::Atomic(block) => match &block.contents {
+                crate::boxes::BlockContents::Float(float) => {
+                    Some(crate::flow::intrinsic_outer(float))
+                }
+                _ => None,
+            },
+            _ => None,
+        })
+        .fold((min, max), |(min, max), (float_min, float_max)| {
+            (min.max(float_min), max + float_max)
+        })
 }
 
 /// An initial letter at the start of the paragraph (CSS Inline 3 § 6).
