@@ -1426,6 +1426,7 @@ fn layout_flow(
         replaced: None,
         legend: legend_gap,
         out_of_flow: None,
+        split: None,
     };
     // Transformed and filtered boxes contain fixed descendants too.
     let fixed = crate::effects::contains_fixed(style);
@@ -1442,7 +1443,17 @@ fn layout_flow(
         } else {
             crate::position::Takes::Absolute
         };
-        crate::position::place_out_of_flow(&mut fragment, cb, takes);
+        // The containing block of a box that pages split is the whole box, which is known
+        // once its last page is laid out (CSS Break 3 § 5.1): until then, each fragment
+        // records how much of the box it is.
+        if !columns && (resumed || break_token.is_some()) {
+            fragment.split = Some(match (&break_token, fragmentainer) {
+                (Some(_), Some(page)) => page.available,
+                _ => fragment.rect.height,
+            });
+        } else {
+            crate::position::place_out_of_flow(&mut fragment, cb, takes);
+        }
     }
     if through {
         // Nothing separates the top and bottom margins: they all collapse together.
@@ -1789,6 +1800,7 @@ fn layout_replaced(
             replaced: Some(replaced),
             legend: None,
             out_of_flow: None,
+            split: None,
         },
         margin: Sides {
             top: margin_top,
@@ -1888,6 +1900,7 @@ fn placeholder(block: &BlockBox, out_of_flow: OutOfFlow) -> Laid {
             replaced: None,
             legend: None,
             out_of_flow: Some(out_of_flow),
+            split: None,
         },
         margin: Sides::default(),
         collapsed_top: CollapsibleMargin::default(),
@@ -1922,6 +1935,7 @@ pub(crate) fn deferred(
             replaced: None,
             legend: None,
             out_of_flow: None,
+            split: None,
         },
         margin: Sides::default(),
         collapsed_top: CollapsibleMargin::default(),

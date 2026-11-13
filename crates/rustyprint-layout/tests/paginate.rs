@@ -179,3 +179,24 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+fn a_positioned_box_split_by_pages_is_one_containing_block() {
+    // Two rows fit a page, leaving 60px: the box is 300 + 300 + 120 = 720px tall.
+    let row = "<div style='height: 120px; break-inside: avoid'></div>";
+    let pages = pages(&format!(
+        "<div style='position: relative'>\
+           <div style='--id: static; position: absolute; left: 50%'>s</div>\
+           <div style='--id: top; position: absolute; top: 12.5%; height: 10px'></div>\
+           <div style='--id: middle; position: absolute; top: 50%; height: 10px'></div>\
+           <div style='--id: bottom; position: absolute; bottom: 0; height: 20px'></div>\
+           {}\
+         </div>",
+        row.repeat(5)
+    ));
+    assert_eq!(pages.len(), 3);
+    assert_eq!(y_of(&pages[0], "static"), 0.0);
+    assert_eq!(y_of(&pages[0], "top"), 90.0);
+    assert_eq!(y_of(&pages[1], "middle"), 60.0);
+    assert_eq!(y_of(&pages[2], "bottom"), 100.0);
+}
