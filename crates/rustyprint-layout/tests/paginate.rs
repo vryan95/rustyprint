@@ -205,3 +205,17 @@ fn a_cell_width_wider_than_the_table_allows_is_squeezed_to_fit_as_browsers_do() 
     // The space is still shared in proportion to what the cells asked for.
     assert!(find(&pages[0], "a").rect.width > find(&pages[0], "b").rect.width);
 }
+
+#[test]
+fn a_column_gets_the_width_its_cell_asks_for_before_other_columns_grow() {
+    // The first cell asks for 200px of the 400px table. The text beside it would take far
+    // more than the rest, so it gets what is left once the first column has its width.
+    let pages = pages(&format!(
+        "<table style='width: 100%; border-collapse: collapse'><tr>\
+         <td style='--id: a; width: 200px; padding: 0'>A</td>\
+         <td style='--id: b; padding: 0'>{}</td></tr></table>",
+        "to be or not ".repeat(20)
+    ));
+    let width = |id| find(&pages[0], id).rect.width;
+    assert_eq!((width("a"), width("b")), (200.0, 200.0));
+}

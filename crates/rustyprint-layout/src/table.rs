@@ -1019,22 +1019,26 @@ fn distribute(c: &Constraints, width: f32) -> Vec<f32> {
         }
         return widths;
     }
-    let grow: f32 = flexible.iter().map(|&i| c.max[i] - c.min[i]).sum();
-    if left <= grow {
-        // Between the minimum and maximum: every column moves the same fraction of the way.
-        let t = if grow > 0.0 { left / grow } else { 0.0 };
-        for &i in &flexible {
-            widths[i] += (c.max[i] - c.min[i]) * t;
+    // Between the minimum and maximum, columns with a width come first: they move the same
+    // fraction of the way to it, and only once they have it do the auto columns grow, each
+    // the same fraction of the way to its maximum.
+    let (fixed, auto): (Vec<usize>, Vec<usize>) = flexible.iter().partition(|&&i| c.fixed[i]);
+    for columns in [&fixed, &auto] {
+        let grow: f32 = columns.iter().map(|&i| c.max[i] - c.min[i]).sum();
+        if left <= grow {
+            let t = if grow > 0.0 { left / grow } else { 0.0 };
+            for &i in columns {
+                widths[i] += (c.max[i] - c.min[i]) * t;
+            }
+            return widths;
         }
-        return widths;
+        for &i in columns {
+            widths[i] = c.max[i];
+        }
+        left -= grow;
     }
-    for &i in &flexible {
-        widths[i] = c.max[i];
-    }
-    left -= grow;
     // Wider than the maximum: auto columns grow in proportion to their widths, and fixed
     // ones only when there are no others.
-    let auto: Vec<usize> = flexible.iter().copied().filter(|&i| !c.fixed[i]).collect();
     let growing = if auto.is_empty() { &flexible } else { &auto };
     let total: f32 = growing.iter().map(|&i| c.max[i]).sum();
     for &i in growing {
