@@ -179,3 +179,21 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+fn a_column_prefers_the_width_of_its_cells_that_have_one() {
+    // The header cells ask for 50, 50 and 100px in a 400px table. The long text below the
+    // second one has no width of its own, so it wraps in the column rather than widening it,
+    // and the columns share the spare 200px in proportion to their widths.
+    let pages = pages(&format!(
+        "<table style='width: 100%; border-collapse: collapse'><tr>\
+         <td style='--id: a; width: 50px; padding: 0'>A</td>\
+         <td style='--id: b; width: 50px; padding: 0'>B</td>\
+         <td style='--id: c; width: 100px; padding: 0'>C</td>\
+         </tr><tr><td style='padding: 0'>1</td><td style='padding: 0'>{}</td>\
+         <td style='padding: 0'></td></tr></table>",
+        "to be or not ".repeat(20)
+    ));
+    let width = |id| find(&pages[0], id).rect.width;
+    assert_eq!((width("a"), width("b"), width("c")), (100.0, 100.0, 200.0));
+}

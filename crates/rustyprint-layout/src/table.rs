@@ -913,7 +913,13 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
         if cell.colspan == 1 {
             let i = cell.column;
             c.min[i] = c.min[i].max(min);
-            c.max[i] = c.max[i].max(max);
+            // What a column prefers comes from its cells with a width, when it has any:
+            // the content of its other cells then only counts towards its minimum.
+            c.max[i] = match (c.fixed[i], fixed) {
+                (false, true) => max,
+                (true, false) => c.max[i],
+                _ => c.max[i].max(max),
+            };
             c.fixed[i] |= fixed;
             continue;
         }
