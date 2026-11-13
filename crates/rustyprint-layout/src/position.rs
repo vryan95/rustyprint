@@ -87,6 +87,23 @@ pub(crate) enum Takes {
     Absolute,
     /// The root, whose containing block is the page area: fixed ones too.
     All,
+    /// Fixed ones only: what is left to take inside a box that pages split, which keeps its
+    /// absolutely positioned descendants until its last page is laid out.
+    Fixed,
+}
+
+impl Takes {
+    /// What a containing block that takes these still takes inside `fragment`.
+    fn inside(self, fragment: &BoxFragment) -> Option<Takes> {
+        if fragment.split.is_none() {
+            return Some(self);
+        }
+        match self {
+            Takes::Absolute => None,
+            Takes::All | Takes::Fixed if crate::effects::contains_fixed(&fragment.style) => None,
+            Takes::All | Takes::Fixed => Some(Takes::Fixed),
+        }
+    }
 }
 
 /// A box with an `anchor-name`, found among a containing block's fragments.
@@ -197,6 +214,9 @@ pub(crate) fn self_alignment(value: ItemAlignment, reversed: bool) -> Option<Sel
 /// adds them as its children. `cb` is the containing block, relative to `fragment`'s border
 /// box.
 pub(crate) fn place_out_of_flow(fragment: &mut BoxFragment, cb: Rect, takes: Takes) {
+    let Some(takes) = takes.inside(fragment) else {
+        return;
+    };
     let mut found = Vec::new();
     let mut path = Vec::new();
     collect(
@@ -210,17 +230,26 @@ pub(crate) fn place_out_of_flow(fragment: &mut BoxFragment, cb: Rect, takes: Tak
         return;
     }
     let mut anchors = Vec::new();
-    let mut scopes = Vec::new();
-    let outer = cb;
     find_anchors(
         &fragment.children,
         Point::new(-cb.x, -cb.y),
-        &mut scopes,
+        &mut Vec::new(),
         &mut anchors,
     );
+    let placed = place_found(found, cb, anchors);
+    fragment
+        .children
+        .extend(placed.into_iter().map(Fragment::Box));
+}
+
+/// Lays out the boxes of `found` placeholders in containing block `outer`, with the
+/// `anchors` around them, which are relative to it. The boxes, the placeholders and `outer`
+/// are relative to the same border box.
+fn place_found(found: Vec<Found>, outer: Rect, mut anchors: Vec<Anchor>) -> Vec<BoxFragment> {
+    let mut all = Vec::new();
     for found in found {
         // A grid area is the containing block of a box its grid container places.
-        let cb = found.area.unwrap_or(cb);
+        let cb = found.area.unwrap_or(outer);
         let static_position = Point::new(found.at.x - cb.x, found.at.y - cb.y);
         // The box is placed outside the elements its placeholder is in, which still scope
         // the anchors inside it.
@@ -261,7 +290,177 @@ pub(crate) fn place_out_of_flow(fragment: &mut BoxFragment, cb: Rect, takes: Tak
         );
         placed.rect.x += cb.x;
         placed.rect.y += cb.y;
-        fragment.children.push(Fragment::Box(placed));
+        all.push(placed);
+    }
+    all
+}
+
+/// A fragment of a positioned box that pages split.
+struct Piece {
+    node: Option<NodeId>,
+    /// Where the fragment starts in the whole box.
+    start: f32,
+    /// How much of the whole box it is.
+    extent: f32,
+    width: f32,
+    border: crate::fragment::Sides,
+    found: Vec<Found>,
+    placed: Vec<BoxFragment>,
+}
+
+/// Places the out-of-flow boxes of the positioned boxes that pages split, once every page
+/// is laid out. `pages` are the root's fragments, one per page, in order.
+///
+/// The containing block of such a box is the box as if its pages followed one another
+/// without a gap, each fragment but the last reaching to the end of its page (CSS Break 3
+/// § 5.1): offsets and percentages are measured in that, and each box goes on the page its
+/// top falls on.
+pub(crate) fn place_in_split(pages: &mut [&mut BoxFragment]) {
+    let mut pieces: Vec<Piece> = Vec::new();
+    for root in pages.iter_mut() {
+        each_split(root, &mut |fragment| {
+            let takes = if crate::effects::contains_fixed(&fragment.style) {
+                Takes::All
+            } else {
+                Takes::Absolute
+            };
+            let mut found = Vec::new();
+            collect(
+                &mut fragment.children,
+                Point::new(0.0, 0.0),
+                takes,
+                &mut Vec::new(),
+                &mut found,
+            );
+            pieces.push(Piece {
+                node: fragment.node,
+                start: 0.0,
+                extent: fragment.split.unwrap_or(fragment.rect.height),
+                width: fragment.rect.width,
+                border: fragment.border,
+                found,
+                placed: Vec::new(),
+            });
+        });
+    }
+    if pieces.is_empty() {
+        return;
+    }
+    // The fragments of each box, in page order. An anonymous box is not split further.
+    let mut boxes: Vec<Vec<usize>> = Vec::new();
+    let mut by_node: std::collections::HashMap<NodeId, usize> = std::collections::HashMap::new();
+    for (index, piece) in pieces.iter().enumerate() {
+        match piece.node {
+            Some(node) => {
+                let at = *by_node.entry(node).or_insert(boxes.len());
+                if at == boxes.len() {
+                    boxes.push(Vec::new());
+                }
+                boxes[at].push(index);
+            }
+            None => boxes.push(vec![index]),
+        }
+    }
+    // The containing block of each box that has something to place: its padding box.
+    let mut blocks: Vec<Option<Rect>> = vec![None; pieces.len()];
+    for of_box in &boxes {
+        let mut start = 0.0;
+        for &index in of_box {
+            pieces[index].start = start;
+            start += pieces[index].extent;
+        }
+        if of_box.iter().all(|&index| pieces[index].found.is_empty()) {
+            continue;
+        }
+        let (first, last) = (&pieces[of_box[0]], &pieces[of_box[of_box.len() - 1]]);
+        let cb = Rect::new(
+            first.border.left,
+            first.border.top,
+            (first.width - first.border.horizontal()).max(0.0),
+            (start - first.border.top - last.border.bottom).max(0.0),
+        );
+        for &index in of_box {
+            blocks[index] = Some(cb);
+        }
+    }
+    // Anchors anywhere in a box, relative to its containing block.
+    let mut anchors: Vec<Vec<Anchor>> = vec![Vec::new(); pieces.len()];
+    if blocks.iter().any(Option::is_some) {
+        let mut index = 0;
+        for root in pages.iter_mut() {
+            each_split(root, &mut |fragment| {
+                if let Some(cb) = blocks[index] {
+                    find_anchors(
+                        &fragment.children,
+                        Point::new(-cb.x, pieces[index].start - cb.y),
+                        &mut Vec::new(),
+                        &mut anchors[index],
+                    );
+                }
+                index += 1;
+            });
+        }
+    }
+    for of_box in &boxes {
+        let Some(cb) = blocks[of_box[0]] else {
+            continue;
+        };
+        let mut found = Vec::new();
+        let mut around = Vec::new();
+        for &index in of_box {
+            let start = pieces[index].start;
+            found.extend(pieces[index].found.drain(..).map(|mut found| {
+                found.at.y += start;
+                found.area = found.area.map(|area| area.translated(0.0, start));
+                found
+            }));
+            around.append(&mut anchors[index]);
+        }
+        for mut placed in place_found(found, cb, around) {
+            // Each goes with the fragment its top is in.
+            let index = of_box
+                .iter()
+                .rev()
+                .find(|&&index| pieces[index].start <= placed.rect.y)
+                .copied()
+                .unwrap_or(of_box[0]);
+            placed.rect.y -= pieces[index].start;
+            pieces[index].placed.push(placed);
+        }
+    }
+    let mut pieces = pieces.into_iter();
+    for root in pages.iter_mut() {
+        each_split(root, &mut |fragment| {
+            fragment.split = None;
+            if let Some(piece) = pieces.next() {
+                fragment
+                    .children
+                    .extend(piece.placed.into_iter().map(Fragment::Box));
+            }
+        });
+    }
+}
+
+/// Calls `visit` with each fragment of a positioned box that pages split, in tree order.
+fn each_split(fragment: &mut BoxFragment, visit: &mut dyn FnMut(&mut BoxFragment)) {
+    if fragment.split.is_some() {
+        visit(fragment);
+    }
+    for child in &mut fragment.children {
+        match child {
+            Fragment::Box(child) => each_split(child, visit),
+            Fragment::Line(line) => each_split_item(&mut line.items, visit),
+        }
+    }
+}
+
+fn each_split_item(items: &mut [LineItem], visit: &mut dyn FnMut(&mut BoxFragment)) {
+    for item in items {
+        match item {
+            LineItem::Box(child) => each_split(child, visit),
+            LineItem::Inline(inline) => each_split_item(&mut inline.children, visit),
+            LineItem::Text(_) => {}
+        }
     }
 }
 
@@ -320,7 +519,11 @@ fn collect_box(
         &child.out_of_flow
     {
         let absolute = positioned.block.style.position == Position::Absolute;
-        if takes == Takes::All || absolute {
+        if match takes {
+            Takes::All => true,
+            Takes::Absolute => absolute,
+            Takes::Fixed => !absolute,
+        } {
             let area = matches!(child.out_of_flow, Some(OutOfFlow::InArea(_)))
                 .then(|| Rect::new(at.x, at.y, child.rect.width, child.rect.height));
             found.push(Found {
@@ -333,6 +536,9 @@ fn collect_box(
         }
         return;
     }
+    let Some(takes) = takes.inside(child) else {
+        return;
+    };
     path.extend(child.node.map(|n| (n, child.style.anchor_scope.clone())));
     collect(&mut child.children, at, takes, path, found);
     if child.node.is_some() {

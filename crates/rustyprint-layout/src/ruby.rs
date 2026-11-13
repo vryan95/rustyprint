@@ -140,6 +140,7 @@ pub(crate) fn layout(block: &BlockBox, ruby: &Ruby) -> Laid {
             replaced: None,
             legend: None,
             out_of_flow: None,
+            split: None,
         },
         margin: Sides {
             left: -left,

@@ -786,6 +786,7 @@ fn border_strip(
         replaced: None,
         legend: None,
         out_of_flow: None,
+        split: None,
     }))
 }
 
@@ -1984,6 +1985,7 @@ pub(crate) fn layout(
         replaced: None,
         legend: None,
         out_of_flow: None,
+        split: None,
     };
     let top_captions: &[(BoxFragment, Sides)] = if resumed { &[] } else { &p.top_captions };
     let bottom_captions: &[(BoxFragment, Sides)] = if broke { &[] } else { &p.bottom_captions };
@@ -2020,6 +2022,7 @@ pub(crate) fn layout(
             replaced: None,
             legend: None,
             out_of_flow: None,
+            split: None,
         }
     };
 
@@ -2083,6 +2086,7 @@ fn part_fragment(
         replaced: None,
         legend: None,
         out_of_flow: None,
+        split: None,
     }
 }
 
