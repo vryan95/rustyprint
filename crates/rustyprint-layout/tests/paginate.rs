@@ -179,3 +179,101 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+fn a_column_prefers_the_width_of_its_cells_that_have_one() {
+    // The header cells ask for 50, 50 and 100px in a 400px table. The long text below the
+    // second one has no width of its own, so it wraps in the column rather than widening it,
+    // and the columns share the spare 200px in proportion to their widths.
+    let pages = pages(&format!(
+        "<table style='width: 100%; border-collapse: collapse'><tr>\
+         <td style='--id: a; width: 50px; padding: 0'>A</td>\
+         <td style='--id: b; width: 50px; padding: 0'>B</td>\
+         <td style='--id: c; width: 100px; padding: 0'>C</td>\
+         </tr><tr><td style='padding: 0'>1</td><td style='padding: 0'>{}</td>\
+         <td style='padding: 0'></td></tr></table>",
+        "to be or not ".repeat(20)
+    ));
+    let width = |id| find(&pages[0], id).rect.width;
+    assert_eq!((width("a"), width("b"), width("c")), (100.0, 100.0, 200.0));
+}
+
+/// The widths of the cells tagged `a`, `b` and `c` in a 400px table with these cells.
+fn column_widths(cells: &str) -> [f32; 3] {
+    let pages = pages(&format!(
+        "<table style='width: 100%; border-collapse: collapse'><tr>{cells}</tr></table>"
+    ));
+    ["a", "b", "c"].map(|id| find(&pages[0], id).rect.width)
+}
+
+fn assert_widths(actual: [f32; 3], expected: [f32; 3]) {
+    for (actual, expected) in actual.iter().zip(expected) {
+        assert!(
+            (actual - expected).abs() < 0.01,
+            "{actual} is not {expected}"
+        );
+    }
+}
+
+#[test]
+fn percentage_columns_share_spare_width_in_proportion_to_their_percentages() {
+    // The percentages come to half of the table. The first column's content keeps it at
+    // 100px rather than its 40px, which leaves 140px to share 1 : 2 : 2.
+    let widths = column_widths(
+        "<td style='--id: a; width: 10%; padding: 0'><div style='width: 100px'></div></td>\
+         <td style='--id: b; width: 20%; padding: 0'></td>\
+         <td style='--id: c; width: 20%; padding: 0'></td>",
+    );
+    assert_widths(widths, [128.0, 136.0, 136.0]);
+}
+
+#[test]
+fn percentages_past_a_hundred_are_cut_from_the_last_column_back() {
+    let widths = column_widths(
+        "<td style='--id: a; width: 50%; padding: 0'></td>\
+         <td style='--id: b; width: 30%; padding: 0'></td>\
+         <td style='--id: c; width: 300%; padding: 0'></td>",
+    );
+    assert_widths(widths, [200.0, 120.0, 80.0]);
+}
+
+#[test]
+fn percentage_columns_short_of_width_each_get_the_same_part_of_what_they_lack() {
+    // The last column's content takes 300px of the 400px, so the first two, which ask for
+    // 120px each, share the remaining 100px.
+    let widths = column_widths(
+        "<td style='--id: a; width: 30%; padding: 0'></td>\
+         <td style='--id: b; width: 30%; padding: 0'></td>\
+         <td style='--id: c; width: 40%; padding: 0'><div style='width: 300px'></div></td>",
+    );
+    assert_widths(widths, [50.0, 50.0, 300.0]);
+}
+
+#[test]
+fn an_image_that_shrinks_with_its_cell_does_not_hold_its_column_open() {
+    // The image asks for 300px and `max-width: 100%` lets it shrink with its cell, so its
+    // column can go down to nothing. The other column needs 300px of the 400px table.
+    let (document, styles) = styled(
+        "<table style='width: 100%; border-collapse: collapse'><tr>\
+         <td style='--id: a; padding: 0'><img src='dot.png' width='300' height='50' \
+         style='--id: i; display: block; max-width: 100%'></td>\
+         <td style='--id: b; padding: 0'><div style='width: 300px'></div></td></tr></table>",
+    );
+    let png = {
+        let mut out = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::from(image::RgbImage::new(10, 10))
+            .write_to(&mut out, image::ImageFormat::Png)
+            .unwrap();
+        out.into_inner()
+    };
+    let load = move |url: &str| (url == "dot.png").then(|| png.clone());
+    let pages = layout_pages(&document, &styles, &options(), &Images::new(&load));
+    let root = pages[0].root.as_ref().expect("a page");
+    let size = |id| {
+        let rect = find(root, id).rect;
+        (rect.width, rect.height)
+    };
+    assert_eq!(size("a").0, 100.0);
+    assert_eq!(size("b").0, 300.0);
+    assert_eq!(size("i"), (100.0, 50.0));
+}
