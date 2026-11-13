@@ -248,3 +248,32 @@ fn percentage_columns_short_of_width_each_get_the_same_part_of_what_they_lack() 
     );
     assert_widths(widths, [50.0, 50.0, 300.0]);
 }
+
+#[test]
+fn an_image_that_shrinks_with_its_cell_does_not_hold_its_column_open() {
+    // The image asks for 300px and `max-width: 100%` lets it shrink with its cell, so its
+    // column can go down to nothing. The other column needs 300px of the 400px table.
+    let (document, styles) = styled(
+        "<table style='width: 100%; border-collapse: collapse'><tr>\
+         <td style='--id: a; padding: 0'><img src='dot.png' width='300' height='50' \
+         style='--id: i; display: block; max-width: 100%'></td>\
+         <td style='--id: b; padding: 0'><div style='width: 300px'></div></td></tr></table>",
+    );
+    let png = {
+        let mut out = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::from(image::RgbImage::new(10, 10))
+            .write_to(&mut out, image::ImageFormat::Png)
+            .unwrap();
+        out.into_inner()
+    };
+    let load = move |url: &str| (url == "dot.png").then(|| png.clone());
+    let pages = layout_pages(&document, &styles, &options(), &Images::new(&load));
+    let root = pages[0].root.as_ref().expect("a page");
+    let size = |id| {
+        let rect = find(root, id).rect;
+        (rect.width, rect.height)
+    };
+    assert_eq!(size("a").0, 100.0);
+    assert_eq!(size("b").0, 300.0);
+    assert_eq!(size("i"), (100.0, 50.0));
+}

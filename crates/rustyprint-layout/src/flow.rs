@@ -1600,20 +1600,31 @@ fn first_line(children: &mut [Fragment], dx: f32) -> Option<(&mut LineFragment, 
 /// The content-box size of a replaced element: its natural size and aspect ratio, fitted to
 /// `width`, `height` and their limits (CSS 2.1 § 10.3.2, § 10.4, § 10.6.2, § 10.7).
 fn replaced_size(block: &BlockBox, replaced: &Replaced, cb: ContainingBlock) -> (f32, f32) {
+    replaced_size_in(block, replaced, cb, Some(cb.width))
+}
+
+/// The used size of a replaced element whose percentage widths are of `basis`, or with
+/// `None` behave as `auto` and as no limit, as they do while the width of its containing
+/// block is not known yet.
+fn replaced_size_in(
+    block: &BlockBox,
+    replaced: &Replaced,
+    cb: ContainingBlock,
+    basis: Option<f32>,
+) -> (f32, f32) {
     let style = &block.style;
     let (padding, border) = padding_and_border(style, cb.width);
     let extra_w = padding.horizontal() + border.horizontal();
     let extra_h = padding.vertical() + border.vertical();
     let border_box = style.box_sizing == BoxSizing::BorderBox;
     let width_of = |size: &Size<LengthPercentage>| match size {
-        Size::Value(v) => {
-            let w = resolve(v, cb.width);
-            Some(if border_box {
+        Size::Value(v) => resolve_definite(v, basis).map(|w| {
+            if border_box {
                 (w - extra_w).max(0.0)
             } else {
                 w
-            })
-        }
+            }
+        }),
         _ => None,
     };
     let height_of = |size: &Size<LengthPercentage>| match size {
@@ -1955,8 +1966,12 @@ fn intrinsic_contents(block: &BlockBox) -> (f32, f32) {
             height: None,
             rtl: false,
         };
-        let (width, _) = replaced_size(block, replaced, cb);
-        return (width, width);
+        // A percentage width or `max-width` lets the element shrink with its container:
+        // it counts as zero towards the narrowest the container can be, and as not set
+        // towards the widest (CSS Sizing 3 §§ 5.2.1, 5.2.2).
+        let (min, _) = replaced_size_in(block, replaced, cb, Some(0.0));
+        let (max, _) = replaced_size_in(block, replaced, cb, None);
+        return (min.min(max), max);
     }
     match &block.contents {
         BlockContents::Inline(items) => inline::intrinsic(items, &block.style),
@@ -1997,7 +2012,8 @@ pub(crate) fn intrinsic_outer(block: &BlockBox) -> (f32, f32) {
         + fixed(&style.margin_left)
         + fixed(&style.margin_right);
     let (min, max) = match &style.width {
-        Size::Value(LengthPercentage::Length(px)) => {
+        // A replaced element's `max-width` and `min-width` apply to its width too.
+        Size::Value(LengthPercentage::Length(px)) if block.replaced.is_none() => {
             let content = if style.box_sizing == BoxSizing::BorderBox {
                 (px - padding.horizontal() - border.horizontal()).max(0.0)
             } else {
