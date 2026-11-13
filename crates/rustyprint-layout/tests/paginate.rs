@@ -197,3 +197,54 @@ fn a_column_prefers_the_width_of_its_cells_that_have_one() {
     let width = |id| find(&pages[0], id).rect.width;
     assert_eq!((width("a"), width("b"), width("c")), (100.0, 100.0, 200.0));
 }
+
+/// The widths of the cells tagged `a`, `b` and `c` in a 400px table with these cells.
+fn column_widths(cells: &str) -> [f32; 3] {
+    let pages = pages(&format!(
+        "<table style='width: 100%; border-collapse: collapse'><tr>{cells}</tr></table>"
+    ));
+    ["a", "b", "c"].map(|id| find(&pages[0], id).rect.width)
+}
+
+fn assert_widths(actual: [f32; 3], expected: [f32; 3]) {
+    for (actual, expected) in actual.iter().zip(expected) {
+        assert!(
+            (actual - expected).abs() < 0.01,
+            "{actual} is not {expected}"
+        );
+    }
+}
+
+#[test]
+fn percentage_columns_share_spare_width_in_proportion_to_their_percentages() {
+    // The percentages come to half of the table. The first column's content keeps it at
+    // 100px rather than its 40px, which leaves 140px to share 1 : 2 : 2.
+    let widths = column_widths(
+        "<td style='--id: a; width: 10%; padding: 0'><div style='width: 100px'></div></td>\
+         <td style='--id: b; width: 20%; padding: 0'></td>\
+         <td style='--id: c; width: 20%; padding: 0'></td>",
+    );
+    assert_widths(widths, [128.0, 136.0, 136.0]);
+}
+
+#[test]
+fn percentages_past_a_hundred_are_cut_from_the_last_column_back() {
+    let widths = column_widths(
+        "<td style='--id: a; width: 50%; padding: 0'></td>\
+         <td style='--id: b; width: 30%; padding: 0'></td>\
+         <td style='--id: c; width: 300%; padding: 0'></td>",
+    );
+    assert_widths(widths, [200.0, 120.0, 80.0]);
+}
+
+#[test]
+fn percentage_columns_short_of_width_each_get_the_same_part_of_what_they_lack() {
+    // The last column's content takes 300px of the 400px, so the first two, which ask for
+    // 120px each, share the remaining 100px.
+    let widths = column_widths(
+        "<td style='--id: a; width: 30%; padding: 0'></td>\
+         <td style='--id: b; width: 30%; padding: 0'></td>\
+         <td style='--id: c; width: 40%; padding: 0'><div style='width: 300px'></div></td>",
+    );
+    assert_widths(widths, [50.0, 50.0, 300.0]);
+}

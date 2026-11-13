@@ -948,6 +948,12 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
     for i in 0..n {
         c.max[i] = c.max[i].max(c.min[i]);
     }
+    // Percentages past 100% in all are cut, from the last column back.
+    let mut left = 1.0_f32;
+    for percent in c.percent.iter_mut().flatten() {
+        *percent = percent.min(left).max(0.0);
+        left -= *percent;
+    }
     c
 }
 
@@ -1003,22 +1009,24 @@ fn distribute(c: &Constraints, width: f32) -> Vec<f32> {
     if n == 0 || width <= min_total {
         return widths;
     }
-    // Percentage columns take their share first, as far as the others' minimums allow.
+    // Percentage columns take their share first. When the others' minimums leave too little
+    // for that, each gets the same fraction of what it lacks.
     let mut left = width - min_total;
-    for ((width_i, percent), min) in widths.iter_mut().zip(&c.percent).zip(&c.min) {
-        if let Some(p) = percent {
-            let want = (p * width - min).max(0.0).min(left);
-            *width_i += want;
-            left -= want;
-        }
+    let lacking = |i: usize| c.percent[i].map_or(0.0, |p| (p * width - c.min[i]).max(0.0));
+    let lacked: f32 = (0..n).map(lacking).sum();
+    let share = if lacked > left { left / lacked } else { 1.0 };
+    for (i, width_i) in widths.iter_mut().enumerate() {
+        *width_i += lacking(i) * share;
     }
+    left -= lacked * share;
     let flexible: Vec<usize> = (0..n).filter(|&i| c.percent[i].is_none()).collect();
     if flexible.is_empty() {
-        // Only percentage columns: they share what is left in proportion.
-        let total: f32 = widths.iter().sum();
-        for w in &mut widths {
+        // Only percentage columns: they share what is left in proportion to their
+        // percentages.
+        let total: f32 = c.percent.iter().flatten().sum();
+        for (w, p) in widths.iter_mut().zip(&c.percent) {
             *w += if total > 0.0 {
-                left * *w / total
+                left * p.unwrap_or(0.0) / total
             } else {
                 left / n as f32
             };
