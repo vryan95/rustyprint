@@ -179,3 +179,18 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+fn a_page_holds_what_fits_its_height_rounded_up_to_a_whole_pixel() {
+    // Browsers lay a page out in a whole number of pixels: 300px of boxes fit a page area
+    // of 299.5px, and 301px of them do not.
+    let boxes = |second: f32| {
+        pages(&format!(
+            "<style>@page {{ size: 400px 299.5px; margin: 0 }} div {{ break-inside: avoid }}</style>\
+             <div style='height: 150px'></div><div style='height: {second}px'></div>"
+        ))
+        .len()
+    };
+    assert_eq!(boxes(150.0), 1);
+    assert_eq!(boxes(151.0), 2);
+}

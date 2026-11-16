@@ -41,6 +41,14 @@ pub struct LaidPage {
     pub margin_boxes: Vec<MarginBoxFragment>,
 }
 
+impl LaidPage {
+    /// The size of the area the root is laid out in: the page area with its height rounded
+    /// up to a whole pixel, as browsers lay pages out.
+    pub(crate) fn layout_area(&self) -> Size {
+        Size::new(self.area.width, self.area.height.ceil())
+    }
+}
+
 /// Lays out `root` page by page.
 pub(crate) fn pages(root: &BlockBox, styles: &Styles, defaults: &PageOptions) -> Vec<LaidPage> {
     // Pages progress in the root's inline direction, or its block flow direction in
@@ -86,7 +94,7 @@ pub(crate) fn pages(root: &BlockBox, styles: &Styles, defaults: &PageOptions) ->
         };
         let mut page = setup(styles, defaults, key);
         // Vertical roots fill the page in their own axes.
-        let area = crate::writing::page_area(root, Size::new(page.area.width, page.area.height));
+        let area = crate::writing::page_area(root, page.layout_area());
         let fragmentainer = Fragmentainer {
             available: area.height,
             at_top: true,
