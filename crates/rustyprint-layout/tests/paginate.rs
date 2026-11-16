@@ -45,6 +45,10 @@ fn pages(body: &str) -> Vec<BoxFragment> {
 
 /// The fragment tagged `--id: <id>` on a page.
 fn find<'a>(root: &'a BoxFragment, id: &str) -> &'a BoxFragment {
+    try_find(root, id).unwrap_or_else(|| panic!("no fragment `{id}`"))
+}
+
+fn try_find<'a>(root: &'a BoxFragment, id: &str) -> Option<&'a BoxFragment> {
     fn walk<'a>(fragment: &'a BoxFragment, out: &mut Vec<&'a BoxFragment>) {
         out.push(fragment);
         for child in &fragment.children {
@@ -57,7 +61,6 @@ fn find<'a>(root: &'a BoxFragment, id: &str) -> &'a BoxFragment {
     walk(root, &mut all);
     all.into_iter()
         .find(|f| f.style.custom.get("--id").is_some_and(|v| v.trim() == id))
-        .unwrap_or_else(|| panic!("no fragment `{id}`"))
 }
 
 /// The y position of the fragment tagged `--id: <id>` on a page.
@@ -178,4 +181,35 @@ fn fixed_backgrounds_repeat_on_every_page() {
             .expect("an image on every page");
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
+}
+
+#[test]
+fn a_row_before_a_break_needs_no_room_for_the_collapsed_border_it_shares_with_the_next() {
+    // Rows of 48px with a 2px border above each: 50px a row with collapsed borders, 1px of
+    // the first border outside the first row. Six rows end at 301px with the half of the
+    // seventh row's border, and at 300px without it: they fit the 300px page, as they do
+    // in browsers, where that border goes to the next page with its row.
+    let rows = |collapse: &str, top: u32| {
+        let cells: String = (0..8)
+            .map(|i| format!("<tr><td style='--id: r{i}'></td></tr>"))
+            .collect();
+        format!(
+            "<div style='height: {top}px'></div>\
+             <style>table {{ border-collapse: {collapse}; border-spacing: 0 }}\
+             td {{ padding: 0; height: 48px; border-top: 2px solid }}</style>\
+             <table>{cells}</table>"
+        )
+    };
+    let rows_on_first_page = |body: &str| {
+        let pages = pages(body);
+        (0..8)
+            .filter(|i| try_find(&pages[0], &format!("r{i}")).is_some())
+            .count()
+    };
+    assert_eq!(rows_on_first_page(&rows("collapse", 0)), 6);
+    // One pixel less room, and the sixth row does not fit.
+    assert_eq!(rows_on_first_page(&rows("collapse", 1)), 5);
+    // Separate borders are each row's own: six rows are 300px.
+    assert_eq!(rows_on_first_page(&rows("separate", 0)), 6);
+    assert_eq!(rows_on_first_page(&rows("separate", 1)), 5);
 }

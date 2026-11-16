@@ -1661,6 +1661,7 @@ pub(crate) fn layout(
     let fixed_bottom = vs + padding.bottom + border.bottom;
     let mut end = body.len();
     let mut forced = false;
+    let collapsed = table.style.border_collapse == BorderCollapse::Collapse;
     if let Some(f) = fragmentainer {
         let mut y = top_height + grid_content_top + vs + rows_height(&header);
         let tail = rows_height(&footer) + fixed_bottom;
@@ -1684,7 +1685,18 @@ pub(crate) fn layout(
             }
             let last = i + 1 == body.len();
             let bottom = if last { bottom_height } else { 0.0 };
-            let fits = y + heights[r] + vs + tail + bottom <= f.available + EPSILON;
+            // With collapsed borders, half of the border between this row and the next is
+            // in this row's height. When the table breaks after the row that border goes
+            // with the next row, so the row does not need room for it, as in browsers.
+            let shared = if collapsed && !last {
+                let cells = row_of_grid(table, r).cells.iter();
+                cells
+                    .map(|cell| cell.block.style.border_bottom_width)
+                    .fold(0.0, f32::max)
+            } else {
+                0.0
+            };
+            let fits = y + heights[r] - shared + vs + tail + bottom <= f.available + EPSILON;
             // The rest of a broken row, or a row too tall for a page of its own, breaks
             // inside its cells.
             if (i == start && partial.is_some())
