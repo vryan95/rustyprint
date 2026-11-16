@@ -195,6 +195,36 @@ const STACK_SIZE: usize = 256 * 1024 * 1024;
 /// leaves anything behind on the caller's thread. A panic inside it is returned as
 /// [`Error::Internal`].
 pub fn render(html: &str, options: &RenderOptions) -> Result<Output, Error> {
+    within_limits(html, options, || render_on_this_thread(html, options))
+}
+
+/// The width of a document's content in a browser window of the size `window`, in CSS
+/// pixels: the document's scroll width, which is the window's width, or more when content
+/// reaches past its right edge. The document is laid out for the screen, so `screen` media
+/// queries match and `print` ones do not, on one continuous page that `@page` rules do not
+/// size.
+///
+/// A caller that prints at a fixed page size can fit a wide document on it with the
+/// [`RenderOptions::scale`] of the page area's width divided by this width. Of `options`,
+/// the stylesheet, the assets and the limits apply.
+pub fn content_width(html: &str, window: Size, options: &RenderOptions) -> Result<f32, Error> {
+    if !(window.width > 0.0 && window.height > 0.0) {
+        return Err(Error::InvalidOptions(format!(
+            "the window must be wider and taller than 0, not {} by {}",
+            window.width, window.height
+        )));
+    }
+    within_limits(html, options, || {
+        Ok(content_width_on_this_thread(html, window, options))
+    })
+}
+
+/// Runs `work` on `html` on a thread of its own, within the limits of `options`.
+fn within_limits<T: Send>(
+    html: &str,
+    options: &RenderOptions,
+    work: impl FnOnce() -> Result<T, Error> + Send,
+) -> Result<T, Error> {
     let limits = &options.limits;
     if html.len() > limits.max_input_bytes {
         return Err(Error::LimitExceeded {
@@ -212,9 +242,7 @@ pub fn render(html: &str, options: &RenderOptions) -> Result<Output, Error> {
         thread::Builder::new()
             .name("rustyprint".into())
             .stack_size(STACK_SIZE)
-            .spawn_scoped(scope, || {
-                budget::run(budget, || render_on_this_thread(html, options))
-            })
+            .spawn_scoped(scope, || budget::run(budget, work))
             .map(|thread| thread.join())
     });
     let exceeded = |limit, max: usize| Error::LimitExceeded {
@@ -252,6 +280,45 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     let (laid_out, warnings) = lay_out(html, options)?;
     let pdf = rustyprint_pdf::write(&laid_out).map_err(|e| Error::Internal(e.to_string()))?;
     Ok(Output { pdf, warnings })
+}
+
+/// The scroll width of a document laid out for the screen in a window, within the budget
+/// [`budget::run`] has set for this thread.
+fn content_width_on_this_thread(html: &str, window: Size, options: &RenderOptions) -> f32 {
+    let document = Document::parse(html);
+    budget::check_document(&document);
+    let page = PageOptions {
+        size: window,
+        margin: Sides::all(0.0),
+    };
+    let loader = assets::Loader::new(&options.assets);
+    let base = document.base_url().map(str::to_owned);
+    let get = |url: &str| match &base {
+        Some(base) => loader.get(&rustyprint_dom::resolve_url(base, url)),
+        None => loader.get(url),
+    };
+    let load = |url: &str| get(url).and_then(|bytes| String::from_utf8(bytes).ok());
+    let load_font = |url: &str| get(url);
+    let load_file = |url: &str| get(url);
+    let images = Images::new(&load_file).with_max_pixels(options.limits.max_image_pixels);
+    let styles = rustyprint_layout::style(
+        &document,
+        &StyleOptions {
+            page_size: (window.width, window.height),
+            media_size: (window.width, window.height),
+            zoom: 1.0,
+            stylesheet: options.stylesheet.as_deref(),
+            load: &load,
+            font_metrics: Some(&rustyprint_layout::font_metrics),
+            load_font: Some(&load_font),
+            screen: true,
+        },
+        &page,
+        &images,
+    );
+    let root = rustyprint_layout::layout_tree(&document, &styles, &page, &images);
+    let right = root.map_or(0.0, |root| root.overflow_right());
+    right.max(window.width)
 }
 
 /// Lays a document out into what its pages paint, with the warnings of doing so.
@@ -296,6 +363,7 @@ fn lay_out(
                 load: &load,
                 font_metrics: Some(&rustyprint_layout::font_metrics),
                 load_font: Some(&load_font),
+                screen: false,
             },
             &page,
             &images,
@@ -652,6 +720,97 @@ mod tests {
             let scale = scale_of(&html, &options);
             assert!((scale - expected).abs() < 0.001, "{width}: {scale}");
         }
+    }
+
+    const WINDOW: Size = Size::new(800.0, 600.0);
+
+    fn width_of(html: &str) -> f32 {
+        content_width(html, WINDOW, &RenderOptions::default()).unwrap()
+    }
+
+    #[test]
+    fn content_width_is_the_window_width_when_the_content_fits() {
+        assert_eq!(width_of("<p>Hello</p>"), 800.0);
+        assert_eq!(width_of(""), 800.0);
+    }
+
+    #[test]
+    fn content_width_reaches_to_the_right_edge_of_the_widest_content() {
+        let body = "<body style='margin: 0 0 0 10px'>";
+        let wide = format!("{body}<div style='width: 1000px'>Wide</div>");
+        assert_eq!(width_of(&wide), 1010.0);
+        let table = format!("{body}<table style='width: 1200px; border-spacing: 0'><tr><td>Cell");
+        assert_eq!(width_of(&table), 1210.0);
+        let word = format!(
+            "{body}<div style='width: 100px; font: 16px monospace'>{}",
+            "W".repeat(200)
+        );
+        assert!(width_of(&word) > 1500.0, "{}", width_of(&word));
+    }
+
+    #[test]
+    fn content_width_does_not_count_what_a_box_clips() {
+        let clipped = "<div style='overflow: hidden; width: 300px'><div style='width: 2000px'>Wide</div></div>";
+        assert_eq!(width_of(clipped), 800.0);
+    }
+
+    #[test]
+    fn content_width_is_measured_for_the_screen() {
+        let html = |medium: &str| {
+            format!(
+                "<style>body {{ margin: 0 }} @media {medium} {{ div {{ width: 1000px }} }}</style>\
+                 <div>Wide</div>"
+            )
+        };
+        assert_eq!(width_of(&html("screen")), 1000.0);
+        assert_eq!(width_of(&html("print")), 800.0);
+        assert_eq!(
+            width_of(&html("(min-width: 800px) and (max-width: 800px)")),
+            1000.0
+        );
+    }
+
+    #[test]
+    fn content_width_is_measured_on_one_page_that_page_rules_do_not_size() {
+        let html = "<style>@page { size: 300px 300px; margin: 50px } body { margin: 0 }</style>\
+                    <div style='width: 100%; height: 5000px'>Tall</div>";
+        assert_eq!(width_of(html), 800.0);
+    }
+
+    #[test]
+    fn content_width_does_not_depend_on_the_page_or_the_scale() {
+        let options = RenderOptions {
+            page_size: Size::new(300.0, 300.0),
+            scale: 0.5,
+            shrink_to_fit: true,
+            stylesheet: Some("div { width: 900px }".into()),
+            ..RenderOptions::default()
+        };
+        let html = "<body style='margin: 0'><div>Wide</div>";
+        assert_eq!(content_width(html, WINDOW, &options).unwrap(), 900.0);
+    }
+
+    #[test]
+    fn content_width_keeps_to_the_limits_and_refuses_an_empty_window() {
+        let limits = Limits {
+            max_input_bytes: 4,
+            ..Limits::default()
+        };
+        let options = RenderOptions {
+            limits,
+            ..RenderOptions::default()
+        };
+        let exceeded = content_width("<p>Hello</p>", WINDOW, &options);
+        assert!(
+            matches!(exceeded, Err(Error::LimitExceeded { .. })),
+            "{exceeded:?}"
+        );
+        let empty = content_width(
+            "<p>Hello</p>",
+            Size::new(0.0, 600.0),
+            &RenderOptions::default(),
+        );
+        assert!(matches!(empty, Err(Error::InvalidOptions(_))), "{empty:?}");
     }
 
     #[test]

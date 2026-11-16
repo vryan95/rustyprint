@@ -1,4 +1,5 @@
-//! Media queries, evaluated for paged print output (see `css-at-rules.md`).
+//! Media queries, evaluated for paged print output, or for a screen when the width of a
+//! document in a browser window is measured (see `css-at-rules.md`).
 
 use std::collections::HashMap;
 
@@ -34,7 +35,7 @@ pub enum MediaQuery {
 pub enum MediaType {
     All,
     Print,
-    /// Any other type, including `screen`; none of them match.
+    /// Any other type. `screen` matches a screen; the rest match nothing.
     Other(String),
 }
 
@@ -130,6 +131,8 @@ pub struct MediaEnvironment<'a> {
     /// The page area, in CSS pixels.
     pub width: f32,
     pub height: f32,
+    /// Whether the medium is a screen rather than print.
+    pub screen: bool,
     pub custom_media: &'a HashMap<String, CustomMedia>,
 }
 
@@ -382,7 +385,11 @@ impl MediaQuery {
                 media_type,
                 condition,
             } => {
-                let type_matches = matches!(media_type, MediaType::All | MediaType::Print);
+                let type_matches = match media_type {
+                    MediaType::All => true,
+                    MediaType::Print => !env.screen,
+                    MediaType::Other(name) => env.screen && name == "screen",
+                };
                 let result = type_matches
                     && condition
                         .as_ref()
@@ -594,6 +601,10 @@ mod tests {
     use super::*;
 
     fn matches(query: &str) -> bool {
+        matches_on(query, false)
+    }
+
+    fn matches_on(query: &str, screen: bool) -> bool {
         let custom = HashMap::from([
             (
                 "--narrow".to_owned(),
@@ -605,6 +616,7 @@ mod tests {
         let env = MediaEnvironment {
             width: 643.0,
             height: 971.0,
+            screen,
             custom_media: &custom,
         };
         parse(query).matches(&env)
@@ -613,6 +625,19 @@ mod tests {
     fn parse(query: &str) -> MediaQueryList {
         let mut input = Parser::new(query);
         MediaQueryList::parse(&mut input)
+    }
+
+    #[test]
+    fn media_types_on_a_screen() {
+        assert!(matches_on("", true));
+        assert!(matches_on("all", true));
+        assert!(matches_on("screen", true));
+        assert!(matches_on("only screen and (min-width: 600px)", true));
+        assert!(!matches_on("print", true));
+        assert!(matches_on("not print", true));
+        assert!(!matches_on("not screen", true));
+        assert!(matches_on("screen, print", true));
+        assert!(!matches_on("tv", true));
     }
 
     #[test]

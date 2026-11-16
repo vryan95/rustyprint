@@ -18,6 +18,7 @@ fn boxes(body: &str) -> Vec<(String, Rect, usize)> {
             load: &load,
             font_metrics: None,
             load_font: None,
+            screen: false,
         },
     );
     let page = PageOptions {

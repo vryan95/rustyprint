@@ -30,6 +30,7 @@ fn style_with(html: &str, extra: Option<&str>, files: &[(&str, &str)]) -> (Docum
             load: &load,
             font_metrics: None,
             load_font: None,
+            screen: false,
         },
     );
     (document, styles)

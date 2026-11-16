@@ -20,6 +20,7 @@ fn paint(body: &str) -> Vec<DisplayItem> {
             load: &load,
             font_metrics: None,
             load_font: None,
+            screen: false,
         },
     );
     let page = PageOptions {

@@ -26,8 +26,13 @@ struct Args {
     /// HTML file to render, or `-` for standard input.
     input: PathBuf,
     /// PDF file to write, or `-` for standard output.
-    #[arg(short, long)]
-    output: PathBuf,
+    #[arg(short, long, required_unless_present = "content_width")]
+    output: Option<PathBuf>,
+    /// Instead of rendering, print the width in CSS pixels of the document's content in a
+    /// browser window of this size, such as `1123x794`: the window's width, or more when
+    /// content reaches past its right edge. The document is laid out for the screen.
+    #[arg(long, value_name = "WIDTHxHEIGHT", value_parser = parse_window, conflicts_with = "output")]
+    content_width: Option<Size>,
     /// Render options as JSON, in the format of `schema/render-options.schema.json`. The
     /// flags below override what it sets.
     #[arg(long, value_name = "FILE")]
@@ -85,6 +90,13 @@ fn parse_asset(text: &str) -> Result<(String, PathBuf), String> {
         }
         _ => Err(format!("expected NAME=FILE, not `{text}`")),
     }
+}
+
+fn parse_window(text: &str) -> Result<Size, String> {
+    let size = text
+        .split_once('x')
+        .and_then(|(width, height)| Some(Size::new(width.parse().ok()?, height.parse().ok()?)));
+    size.ok_or_else(|| format!("expected WIDTHxHEIGHT in CSS pixels, not `{text}`"))
 }
 
 /// Why the command failed, which decides its exit code.
@@ -158,6 +170,13 @@ fn run(args: Args) -> Result<(), Failure> {
         read_text(&args.input)?
     };
     let options = options(&args)?;
+    if let Some(window) = args.content_width {
+        println!("{}", rustyprint::content_width(&html, window, &options)?);
+        return Ok(());
+    }
+    let Some(path) = &args.output else {
+        return Err(Failure::Io("no output file".into()));
+    };
     let output = rustyprint::render(&html, &options)?;
     for warning in &output.warnings {
         eprintln!("warning: {warning}");
@@ -165,15 +184,15 @@ fn run(args: Args) -> Result<(), Failure> {
     if args.fail_on_warnings && !output.warnings.is_empty() {
         return Err(Failure::Warnings(output.warnings.len()));
     }
-    if is_std(&args.output) {
+    if is_std(path) {
         let mut stdout = io::stdout().lock();
         stdout
             .write_all(&output.pdf)
             .and_then(|()| stdout.flush())
             .map_err(|e| Failure::Io(format!("writing standard output: {e}")))
     } else {
-        fs::write(&args.output, &output.pdf)
-            .map_err(|e| Failure::Io(format!("writing {}: {e}", args.output.display())))
+        fs::write(path, &output.pdf)
+            .map_err(|e| Failure::Io(format!("writing {}: {e}", path.display())))
     }
 }
 

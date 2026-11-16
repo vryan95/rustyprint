@@ -23,6 +23,7 @@ fn runs(body: &str) -> Vec<TextRun> {
             load: &load,
             font_metrics: None,
             load_font: None,
+            screen: false,
         },
     );
     let page = PageOptions {

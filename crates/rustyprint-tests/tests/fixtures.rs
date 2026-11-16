@@ -228,6 +228,7 @@ fn run_fixture(path: &Path) -> Result<(), Failed> {
             load: &load,
             font_metrics: Some(&rustyprint_layout::font_metrics),
             load_font: Some(&load_font),
+            screen: false,
         },
         &page,
         &images,

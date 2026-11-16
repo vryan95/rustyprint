@@ -5,9 +5,9 @@ use std::ptr;
 use std::thread;
 
 use rustyprint_ffi::{
-    RenderResult as RpResult, Request, Status, rp_render, rp_request_add_asset, rp_request_free,
-    rp_request_new, rp_result_error, rp_result_free, rp_result_pdf, rp_result_status,
-    rp_result_warnings_json, rp_version,
+    RenderResult as RpResult, Request, Status, rp_content_width, rp_render, rp_request_add_asset,
+    rp_request_free, rp_request_new, rp_result_content_width, rp_result_error, rp_result_free,
+    rp_result_pdf, rp_result_status, rp_result_warnings_json, rp_version,
 };
 
 /// A request with the given JSON options, or the defaults for `None`.
@@ -308,6 +308,83 @@ fn null_arguments_are_invalid() {
         assert_eq!(rendered.status, Status::InvalidOptions);
         rp_request_free(invalid);
     }
+    free(request);
+}
+
+/// The status, width and error `rp_content_width` gives for a window 800 by 600.
+fn content_width(request: *const Request, html: &str) -> (Status, f64, Option<String>) {
+    let mut result: *mut RpResult = ptr::null_mut();
+    // SAFETY: the request is live or null, the HTML is a live string and `result` is writable.
+    let status = unsafe {
+        rp_content_width(
+            request,
+            html.as_ptr().cast(),
+            html.len(),
+            800.0,
+            600.0,
+            &mut result,
+        )
+    };
+    assert!(!result.is_null(), "every measurement gives a result");
+    // SAFETY: the result is live until it is freed below.
+    let (width, error) = unsafe {
+        assert_eq!(rp_result_status(result), status);
+        let mut len = usize::MAX;
+        rp_result_pdf(result, &mut len);
+        assert_eq!(len, 0, "a measurement has no PDF");
+        let error = rp_result_error(result, ptr::null_mut());
+        let error = (!error.is_null()).then(|| CStr::from_ptr(error).to_str().unwrap().to_owned());
+        (rp_result_content_width(result), error)
+    };
+    // SAFETY: the result came from `rp_content_width` and is freed once.
+    unsafe { rp_result_free(result) };
+    (status, width, error)
+}
+
+#[test]
+fn content_width_is_the_width_of_the_widest_content() {
+    let request = request(None);
+    let fits = content_width(request, "<p>Hello</p>");
+    assert_eq!(fits, (Status::Ok, 800.0, None));
+    let wide = content_width(
+        request,
+        "<body style='margin: 0'><div style='width: 1000px'>Wide</div>",
+    );
+    assert_eq!(wide, (Status::Ok, 1000.0, None));
+    free(request);
+}
+
+#[test]
+fn content_width_uses_the_request_assets() {
+    let request = request(None);
+    let status = add_asset(request, c"wide.css", b"div { width: 1200px }");
+    assert_eq!(status, Status::Ok);
+    let html = "<link rel='stylesheet' href='wide.css'><body style='margin: 0'><div>Wide</div>";
+    assert_eq!(content_width(request, html), (Status::Ok, 1200.0, None));
+    free(request);
+}
+
+#[test]
+fn content_width_fails_as_a_render_does() {
+    let invalid = request(Some(r#"{"page_size": "A9"}"#));
+    let (status, width, error) = content_width(invalid, "<p>Hello</p>");
+    assert_eq!((status, width), (Status::InvalidOptions, 0.0));
+    assert!(error.unwrap().contains("A9"));
+    free(invalid);
+
+    let (status, _, error) = content_width(ptr::null(), "<p>Hello</p>");
+    assert_eq!(status, Status::InvalidArgument);
+    assert_eq!(error.as_deref(), Some("request is null"));
+
+    let request = request(None);
+    // SAFETY: a null `out` is refused before anything is read.
+    let status =
+        unsafe { rp_content_width(request, c"<p>".as_ptr(), 3, 800.0, 600.0, ptr::null_mut()) };
+    assert_eq!(status, Status::InvalidArgument);
+    // SAFETY: a null result is allowed.
+    assert_eq!(unsafe { rp_result_content_width(ptr::null()) }, 0.0);
+    let rendered = render(request, "<p>Hello</p>");
+    assert_eq!(rendered.status, Status::Ok);
     free(request);
 }
 

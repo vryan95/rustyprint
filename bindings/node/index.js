@@ -34,6 +34,15 @@ function createRenderer ({ concurrency = os.availableParallelism() } = {}) {
       const { signal, ...rest } = options ?? {}
       return pool.run(html, rest, signal)
     },
+    contentWidth (html, window, options) {
+      const { signal, ...rest } = options ?? {}
+      const { width, height } = window ?? {}
+      if (typeof width !== 'number' || typeof height !== 'number') {
+        return Promise.reject(new TypeError(
+          'window must be a width and a height in CSS pixels, such as { width: 1280, height: 720 }'))
+      }
+      return pool.run(html, rest, signal, { width, height })
+    },
     close () {
       return pool.close()
     }
@@ -54,6 +63,19 @@ function renderSync (html, options) {
   return require('./lib/render').renderSync(html, options)
 }
 
+// Measures, on a render worker, the width in CSS pixels of a document's content in a browser
+// window of the size `window`, such as `{ width: 1280, height: 720 }`: the window's width, or
+// more when content reaches past its right edge. The document is laid out for the screen.
+function contentWidth (html, window, options) {
+  defaultRenderer ??= createRenderer()
+  return defaultRenderer.contentWidth(html, window, options)
+}
+
+// Measures the width of a document's content on the calling thread, as contentWidth() does.
+function contentWidthSync (html, window, options) {
+  return require('./lib/render').contentWidthSync(html, window, options)
+}
+
 // The native library's version.
 function nativeVersion () {
   return require('./lib/render').nativeVersion()
@@ -62,6 +84,8 @@ function nativeVersion () {
 module.exports = {
   render,
   renderSync,
+  contentWidth,
+  contentWidthSync,
   createRenderer,
   nativeVersion,
   VERSION,

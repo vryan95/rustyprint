@@ -2115,6 +2115,7 @@ mod tests {
                 load: &load,
                 font_metrics: None,
                 load_font: None,
+                screen: false,
             },
         );
         let root = crate::boxes::build(&document, &styles, &Images::none()).unwrap();

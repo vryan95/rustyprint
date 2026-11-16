@@ -136,6 +136,7 @@
   "examples": [
     {},
     { "page_size": "A4", "margin": "15mm", "title": "Invoice 42" },
+    { "page_size": "A4", "landscape": true, "scale": 0.8, "shrink_to_fit": true },
     {
       "page_size": "Letter",
       "landscape": true,

@@ -34,6 +34,10 @@ module.exports = {
     'int32_t rp_request_add_asset(rp_request *request, const char *path, const uint8_t *data, size_t len)'),
   rp_render: lib.func(
     'int32_t rp_render(const rp_request *request, const uint8_t *html, size_t len, _Out_ rp_result **out)'),
+  rp_content_width: lib.func(
+    'int32_t rp_content_width(const rp_request *request, const uint8_t *html, size_t len, ' +
+    'double window_width, double window_height, _Out_ rp_result **out)'),
+  rp_result_content_width: lib.func('double rp_result_content_width(const rp_result *result)'),
   rp_result_pdf: lib.func('const uint8_t *rp_result_pdf(const rp_result *result, _Out_ size_t *len)'),
   rp_result_warnings_json: lib.func(
     'const char *rp_result_warnings_json(const rp_result *result, _Out_ size_t *len)'),

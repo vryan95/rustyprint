@@ -50,8 +50,8 @@ typedef int32_t rp_status;
 #endif // __cplusplus
 
 /**
- * What a render gave: a PDF and its warnings, or an error. Made by `rp_render` and freed by
- * `rp_result_free`.
+ * What a render gave: a PDF and its warnings, or an error. Made by `rp_render`, or by
+ * `rp_content_width` with a width in place of the PDF, and freed by `rp_result_free`.
  */
 typedef struct rp_result rp_result;
 
@@ -120,6 +120,38 @@ rp_status rp_render(const struct rp_request *request,
                     struct rp_result **out);
 
 /**
+ * Measures the width, in CSS pixels, of the content of `len` bytes of UTF-8 HTML at `html` in
+ * a browser window `window_width` by `window_height` CSS pixels in size: the window's width,
+ * or more when content reaches past its right edge. The document is laid out for the screen,
+ * on one continuous page. Of the request's options, the stylesheet, the limits and the
+ * assets apply.
+ *
+ * Stores the result in `*out`, which the caller frees with `rp_result_free`, and returns its
+ * status: `RP_STATUS_OK` with a width that `rp_result_content_width` gives, or an error with
+ * a message. A null `out` returns `RP_STATUS_INVALID_ARGUMENT`.
+ *
+ * # Safety
+ *
+ * As for [`rp_render`].
+ */
+rp_status rp_content_width(const struct rp_request *request,
+                           const char *html,
+                           size_t len,
+                           double window_width,
+                           double window_height,
+                           struct rp_result **out);
+
+/**
+ * The width `rp_content_width` measured, in CSS pixels. Zero if it failed, for a result of
+ * `rp_render` and for a null result.
+ *
+ * # Safety
+ *
+ * `result` is null or a live result.
+ */
+double rp_result_content_width(const struct rp_result *result);
+
+/**
  * The result's status, the one `rp_render` returned. `RP_STATUS_INVALID_ARGUMENT` for a null
  * result.
  *
@@ -178,7 +210,8 @@ void rp_request_free(struct rp_request *request);
  *
  * # Safety
  *
- * `result` is null or a live result from `rp_render`, which is not used again.
+ * `result` is null or a live result from `rp_render` or `rp_content_width`, which is not used
+ * again.
  */
 void rp_result_free(struct rp_result *result);
 
