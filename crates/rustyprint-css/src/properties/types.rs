@@ -531,12 +531,14 @@ impl Property for BorderWidth {
     }
 
     fn compute(specified: &Self::Specified, ctx: &ComputeContext) -> f32 {
-        let px = specified.compute(ctx, true).as_length().unwrap_or(0.0);
-        // Widths between 0 and 1px round up to 1px; others floor to whole pixels.
+        // Widths between 0 and 1px round up to 1px; others floor to whole pixels. The scale
+        // of a print comes after: a 1px border of a document printed at 0.9 is 0.9px.
+        let scale = ctx.parent.print_scale;
+        let px = specified.compute(ctx, true).as_length().unwrap_or(0.0) / scale;
         if px > 0.0 && px < 1.0 {
-            1.0
+            scale
         } else {
-            px.floor()
+            px.floor() * scale
         }
     }
 }
