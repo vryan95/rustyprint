@@ -1381,13 +1381,13 @@ impl Builder<'_> {
                 Some(poster) => replaced(poster),
                 None => Embedding::Replaced(Replaced {
                     picture: None,
-                    size: Some((300.0, 150.0)),
+                    size: Some(crate::flow::default_object_size(style)),
                     widget: None,
                 }),
             },
             local_name!("audio") if element.has_attr("controls") => Embedding::Replaced(Replaced {
                 picture: None,
-                size: Some((300.0, 54.0)),
+                size: Some((300.0 * style.effective_zoom, 54.0 * style.effective_zoom)),
                 widget: Some(Widget::MediaControls),
             }),
             local_name!("audio") => Embedding::Nothing,
@@ -1451,7 +1451,11 @@ impl Builder<'_> {
             ) => *px,
             _ => default,
         };
-        let viewport = (fixed(&style.width, 300.0), fixed(&style.height, 150.0));
+        let default = crate::flow::default_object_size(style);
+        let viewport = (
+            fixed(&style.width, default.0),
+            fixed(&style.height, default.1),
+        );
         let document = Document::parse(&html);
         rustyprint_dom::budget::check_document(&document);
         let load = |url: &str| self.images.text(url);
