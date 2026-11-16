@@ -1633,9 +1633,16 @@ fn replaced_size(block: &BlockBox, replaced: &Replaced, cb: ContainingBlock) -> 
             Some((_, _, vw, vh)) if vw > 0.0 && vh > 0.0 => (vw, vh),
             _ => (w, h),
         });
+    // Content with a shape and no size of its own, such as an SVG image with only a
+    // `viewBox`.
+    let shape = match replaced.size {
+        Some(_) => None,
+        None => replaced.picture.as_ref().and_then(Picture::shape),
+    };
     let natural_ratio = natural
         .filter(|&(w, h)| w > 0.0 && h > 0.0)
-        .map(|(w, h)| w / h);
+        .map(|(w, h)| w / h)
+        .or(shape);
     let given = style.aspect_ratio.value();
     let ratio = if style.aspect_ratio.auto {
         natural_ratio.or(given)
@@ -1649,6 +1656,18 @@ fn replaced_size(block: &BlockBox, replaced: &Replaced, cb: ContainingBlock) -> 
         (None, Some(h)) => (ratio.map_or(natural.map_or(300.0, |n| n.0), |r| h * r), h),
         (None, None) => match (natural, ratio) {
             (Some(n), _) => n,
+            // Content with a shape and no size is as wide as the room it has, as a block
+            // is (§ 10.3.2), and has no width while that room is not known yet.
+            (None, Some(r)) if shape.is_some() => {
+                let room = if cb.width < crate::inline::UNLIMITED {
+                    let margins = margin(&style.margin_left, cb.width).unwrap_or(0.0)
+                        + margin(&style.margin_right, cb.width).unwrap_or(0.0);
+                    (cb.width - margins - extra_w).max(0.0)
+                } else {
+                    0.0
+                };
+                (room, room / r)
+            }
             (None, Some(r)) => (300.0, 300.0 / r),
             (None, None) => (300.0, 150.0),
         },

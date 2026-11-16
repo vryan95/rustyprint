@@ -27,7 +27,7 @@ We build the engine ourselves and use existing crates only for low-level tasks.
 | PDF writing | Reuse | `pdf-writer`, `subsetter`, `miniz_oxide` |
 | Color management (ICC profiles) | Reuse | `moxcms` |
 | Rasterising filter effects | Reuse | `tiny-skia` |
-| Images | Reuse | `image` |
+| Images | Reuse | `image`, `resvg` for SVG |
 
 ## 3. Rendering pipeline
 

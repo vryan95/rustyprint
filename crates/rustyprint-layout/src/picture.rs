@@ -19,13 +19,14 @@ use crate::images::{ElementImage, Image, Images, natural_size, orientation};
 use crate::paginate::LaidPage;
 
 /// The image types `image-set()` options may name and that can be decoded.
-const SUPPORTED_TYPES: [&str; 6] = [
+const SUPPORTED_TYPES: [&str; 7] = [
     "image/png",
     "image/jpeg",
     "image/gif",
     "image/webp",
     "image/bmp",
     "image/x-bmp",
+    "image/svg+xml",
 ];
 
 /// An image ready to paint.
@@ -151,6 +152,30 @@ impl Picture {
         }
     }
 
+    /// The width over the height of an image that has a shape and no size of its own, such
+    /// as an SVG image with only a `viewBox`.
+    pub fn shape(&self) -> Option<f32> {
+        match self {
+            Picture::Raster {
+                image, crop: None, ..
+            } if image.shape_only => image
+                .natural
+                .filter(|&(w, h)| w > 0.0 && h > 0.0)
+                .map(|(w, h)| w / h),
+            _ => None,
+        }
+    }
+
+    /// The natural size in CSS pixels, where an image with a shape and no size of its own
+    /// is the largest of its shape that fits in `area` (CSS Images 3 § 5.3.1).
+    pub fn size_in(&self, style: &ComputedValues, area: (f32, f32)) -> Option<(f32, f32)> {
+        match self.shape() {
+            Some(ratio) if area.0 / ratio <= area.1 => Some((area.0, area.0 / ratio)),
+            Some(ratio) => Some((area.1 * ratio, area.1)),
+            None => self.natural_size(style),
+        }
+    }
+
     /// The natural size in CSS pixels, or `None` for images without one, such as gradients.
     pub fn natural_size(&self, style: &ComputedValues) -> Option<(f32, f32)> {
         match self {
@@ -233,7 +258,13 @@ impl Picture {
                         let full = Rect::new(rect.x - x * sx, rect.y - y * sy, iw * sx, ih * sy);
                         (full, true)
                     }
-                    None => (rect, false),
+                    None => match (image.fit, image.natural) {
+                        // An SVG image keeps its shape in a box of another shape.
+                        (Some(fit), Some(size)) if size.0 > 0.0 && size.1 > 0.0 => {
+                            (fit.place(size, rect), fit.slice)
+                        }
+                        _ => (rect, false),
+                    },
                 };
                 if clip {
                     items.push(DisplayItem::PushClip(rect));
@@ -351,7 +382,11 @@ fn media_fragment(fragment: &str, image: &Image) -> Option<[f32; 4]> {
             h * ih / 100.0,
         ]
     } else {
-        [x, y, w, h]
+        // An SVG image's pixels are CSS pixels of its own size, not the ones it is drawn with.
+        let (sx, sy) = image
+            .natural
+            .map_or((1.0, 1.0), |(nw, nh)| (iw / nw, ih / nh));
+        [x * sx, y * sy, w * sx, h * sy]
     };
     let (x, y) = (x.min(iw), y.min(ih));
     let (w, h) = (w.min(iw - x), h.min(ih - y));
