@@ -1657,13 +1657,20 @@ pub(crate) fn layout(
         outer.break_inside.avoids_page()
     };
     let fragmentainer = fragmentainer.filter(|f| f.at_top || !avoid);
-    let grid_content_top = border.top + padding.top;
-    let fixed_bottom = vs + padding.bottom + border.bottom;
+    // A sliced table has no border or padding at a break (CSS Fragmentation 3 § 5.4): none
+    // above the rows it continues with, and none below the rows it breaks after.
+    let clone = outer.box_decoration_break == BoxDecorationBreak::Clone;
+    let grid_content_top = if resumed && !clone {
+        0.0
+    } else {
+        border.top + padding.top
+    };
+    let bottom_edge = padding.bottom + border.bottom;
     let mut end = body.len();
     let mut forced = false;
     if let Some(f) = fragmentainer {
         let mut y = top_height + grid_content_top + vs + rows_height(&header);
-        let tail = rows_height(&footer) + fixed_bottom;
+        let footer_height = rows_height(&footer) + vs;
         let mut placed = 0;
         for (i, &r) in body.iter().enumerate().skip(start) {
             if i > start {
@@ -1684,6 +1691,8 @@ pub(crate) fn layout(
             }
             let last = i + 1 == body.len();
             let bottom = if last { bottom_height } else { 0.0 };
+            // Rows before the last can end the page, where a sliced table has no bottom edge.
+            let tail = footer_height + if last || clone { bottom_edge } else { 0.0 };
             let fits = y + heights[r] + vs + tail + bottom <= f.available + EPSILON;
             // The rest of a broken row, or a row too tall for a page of its own, breaks
             // inside its cells.
@@ -1760,7 +1769,7 @@ pub(crate) fn layout(
         row_y[r] = Some(y);
         y += heights[r] + vs;
     }
-    let grid_height = y + padding.bottom + border.bottom;
+    let grid_height = y + if broke && !clone { 0.0 } else { bottom_edge };
 
     // Cell fragments, aligned in their rows.
     let column_x = &p.column_x;
@@ -1963,7 +1972,6 @@ pub(crate) fn layout(
         }
     }
 
-    let clone = outer.box_decoration_break == BoxDecorationBreak::Clone;
     let mut grid_border = border;
     let mut grid_padding = padding;
     if resumed && !clone {

@@ -179,3 +179,30 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+fn a_sliced_table_has_no_border_or_padding_where_pages_break_it() {
+    // 15px of border and padding above and below six rows of 100px, on pages of 300px.
+    let row =
+        |id: usize| format!("<tr><td style='--id: r{id}; height: 100px; padding: 0'></td></tr>");
+    let table = |decoration: &str| {
+        pages(&format!(
+            "<table style='border-spacing: 0; border: 10px solid; padding: 5px; \
+             box-decoration-break: {decoration}'>{}</table>",
+            (1..=6).map(row).collect::<String>()
+        ))
+    };
+    // Sliced, the page it starts on has room for two rows under its top edge, the next for
+    // three rows and nothing else, and the last row brings the bottom edge.
+    let sliced = table("slice");
+    assert_eq!(sliced.len(), 3);
+    assert_eq!(y_of(&sliced[0], "r1"), 15.0);
+    assert_eq!(y_of(&sliced[1], "r3"), 0.0);
+    assert_eq!(y_of(&sliced[1], "r5"), 200.0);
+    assert_eq!(y_of(&sliced[2], "r6"), 0.0);
+    // Cloned, every page has both edges, which leaves room for two rows.
+    let cloned = table("clone");
+    assert_eq!(cloned.len(), 3);
+    assert_eq!(y_of(&cloned[1], "r3"), 15.0);
+    assert_eq!(y_of(&cloned[2], "r5"), 15.0);
+}
