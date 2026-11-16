@@ -1361,12 +1361,32 @@ fn prepare(
     for cell in cells.iter().filter(|c| c.rowspan == 1) {
         heights[cell.row] = heights[cell.row].max(offset(cell) + cell.fragment.rect.height);
     }
+    // Rows a height constrains: their own, or that of a cell in them alone.
+    let mut constrained: Vec<bool> = table
+        .groups
+        .iter()
+        .flat_map(|group| &group.rows)
+        .map(|row| has_length_height(&row.style))
+        .collect();
+    let mut starts_span = vec![false; rows];
+    for cell in &cells {
+        if cell.rowspan > 1 {
+            starts_span[cell.row] = true;
+        } else if has_length_height(&cell.fragment.style) {
+            constrained[cell.row] = true;
+        }
+    }
     for cell in cells.iter().filter(|c| c.rowspan > 1) {
         let span = cell.row..cell.row + cell.rowspan;
         let have = heights[span.clone()].iter().sum::<f32>() + vs * (cell.rowspan - 1) as f32;
         let need = offset(cell) + cell.fragment.rect.height;
         if need > have {
-            heights[span.end - 1] += need - have;
+            grow_spanned_rows(
+                &mut heights[span.clone()],
+                need - have,
+                &constrained[span.clone()],
+                &starts_span[span],
+            );
         }
     }
     for (r, grid_row) in grid.iter().enumerate() {
@@ -1435,6 +1455,45 @@ fn prepare(
         baselines,
         top_captions,
         bottom_captions,
+    }
+}
+
+/// Whether a row's or a cell's `height` is a length.
+fn has_length_height(style: &ComputedValues) -> bool {
+    matches!(style.height, Size::Value(LengthPercentage::Length(_)))
+}
+
+/// Gives the rows a cell spans the `extra` height it needs beyond theirs, the way browsers
+/// share it out. CSS 2.1 leaves this open; these are the steps Chromium takes:
+///
+/// 1. rows after the first where another spanning cell starts share it equally;
+/// 2. otherwise rows with content and no height of their own grow in proportion to their
+///    heights;
+/// 3. otherwise, when no row has content, the last row takes it all;
+/// 4. otherwise the rows with content grow in proportion to their heights.
+fn grow_spanned_rows(heights: &mut [f32], extra: f32, constrained: &[bool], starts_span: &[bool]) {
+    let rows = heights.len();
+    let starting: Vec<usize> = (1..rows).filter(|&r| starts_span[r]).collect();
+    if !starting.is_empty() {
+        for &r in &starting {
+            heights[r] += extra / starting.len() as f32;
+        }
+        return;
+    }
+    let filled = |heights: &[f32], r: usize| heights[r] > 0.0;
+    let mut growing: Vec<usize> = (0..rows)
+        .filter(|&r| filled(heights, r) && !constrained[r])
+        .collect();
+    if growing.is_empty() {
+        growing = (0..rows).filter(|&r| filled(heights, r)).collect();
+    }
+    if growing.is_empty() {
+        heights[rows - 1] += extra;
+        return;
+    }
+    let total: f32 = growing.iter().map(|&r| heights[r]).sum();
+    for &r in &growing {
+        heights[r] += extra * heights[r] / total;
     }
 }
 

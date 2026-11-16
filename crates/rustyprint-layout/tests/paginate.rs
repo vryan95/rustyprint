@@ -179,3 +179,80 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+/// The heights of the three cells `a`, `b` and `c` beside a 240px cell that spans their rows.
+fn heights_beside_a_spanning_cell(rows: [&str; 3]) -> [f32; 3] {
+    let tall = "<td rowspan=3><div style='height: 240px'></div></td>";
+    let pages = pages(&format!(
+        "<style>td {{ padding: 0 }}</style><table style='border-spacing: 0'>\
+         <tr>{}{tall}</tr><tr>{}</tr><tr>{}</tr></table>",
+        rows[0], rows[1], rows[2]
+    ));
+    ["a", "b", "c"].map(|id| find(&pages[0], id).rect.height.round())
+}
+
+#[test]
+fn rows_under_a_taller_spanning_cell_share_its_extra_height() {
+    // Three rows of 20px, 40px and 20px under a 240px cell grow in proportion.
+    let cell =
+        |id, height| format!("<td style='--id: {id}'><div style='height: {height}px'></div></td>");
+    let (a, b, c) = (cell("a", 20), cell("b", 40), cell("c", 20));
+    assert_eq!(
+        heights_beside_a_spanning_cell([&a, &b, &c]),
+        [60.0, 120.0, 60.0]
+    );
+}
+
+#[test]
+fn rows_with_a_height_grow_under_a_spanning_cell_only_when_all_rows_have_one() {
+    // Rows without a height take the extra before rows with one.
+    let a = "<td style='--id: a; height: 20px'></td>";
+    let b = "<td style='--id: b'><div style='height: 20px'></div></td>";
+    let c = "<td style='--id: c'><div style='height: 20px'></div></td>";
+    assert_eq!(
+        heights_beside_a_spanning_cell([a, b, c]),
+        [20.0, 110.0, 110.0]
+    );
+    // When every row has a height, they all grow in proportion.
+    let b = "<td style='--id: b; height: 60px'></td>";
+    let c = "<td style='--id: c; height: 40px'></td>";
+    assert_eq!(
+        heights_beside_a_spanning_cell([a, b, c]),
+        [40.0, 120.0, 80.0]
+    );
+}
+
+#[test]
+fn a_row_where_another_spanning_cell_starts_takes_the_extra_height() {
+    let cell = |id| format!("<td style='--id: {id}'><div style='height: 20px'></div></td>");
+    let a = cell("a");
+    let b = format!("{}<td rowspan=2></td>", cell("b"));
+    let c = cell("c");
+    assert_eq!(
+        heights_beside_a_spanning_cell([&a, &b, &c]),
+        [20.0, 200.0, 20.0]
+    );
+}
+
+#[test]
+fn an_empty_row_under_a_spanning_cell_stays_empty() {
+    let pages = pages(
+        "<style>td { padding: 0 }</style><table style='border-spacing: 0'>\
+         <tr><td style='--id: a'><div style='height: 20px'></div></td>\
+         <td rowspan=3><div style='height: 240px'></div></td></tr><tr></tr>\
+         <tr><td style='--id: c'><div style='height: 20px'></div></td></tr></table>",
+    );
+    let height = |id| find(&pages[0], id).rect.height.round();
+    assert_eq!((height("a"), height("c")), (120.0, 120.0));
+}
+
+#[test]
+fn rows_without_content_leave_a_spanning_cells_height_to_the_last_one() {
+    let pages = pages(
+        "<style>td { padding: 0 }</style><table style='border-spacing: 0'>\
+         <tr><td rowspan=2><div style='height: 240px'></div></td><td style='--id: a'></td></tr>\
+         <tr><td style='--id: b'></td></tr></table>",
+    );
+    let height = |id| find(&pages[0], id).rect.height.round();
+    assert_eq!((height("a"), height("b")), (0.0, 240.0));
+}
