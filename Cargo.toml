@@ -32,7 +32,7 @@ image = { version = "0.25.10", default-features = false, features = ["png", "jpe
 libtest-mimic = "0.8.2"
 # Only tests use it, to read back the PDFs they render. Without its default features, which
 # bring in `chrono` for document dates and `rayon`.
-lopdf = { version = "0.46.0", default-features = false }
+lopdf = { version = "0.47.0", default-features = false }
 miniz_oxide = "0.9.1"
 # The version `image` uses, so that the two share one copy; 0.9 waits for `image` to move.
 moxcms = "0.8.1"
