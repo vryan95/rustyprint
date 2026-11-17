@@ -528,6 +528,54 @@ mod tests {
         assert_eq!(page.get(b"Rotate").unwrap().as_i64().unwrap(), 90);
     }
 
+    /// The Type0 base font names of a rendered document.
+    fn embedded_fonts(html: &str, options: &RenderOptions) -> Vec<String> {
+        let output = render(html, options).unwrap();
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+        parse(&output.pdf)
+            .objects
+            .values()
+            .filter_map(|object| object.as_dict().ok())
+            .filter(|dict| {
+                dict.get(b"Subtype")
+                    .is_ok_and(|t| t.as_name().ok() == Some(&b"Type0"[..]))
+            })
+            .map(|dict| {
+                String::from_utf8_lossy(dict.get(b"BaseFont").unwrap().as_name().unwrap())
+                    .into_owned()
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_font_face_named_after_a_generic_family_stands_in_for_it() {
+        let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/css-at-rules/assets");
+        let mut options = RenderOptions::default();
+        let data = std::fs::read(assets.join("var.ttf")).unwrap();
+        options.assets.files.insert("var.ttf".into(), data);
+        let face = "<style>@font-face { font-family: 'sans-serif'; src: url(var.ttf) }</style>";
+        let text = "<p style='font-family: sans-serif'>A</p>";
+
+        let replaced = embedded_fonts(&format!("{face}{text}"), &options);
+        assert!(
+            replaced.iter().all(|f| f.contains("TestVar")),
+            "{replaced:?}"
+        );
+
+        // Without the rule, and for the other generic families, the bundled fonts are used.
+        let bundled = embedded_fonts(text, &options);
+        assert!(
+            bundled.iter().all(|f| f.contains("NotoSans")),
+            "{bundled:?}"
+        );
+        let serif = embedded_fonts(
+            &format!("{face}<p style='font-family: serif'>A</p>"),
+            &options,
+        );
+        assert!(serif.iter().all(|f| f.contains("NotoSerif")), "{serif:?}");
+    }
+
     #[test]
     fn web_fonts_are_embedded_per_instance() {
         let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
