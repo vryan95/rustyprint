@@ -1126,6 +1126,9 @@ struct LaidCell {
     column: usize,
     rowspan: usize,
     fragment: BoxFragment,
+    /// The height its content takes, before a definite height makes the cell taller: what
+    /// `vertical-align` moves within the cell.
+    content_height: f32,
     /// Its content's first baseline from the top of its border box.
     baseline: f32,
     align: Align,
@@ -1461,6 +1464,7 @@ fn lay_out_cell(
         None,
     );
     let mut fragment = laid.fragment;
+    let content_height = fragment.rect.height;
     // A definite height is a minimum.
     if let Size::Value(LengthPercentage::Length(h)) = &cell_style.height {
         let h = if cell_style.box_sizing == BoxSizing::BorderBox {
@@ -1493,6 +1497,7 @@ fn lay_out_cell(
         rowspan: cell.rowspan,
         align: align(cell_style),
         baseline,
+        content_height,
         fragment,
     }
 }
@@ -1798,7 +1803,7 @@ pub(crate) fn layout(
                 }
             }
             let mut fragment = cell.fragment.clone();
-            let content = fragment.rect.height;
+            let content = cell.content_height;
             let offset = match cell.align {
                 Align::Top => 0.0,
                 Align::Middle => ((height - content) / 2.0).max(0.0),
