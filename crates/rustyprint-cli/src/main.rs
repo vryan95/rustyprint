@@ -45,6 +45,14 @@ struct Args {
     /// Landscape orientation.
     #[arg(long)]
     landscape: bool,
+    /// Scale of the document on the page, from 0.1 to 2, as the scale of a browser's print.
+    /// The document is laid out on a page area that much wider or narrower.
+    #[arg(long)]
+    scale: Option<f32>,
+    /// Shrink a document laid out wider than the page area to fit it, as a browser's print
+    /// does, by up to a third; what is wider still is cut off at the right of the page area.
+    #[arg(long)]
+    shrink_to_fit: bool,
     /// Page margins like the CSS `margin` shorthand: one to four lengths such as `2cm`, `15mm`,
     /// `0.5in` or `40px`, for the top, right, bottom and left. Defaults to `2cm`.
     #[arg(long)]
@@ -180,6 +188,12 @@ fn options(args: &Args) -> Result<RenderOptions, Failure> {
     }
     if let Some(title) = &args.title {
         options.title = Some(title.clone());
+    }
+    if let Some(scale) = args.scale {
+        options.scale = scale;
+    }
+    if args.shrink_to_fit {
+        options.shrink_to_fit = true;
     }
     let landscape = args.landscape || options.page_size.width > options.page_size.height;
     if let Some(name) = &args.page_size {

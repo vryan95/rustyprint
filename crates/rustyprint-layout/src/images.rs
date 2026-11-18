@@ -88,9 +88,9 @@ impl Image {
 }
 
 /// An image's natural size in CSS pixels as it displays: turned by its orientation and
-/// scaled by `image-resolution`.
+/// scaled by `image-resolution` and by `zoom`.
 pub fn natural_size(image: &Image, style: &ComputedValues) -> (f32, f32) {
-    let dppx = style.image_resolution.dppx(image.resolution);
+    let dppx = style.image_resolution.dppx(image.resolution) / style.effective_zoom;
     let (w, h) = (image.width as f32 / dppx, image.height as f32 / dppx);
     if Image::turned(orientation(image, style.image_orientation)) {
         (h, w)
