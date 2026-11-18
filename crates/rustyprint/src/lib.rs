@@ -490,6 +490,37 @@ mod tests {
     }
 
     #[test]
+    fn embeds_svg_images() {
+        // <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 10"><path fill="#1F4E9C" d="M0,0h40v10H0z"/></svg>
+        let svg = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCAxMCI+PHBhdGggZmlsbD0iIzFGNEU5QyIgZD0iTTAsMGg0MHYxMEgweiIvPjwvc3ZnPg==";
+        let output = render(
+            &format!("<img src='{svg}' width='80' height='20'>"),
+            &RenderOptions::default(),
+        )
+        .unwrap();
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+        let doc = parse(&output.pdf);
+        let sizes: Vec<_> = doc
+            .objects
+            .values()
+            .filter_map(|object| object.as_stream().ok())
+            .filter(|stream| {
+                stream
+                    .dict
+                    .get(b"Subtype")
+                    .and_then(|s| s.as_name())
+                    .is_ok_and(|name| name == b"Image")
+            })
+            .map(|stream| {
+                let side = |key: &[u8]| stream.dict.get(key).and_then(|n| n.as_i64()).unwrap();
+                (side(b"Width"), side(b"Height"))
+            })
+            .collect();
+        // Opaque, so there is no soft mask: the SVG alone, drawn 1024 pixels wide.
+        assert_eq!(sizes, [(1024, 256)]);
+    }
+
+    #[test]
     fn linked_stylesheets_load_from_assets() {
         let mut options = RenderOptions::default();
         options

@@ -16,6 +16,14 @@
 #k { layout-width: 20px; layout-height: 10px }
 #l { float: left }
 #m { alignment-baseline: middle }
+#n { layout-width: 400px; layout-height: 100px; layout-image: "0 0 400 100" }
+#o { layout-width: 100px; layout-height: 75px; layout-image: "0 25 100 25" }
+#p { layout-width: 100px; layout-height: 100px; layout-image: "0 0 100 100" }
+#q { layout-width: 200px; layout-height: 50px; layout-image: "0 0 200 50" }
+#r { layout-width: 0px; layout-height: 0px }
+#s { layout-width: 300px; layout-height: 75px }
+#t { layout-width: 120px; layout-height: 30px }
+#u { layout-width: 150px; layout-height: 37.5px }
 warning: could not load image `missing.png`
 warning: could not load image `missing2.png`
 warning: could not load image `missing3.png`
@@ -30,5 +38,12 @@ warning: could not load image `missing3.png`
 <p><img id=i srcset="assets/photo.png 2x"> <img id=j src="assets/photo.png" border=2>
 <img id=k src="assets/photo.png" style="max-width: 20px"></p>
 <p><img id=l src="assets/photo.png" align=left> <img id=m src="assets/photo.png" align=absmiddle></p>
+<p><img id=o src="assets/shape.svg" width=100 height=75>
+<img id=p src="assets/shape-stretched.svg" width=100 height=100> <img id=q src="assets/shape-sized.svg"></p>
+<div style="width: 400px"><img id=n src="assets/shape.svg"></div>
+<span style="display: inline-block"><img id=r src="assets/shape.svg"></span>
+<div style="display: flex; width: 300px"><img id=s src="assets/shape.svg"></div>
+<p><img id=t src="assets/shape.svg" height=30></p>
+<table><tr><td style="width: 150px; padding: 0"><img id=u src="assets/shape.svg"></td></tr></table>
 </body>
 </html>
