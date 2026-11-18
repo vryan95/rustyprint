@@ -913,7 +913,13 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
         if cell.colspan == 1 {
             let i = cell.column;
             c.min[i] = c.min[i].max(min);
-            c.max[i] = c.max[i].max(max);
+            // What a column prefers comes from its cells with a width, when it has any:
+            // the content of its other cells then only counts towards its minimum.
+            c.max[i] = match (c.fixed[i], fixed) {
+                (false, true) => max,
+                (true, false) => c.max[i],
+                _ => c.max[i].max(max),
+            };
             c.fixed[i] |= fixed;
             continue;
         }
@@ -941,6 +947,12 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
     }
     for i in 0..n {
         c.max[i] = c.max[i].max(c.min[i]);
+    }
+    // Percentages past 100% in all are cut, from the last column back.
+    let mut left = 1.0_f32;
+    for percent in c.percent.iter_mut().flatten() {
+        *percent = percent.min(left).max(0.0);
+        left -= *percent;
     }
     c
 }
@@ -997,22 +1009,24 @@ fn distribute(c: &Constraints, width: f32) -> Vec<f32> {
     if n == 0 || width <= min_total {
         return widths;
     }
-    // Percentage columns take their share first, as far as the others' minimums allow.
+    // Percentage columns take their share first. When the others' minimums leave too little
+    // for that, each gets the same fraction of what it lacks.
     let mut left = width - min_total;
-    for ((width_i, percent), min) in widths.iter_mut().zip(&c.percent).zip(&c.min) {
-        if let Some(p) = percent {
-            let want = (p * width - min).max(0.0).min(left);
-            *width_i += want;
-            left -= want;
-        }
+    let lacking = |i: usize| c.percent[i].map_or(0.0, |p| (p * width - c.min[i]).max(0.0));
+    let lacked: f32 = (0..n).map(lacking).sum();
+    let share = if lacked > left { left / lacked } else { 1.0 };
+    for (i, width_i) in widths.iter_mut().enumerate() {
+        *width_i += lacking(i) * share;
     }
+    left -= lacked * share;
     let flexible: Vec<usize> = (0..n).filter(|&i| c.percent[i].is_none()).collect();
     if flexible.is_empty() {
-        // Only percentage columns: they share what is left in proportion.
-        let total: f32 = widths.iter().sum();
-        for w in &mut widths {
+        // Only percentage columns: they share what is left in proportion to their
+        // percentages.
+        let total: f32 = c.percent.iter().flatten().sum();
+        for (w, p) in widths.iter_mut().zip(&c.percent) {
             *w += if total > 0.0 {
-                left * *w / total
+                left * p.unwrap_or(0.0) / total
             } else {
                 left / n as f32
             };
@@ -1126,6 +1140,9 @@ struct LaidCell {
     column: usize,
     rowspan: usize,
     fragment: BoxFragment,
+    /// The height its content takes, before a definite height makes the cell taller: what
+    /// `vertical-align` moves within the cell.
+    content_height: f32,
     /// Its content's first baseline from the top of its border box.
     baseline: f32,
     align: Align,
@@ -1520,6 +1537,7 @@ fn lay_out_cell(
         None,
     );
     let mut fragment = laid.fragment;
+    let content_height = fragment.rect.height;
     // A definite height is a minimum.
     if let Size::Value(LengthPercentage::Length(h)) = &cell_style.height {
         let h = if cell_style.box_sizing == BoxSizing::BorderBox {
@@ -1552,6 +1570,7 @@ fn lay_out_cell(
         rowspan: cell.rowspan,
         align: align(cell_style),
         baseline,
+        content_height,
         fragment,
     }
 }
@@ -1857,7 +1876,7 @@ pub(crate) fn layout(
                 }
             }
             let mut fragment = cell.fragment.clone();
-            let content = fragment.rect.height;
+            let content = cell.content_height;
             let offset = match cell.align {
                 Align::Top => 0.0,
                 Align::Middle => ((height - content) / 2.0).max(0.0),
