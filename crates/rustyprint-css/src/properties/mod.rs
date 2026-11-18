@@ -244,6 +244,9 @@ macro_rules! longhands {
             /// The product of the `zoom` of the element and its ancestors, which absolute
             /// lengths are multiplied by.
             pub effective_zoom: f32,
+            /// The scale of a scaled print, which is part of `effective_zoom`. What snaps to
+            /// whole pixels does so before the scale, as it does not for `zoom`.
+            pub print_scale: f32,
             /// For a style turned into the line-relative axes of a vertical writing mode
             /// (see [`ComputedValues::in_line_axes`]), the style as computed.
             pub unrotated: Option<Arc<ComputedValues>>,
@@ -263,6 +266,7 @@ macro_rules! longhands {
                     custom: CustomProperties::default(),
                     font_rules: crate::font_rules::FontRulesRef::default(),
                     effective_zoom: 1.0,
+                    print_scale: 1.0,
                     unrotated: None,
                 }
             }
@@ -1020,6 +1024,7 @@ impl ComputedValues {
         style.custom = parent.custom.clone();
         style.font_rules = parent.font_rules.clone();
         style.effective_zoom = parent.effective_zoom;
+        style.print_scale = parent.print_scale;
         // Borders and outlines keep their initial `none` style, so they compute to no width.
         style.border_top_width = 0.0;
         style.border_right_width = 0.0;

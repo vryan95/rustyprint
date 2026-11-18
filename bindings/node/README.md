@@ -35,6 +35,20 @@ warnings // => ["invoice.css:12: unsupported property `colr`"]
 
 **Assets** are the files the document refers to by relative or root-relative URL, by the path it uses without a leading slash (`/css/app.css` is `css/app.css`): strings, Buffers, typed arrays or ArrayBuffers, in an object or a Map. Nothing else is read, and nothing is fetched from the network unless `remote.allowedHosts` allows the host.
 
+## Fit a wide document to the page
+
+`contentWidth` measures how wide a document's content is in a browser window of a given size, in CSS pixels: the window's width, or more when content reaches past its right edge. The document is laid out for the screen, on one continuous page. To fit the document on a page, render it with a `scale` of the page area's width divided by that width.
+
+```js
+const { contentWidth, render } = require('rustyprint')
+
+const width = await contentWidth(html, { width: 1123, height: 794 }, { assets })
+const area = 1123 - 2 * 20 // A4 landscape with 20px margins, in CSS pixels
+const { pdf } = await render(html, { pageSize: 'A4', landscape: true, margin: '20px', scale: Math.min(1, area / width), assets })
+```
+
+`contentWidthSync` measures on the calling thread. Of the options, the stylesheet, the assets and the limits apply.
+
 ## Threads
 
 `render` runs each render on a worker thread, so the event loop keeps running meanwhile. It stays off libuv's thread pool too, which file system, DNS, crypto and zlib calls share. At most `os.availableParallelism()` renders run at once; the others wait their turn.

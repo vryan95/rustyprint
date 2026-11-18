@@ -52,6 +52,16 @@ export interface RenderOptions {
   landscape?: boolean
   /** Page margins like the CSS margin shorthand, such as `15mm` or `10mm 20mm`. Default: 2cm. */
   margin?: string
+  /**
+   * The scale of the document on the page, from 0.1 to 2, as the scale of a browser's print.
+   * The document is laid out on a page area that much wider or narrower. Default: 1.
+   */
+  scale?: number
+  /**
+   * Shrinks a document laid out wider than the page area to fit it, as a browser's print does,
+   * by up to a third; what is wider still is cut off. Default: false.
+   */
+  shrinkToFit?: boolean
   /** The PDF's title. Default: the document's `<title>`. */
   title?: string
   /** A stylesheet applied after the document's own styles. */
@@ -77,6 +87,12 @@ export interface RenderOutput {
   warnings: string[]
 }
 
+/** The size of a browser window in CSS pixels. */
+export interface WindowSize {
+  width: number
+  height: number
+}
+
 export interface RendererOptions {
   /** How many renders run at once, each on its own worker thread. Default: `os.availableParallelism()`. */
   concurrency?: number
@@ -85,6 +101,8 @@ export interface RendererOptions {
 export interface Renderer {
   /** Renders an HTML document to PDF on one of this renderer's workers. */
   render (html: string | Uint8Array | ArrayBuffer, options?: AsyncRenderOptions): Promise<RenderOutput>
+  /** Measures the width of a document's content on one of this renderer's workers, as `contentWidth` does. */
+  contentWidth (html: string | Uint8Array | ArrayBuffer, window: WindowSize, options?: AsyncRenderOptions): Promise<number>
   /** Stops the workers. Renders still waiting are refused. */
   close (): Promise<void>
 }
@@ -97,6 +115,20 @@ export function render (html: string | Uint8Array | ArrayBuffer, options?: Async
 
 /** Renders an HTML document to PDF on the calling thread, blocking the event loop until it is done. */
 export function renderSync (html: string | Uint8Array | ArrayBuffer, options?: RenderOptions): RenderOutput
+
+/**
+ * Measures, on a render worker, the width in CSS pixels of a document's content in a browser
+ * window of the given size: the window's width, or more when content reaches past its right
+ * edge. The document is laid out for the screen, on one continuous page. Of the options, the
+ * stylesheet, the assets and the limits apply.
+ *
+ * To fit a wide document on a page, render it with a `scale` of the page area's width divided
+ * by this width.
+ */
+export function contentWidth (html: string | Uint8Array | ArrayBuffer, window: WindowSize, options?: AsyncRenderOptions): Promise<number>
+
+/** Measures the width of a document's content on the calling thread, as `contentWidth` does. */
+export function contentWidthSync (html: string | Uint8Array | ArrayBuffer, window: WindowSize, options?: RenderOptions): number
 
 /** Makes a renderer with its own workers and concurrency. */
 export function createRenderer (options?: RendererOptions): Renderer

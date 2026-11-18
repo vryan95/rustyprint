@@ -3,6 +3,8 @@
 
 import { readFileSync } from 'node:fs'
 import {
+  contentWidth,
+  contentWidthSync,
   createRenderer,
   InvalidOptionsError,
   nativeVersion,
@@ -36,6 +38,12 @@ async function main (): Promise<void> {
   await renderer.render('<p>x</p>')
   await renderer.close()
 
+  const widths: number[] = [
+    await contentWidth('<p>x</p>', { width: 1280, height: 720 }, { stylesheet: 'p {}', signal: AbortSignal.timeout(5000) }),
+    contentWidthSync('<p>x</p>', { width: 1280, height: 720 }),
+    await renderer.contentWidth('<p>x</p>', { width: 1280, height: 720 })
+  ]
+
   const versions: string[] = [VERSION, nativeVersion()]
 
   try {
@@ -51,7 +59,7 @@ async function main (): Promise<void> {
   // @ts-expect-error: a signal stops only renders waiting for a worker, so renderSync takes none.
   renderSync('<p>x</p>', { signal: AbortSignal.abort() })
 
-  void [pdf, warnings, versions]
+  void [pdf, warnings, versions, widths]
 }
 
 void main

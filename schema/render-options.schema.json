@@ -41,6 +41,16 @@
       "description": "A stylesheet applied after the document's own styles.",
       "type": "string"
     },
+    "scale": {
+      "description": "Scale of the document on the page, as the scale of a browser's print: at 0.5 everything is half the size and the document is laid out on a page area twice as wide, which is also the width its media queries see. Page sizes, page margins and margin boxes are not scaled. Default: 1.",
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 2
+    },
+    "shrink_to_fit": {
+      "description": "Shrink a document whose content is laid out wider than the page area, as a browser's print does, instead of letting it run off the right edge: it is laid out on a page area as wide as the content, up to 1.5 times as wide, and scaled down to the page. Content that is wider still is cut off at the right of the page area. Never enlarges. Default: false.",
+      "type": "boolean"
+    },
     "remote": {
       "description": "Hosts that absolute URLs may be fetched from. Without it, nothing is fetched from the network.",
       "type": "object",
@@ -126,6 +136,7 @@
   "examples": [
     {},
     { "page_size": "A4", "margin": "15mm", "title": "Invoice 42" },
+    { "page_size": "A4", "landscape": true, "scale": 0.8, "shrink_to_fit": true },
     {
       "page_size": "Letter",
       "landscape": true,

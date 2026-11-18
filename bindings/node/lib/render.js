@@ -28,15 +28,23 @@ function addAsset (request, path, data) {
   if (status !== 0) throw new TypeError(`invalid asset path ${JSON.stringify(path)}`)
 }
 
-function renderRequest (request, html) {
+// What `read` makes of the result that `call` stores for a request, or the error it holds.
+function resultOf (call, read) {
   const out = [null]
-  const status = native.rp_render(request, html, html.byteLength, out)
+  const status = call(out)
   const result = out[0]
   if (result == null) throw errorFor('internal', 'the native library could not make a result')
 
   try {
     if (status !== 0) throw errorFor(STATUS[status], native.rp_result_error(result, null))
+    return read(result)
+  } finally {
+    native.rp_result_free(result)
+  }
+}
 
+function renderRequest (request, html) {
+  return resultOf(out => native.rp_render(request, html, html.byteLength, out), result => {
     const len = [0]
     const pdf = native.rp_result_pdf(result, len)
     return {
@@ -44,13 +52,11 @@ function renderRequest (request, html) {
       pdf: koffi.view(pdf, Number(len[0])).slice(0),
       warnings: JSON.parse(native.rp_result_warnings_json(result, null))
     }
-  } finally {
-    native.rp_result_free(result)
-  }
+  })
 }
 
-// Renders a document, with the PDF as an ArrayBuffer that can move to another thread.
-function renderBytes (html, options) {
+// What `work` makes of the document as bytes and a native request with the options and assets.
+function withRequest (html, options, work) {
   const { assets = {}, ...rest } = options ?? {}
   const document = bytes(html, 'html')
   const json = Buffer.from(JSON.stringify(snakeCase(rest)), 'utf8')
@@ -61,10 +67,28 @@ function renderBytes (html, options) {
   try {
     const entries = assets instanceof Map ? assets.entries() : Object.entries(assets)
     for (const [path, data] of entries) addAsset(request, path, data)
-    return renderRequest(request, document)
+    return work(request, document)
   } finally {
     native.rp_request_free(request)
   }
+}
+
+// Renders a document, with the PDF as an ArrayBuffer that can move to another thread.
+function renderBytes (html, options) {
+  return withRequest(html, options, renderRequest)
+}
+
+// The width in CSS pixels of a document's content in a browser window of the size `window`.
+function contentWidthSync (html, window, options) {
+  const { width, height } = window ?? {}
+  if (typeof width !== 'number' || typeof height !== 'number') {
+    throw new TypeError('window must be a width and a height in CSS pixels, such as { width: 1280, height: 720 }')
+  }
+  // A signal stops only work waiting for a worker, so it means nothing here.
+  const { signal, ...rest } = options ?? {}
+  return withRequest(html, rest, (request, document) => resultOf(
+    out => native.rp_content_width(request, document, document.byteLength, width, height, out),
+    result => native.rp_result_content_width(result)))
 }
 
 function renderSync (html, options) {
@@ -78,4 +102,4 @@ function nativeVersion () {
   return native.rp_version()
 }
 
-module.exports = { renderBytes, renderSync, nativeVersion }
+module.exports = { renderBytes, renderSync, contentWidthSync, nativeVersion }

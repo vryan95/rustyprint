@@ -71,6 +71,7 @@ cl hello.c /I include rustyprint_ffi.dll.lib
 - **Text** is UTF-8. Options and HTML are a pointer and a length and need not end in NUL; asset paths end in NUL. The strings the library gives end in NUL.
 - **Memory** the library gives is the library's: free requests with `rp_request_free` and results with `rp_result_free`, which also frees the PDF, warnings and error the result holds. Both accept null.
 - **Results:** `rp_render` gives a result whenever `out` is not null, even when it fails, so the error message can be read. Warnings, problems found in the document's CSS and assets, are a JSON array of strings.
+- **Fitting a wide document:** `rp_content_width` measures, with the same request, how wide the document's content is in a browser window of a given size, laid out for the screen; `rp_result_content_width` reads it from the result. A print `scale` of the page area's width divided by that width fits the document on the page.
 - **Threads:** a request can render on several threads at once, as long as no thread adds assets to it meanwhile. Each render runs on a thread of its own with a large stack, so the calling thread's stack size does not matter.
 - **Panics** never reach the caller: a bug in rustyprint gives `RP_STATUS_INTERNAL`.
 

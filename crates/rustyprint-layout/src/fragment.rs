@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
-use rustyprint_css::properties::types::TextDecorationStyle;
+use rustyprint_css::properties::types::{Overflow, TextDecorationStyle};
 use rustyprint_dom::NodeId;
 
 use crate::display::{Color, Rect, Size, TextRun};
@@ -387,6 +387,23 @@ impl BoxFragment {
         out
     }
 
+    /// How far right the box and what it lays out reach, relative to the parent's border
+    /// box: the right edge of its border box and, unless the box clips them, of the boxes
+    /// and text inside it. Transforms are not applied.
+    pub fn overflow_right(&self) -> f32 {
+        let own = self.rect.right();
+        if self.style.overflow_x != Overflow::Visible || self.style.used_contain().paint {
+            return own;
+        }
+        let inside = self.children.iter().map(|child| match child {
+            Fragment::Box(child) => child.overflow_right(),
+            // A turned line's items are in axes of their own: the line's box stands for them.
+            Fragment::Line(line) if line.turned().is_some() => line.rect.right(),
+            Fragment::Line(line) => line.rect.x + items_right(&line.items),
+        });
+        inside.fold(own, |right, child| right.max(self.rect.x + child))
+    }
+
     /// The number of line boxes in this box, including nested block boxes.
     pub fn line_count(&self) -> usize {
         self.children
@@ -414,6 +431,31 @@ impl BoxFragment {
             self.padding.left,
         )
     }
+}
+
+/// How far right line items reach, relative to their line. Spaces at the end of a line
+/// hang: they take no room.
+fn items_right(items: &[LineItem]) -> f32 {
+    let right = |item: &LineItem| match item {
+        LineItem::Text(text) => {
+            let run = &text.run;
+            let hanging: f32 = run
+                .glyphs
+                .iter()
+                .rev()
+                .take_while(|glyph| {
+                    run.text[glyph.text.clone()]
+                        .chars()
+                        .all(char::is_whitespace)
+                })
+                .map(|glyph| glyph.x_advance)
+                .sum();
+            run.origin.x + run.width() - hanging
+        }
+        LineItem::Box(atomic) => atomic.overflow_right(),
+        LineItem::Inline(inline) => inline.rect.right().max(items_right(&inline.children)),
+    };
+    items.iter().map(right).fold(f32::MIN, f32::max)
 }
 
 fn collect_lines(fragment: &BoxFragment, out: &mut Vec<String>) {

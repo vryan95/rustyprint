@@ -53,8 +53,14 @@ pub enum Origin {
 
 /// Options for computing styles.
 pub struct StyleOptions<'a> {
-    /// The page area in CSS pixels, for media queries and viewport units.
+    /// The page area in CSS pixels, for viewport units.
     pub page_size: (f32, f32),
+    /// The size media queries see, in CSS pixels: the page area as the document measures
+    /// it, which is `page_size` divided by the scale of a scaled print.
+    pub media_size: (f32, f32),
+    /// The zoom the root element starts from, as when a print is scaled. Page contexts and
+    /// their margin boxes do not take it.
+    pub zoom: f32,
     /// An extra author stylesheet applied after the document's own.
     pub stylesheet: Option<&'a str>,
     /// Loads `<link>` and `@import` stylesheets by URL.
@@ -67,6 +73,8 @@ pub struct StyleOptions<'a> {
     /// `@color-profile` rules. Without it, only `local()` fonts are found and no profiles
     /// load.
     pub load_font: Option<LoadFont<'a>>,
+    /// Whether media queries see a screen, as a browser window does, rather than print.
+    pub screen: bool,
 }
 
 /// Loads a file's bytes by URL.
@@ -193,6 +201,10 @@ pub fn compute_styles_in(
         ..Default::default()
     };
     let mut root_parent = ComputedValues::initial();
+    // Lengths the root inherits are zoomed already, as the root's own lengths will be.
+    root_parent.effective_zoom = options.zoom;
+    root_parent.print_scale = options.zoom;
+    root_parent.font_size *= options.zoom;
     root_parent.font_rules = rules.font_rules.clone();
     // Registered custom properties start at their initial values.
     if !rules.registered.is_empty() {
@@ -503,8 +515,9 @@ impl<'a> Collector<'a> {
             collect_custom_media(&sheet.sheet.rules, &mut custom_media);
         }
         let env = MediaEnvironment {
-            width: self.options.page_size.0,
-            height: self.options.page_size.1,
+            width: self.options.media_size.0,
+            height: self.options.media_size.1,
+            screen: self.options.screen,
             custom_media: &custom_media,
         };
         let mut flattener = Flattener {
@@ -1745,7 +1758,17 @@ impl Engine<'_> {
             .document
             .document_element()
             .unwrap_or(self.document.root());
-        let style = Arc::new(self.compute(element, root, applicable, (1, 1)));
+        // The scale of a print is for the document, not for the page: the lengths of the
+        // page context and what it inherits from the root are as written.
+        let mut unscaled = root.clone();
+        let zoom = self.options.zoom;
+        unscaled.effective_zoom /= zoom;
+        unscaled.print_scale = 1.0;
+        unscaled.font_size /= zoom;
+        if let LineHeight::Length(px) = &mut unscaled.line_height {
+            *px /= zoom;
+        }
+        let style = Arc::new(self.compute(element, &unscaled, applicable, (1, 1)));
 
         descriptors.sort_by_key(|(key, _)| *key);
         let mut out = default_page_style();
@@ -2399,8 +2422,9 @@ impl Engine<'_> {
         let media = |text: &str| {
             let queries = MediaQueryList::parse(&mut cssparser::Parser::new(text));
             queries.matches(&MediaEnvironment {
-                width: self.options.page_size.0,
-                height: self.options.page_size.1,
+                width: self.options.media_size.0,
+                height: self.options.media_size.1,
+                screen: self.options.screen,
                 custom_media: &self.rules.custom_media,
             })
         };
@@ -2460,6 +2484,7 @@ impl Engine<'_> {
         let initial = initial_values();
         let mut style = initial.clone();
         style.font_rules = parent.font_rules.clone();
+        style.print_scale = parent.print_scale;
 
         // Custom properties first: other values substitute them.
         let mut custom = Vec::new();

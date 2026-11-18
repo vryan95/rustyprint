@@ -16,6 +16,9 @@ struct Options {
     margin: Option<String>,
     title: Option<String>,
     stylesheet: Option<String>,
+    scale: Option<f32>,
+    #[serde(default)]
+    shrink_to_fit: bool,
     remote: Option<RemoteOptions>,
     #[serde(default)]
     limits: LimitOptions,
@@ -85,6 +88,10 @@ pub(crate) fn from_json(json: &str) -> Result<RenderOptions, Error> {
     }
     options.title = parsed.title;
     options.stylesheet = parsed.stylesheet;
+    if let Some(scale) = parsed.scale {
+        options.scale = scale;
+    }
+    options.shrink_to_fit = parsed.shrink_to_fit;
     options.assets.remote = parsed.remote.map(|remote| {
         let default = Remote::allowing(remote.allowed_hosts);
         Remote {
