@@ -187,6 +187,22 @@ impl Painter<'_> {
             | usvg::ImageKind::GIF(bytes)
             | usvg::ImageKind::WEBP(bytes) => {
                 if let Some(decoded) = (self.context.decode)(bytes) {
+                    // The file's own orientation, as `image-orientation: from-image`
+                    // shows an image of the page. One turned a quarter is as tall as its
+                    // pixels are wide, and keeps that shape in the box of its pixels.
+                    let orientation = decoded.orientation;
+                    let rect = if Image::turned(orientation) {
+                        let scale = (rect.width / rect.height).min(rect.height / rect.width);
+                        let (width, height) = (rect.height * scale, rect.width * scale);
+                        Rect::new(
+                            (rect.width - width) / 2.0,
+                            (rect.height - height) / 2.0,
+                            width,
+                            height,
+                        )
+                    } else {
+                        rect
+                    };
                     self.items.push(DisplayItem::Image {
                         image: decoded,
                         rect,
@@ -196,7 +212,7 @@ impl Painter<'_> {
                                 | usvg::ImageRendering::CrispEdges
                                 | usvg::ImageRendering::Pixelated
                         ),
-                        orientation: 1,
+                        orientation,
                         alpha: 255,
                     });
                 }

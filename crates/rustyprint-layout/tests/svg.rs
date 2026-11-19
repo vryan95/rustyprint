@@ -34,7 +34,8 @@ const UNLIMITED: Within = Within {
 };
 
 /// What `body` (with no body margin) paints on an 800 × 1000 page area. `red.png` is a
-/// 10 × 10 red image, as is the file whose name has the characters XML escapes, and
+/// 10 × 10 red image, as is the file whose name has the characters XML escapes,
+/// `turned.jpg` is a photo that its EXIF orientation turns a quarter, and
 /// `label.ttf` is a monospace font.
 fn paint_within(body: &str, within: Within) -> Painted {
     let html = format!("<!DOCTYPE html><style>body {{ margin: 0 }}</style><body>{body}");
@@ -69,6 +70,9 @@ fn paint_within(body: &str, within: Within) -> Painted {
     let loads = std::cell::Cell::new(0);
     let load_file = |url: &str| {
         loads.set(loads.get() + 1);
+        if url == "turned.jpg" {
+            return Some(TURNED.to_vec());
+        }
         matches!(url, "red.png" | ESCAPED_NAME).then(|| png.clone())
     };
     let images = Images::new(&load_file)
@@ -83,6 +87,9 @@ fn paint_within(body: &str, within: Within) -> Painted {
         svg_pixels: images.svg_pixels(),
     }
 }
+
+/// A photo of 40 × 20 pixels whose EXIF orientation turns it a quarter, to 20 × 40.
+const TURNED: &[u8] = include_bytes!("../../../tests/fixtures/css-properties/assets/turned.jpg");
 
 /// A file name with the characters that XML escapes or ends a section with.
 const ESCAPED_NAME: &str = "a&b<c\"]]>.png";
@@ -1090,4 +1097,23 @@ fn a_curve_is_filled_though_it_is_one_segment() {
     let (image, _) =
         picture("<svg width='100' height='60'><path d='M0 0 L100 60' fill='#ff0000'/></svg>");
     assert_eq!(rgba(&image, 50.0, 30.0), CLEAR);
+}
+
+#[test]
+fn a_photo_in_an_svg_element_is_turned_as_its_file_says() {
+    let items = paint(
+        "<svg width='100' height='100'>\
+         <image href='turned.jpg' x='10' y='20' width='40' height='20'/></svg>",
+    );
+    let turned: Vec<(u8, Rect)> = items
+        .iter()
+        .filter_map(|item| match item {
+            DisplayItem::Image {
+                orientation, rect, ..
+            } => Some((*orientation, *rect)),
+            _ => None,
+        })
+        .collect();
+    // Upright it is half as wide as it is tall, in the middle of the box of its pixels.
+    assert_eq!(turned, [(6, Rect::new(15.0, 0.0, 10.0, 20.0))]);
 }
