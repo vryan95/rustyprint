@@ -16,8 +16,8 @@ use rustyprint_css::properties::types::{
 use rustyprint_css::properties::{ComputedValues, LonghandId, Property};
 use rustyprint_dom::{Document, Element, NodeData, NodeId, local_name, ns};
 
-use crate::images::{Image, Images};
-use crate::svg::Resources;
+use crate::images::Images;
+use crate::svg::SvgPicture;
 
 /// The properties an SVG element is written with, which are also the presentation
 /// attributes and `style` declarations it is written without. All but the last two inherit.
@@ -54,7 +54,7 @@ pub(crate) fn picture(
     images: &Images,
     node: NodeId,
     style: &Arc<ComputedValues>,
-) -> Option<Arc<Image>> {
+) -> Option<Arc<SvgPicture>> {
     let mut writer = Writer {
         document,
         styles,
@@ -69,11 +69,7 @@ pub(crate) fn picture(
     if writer.empty {
         return None;
     }
-    let resources = Resources {
-        style: Some(style.clone()),
-        files: writer.files,
-    };
-    images.svg_element(&writer.out, resources)
+    images.svg_element(&writer.out, style, writer.files)
 }
 
 /// Writes an `<svg>` element and its descendants as an SVG file.
@@ -102,6 +98,12 @@ impl Writer<'_> {
             return;
         }
         let name = &*element.name.local;
+        // HTML allows names that no SVG file can have, as in `<rect"x>`. Such an element is
+        // not one SVG knows, so it is left out and the rest is drawn.
+        if !is_xml_name(name) {
+            return;
+        }
+        rustyprint_dom::budget::check_deadline();
         let style = self.styles.get(node).cloned();
         self.out.push('<');
         self.out.push_str(name);
@@ -123,6 +125,10 @@ impl Writer<'_> {
             };
             let sized = parent.is_none() && matches!(local, "width" | "height");
             if prefix.is_empty() && (local == "xmlns" || sized) {
+                continue;
+            }
+            // As for an element: an attribute HTML reads as `"x` or `a:b` is left out.
+            if !is_xml_name(local) {
                 continue;
             }
             if prefix.is_empty() && style.is_some() {
@@ -217,7 +223,7 @@ impl Writer<'_> {
             && !self.files.contains_key(url)
             && let Some(bytes) = self.images.file(url)
         {
-            self.files.insert(url.to_owned(), Arc::new(bytes));
+            self.files.insert(url.to_owned(), bytes);
         }
     }
 
@@ -314,6 +320,26 @@ fn value(style: &ComputedValues, id: LonghandId) -> Option<String> {
     })
 }
 
+/// Whether `name` can be the name of an element or attribute in an XML file, without a
+/// prefix (Namespaces in XML § 3, `NCName`). HTML allows many names that are not.
+fn is_xml_name(name: &str) -> bool {
+    let start = |c: char| {
+        matches!(c,
+            'A'..='Z' | '_' | 'a'..='z' | '\u{C0}'..='\u{D6}' | '\u{D8}'..='\u{F6}'
+            | '\u{F8}'..='\u{2FF}' | '\u{370}'..='\u{37D}' | '\u{37F}'..='\u{1FFF}'
+            | '\u{200C}'..='\u{200D}' | '\u{2070}'..='\u{218F}' | '\u{2C00}'..='\u{2FEF}'
+            | '\u{3001}'..='\u{D7FF}' | '\u{F900}'..='\u{FDCF}' | '\u{FDF0}'..='\u{FFFD}'
+            | '\u{10000}'..='\u{EFFFF}')
+    };
+    let part = |c: char| {
+        start(c)
+            || matches!(c,
+                '-' | '.' | '0'..='9' | '\u{B7}' | '\u{300}'..='\u{36F}' | '\u{203F}'..='\u{2040}')
+    };
+    let mut chars = name.chars();
+    chars.next().is_some_and(start) && chars.all(part)
+}
+
 /// Writes text as XML character data or an attribute value.
 fn escape(out: &mut String, text: &str) {
     for c in text.chars() {
@@ -324,6 +350,7 @@ fn escape(out: &mut String, text: &str) {
             '"' => out.push_str("&quot;"),
             // Characters XML does not allow.
             c if c < ' ' && !matches!(c, '\t' | '\n' | '\r') => {}
+            '\u{FFFE}' | '\u{FFFF}' => {}
             c => out.push(c),
         }
     }

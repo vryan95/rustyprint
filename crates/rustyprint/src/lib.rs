@@ -525,10 +525,12 @@ mod tests {
         let output = render(
             "<p>before</p><svg width='200' height='120' viewBox='0 0 200 120'>\
              <rect width='200' height='120' fill='#ff0000'/>\
-             <text x='120' y='60' font-size='20'>12%</text></svg>",
+             <text x='120' y='60' font-size='20'>12%</text></svg>\
+             <svg width='20' height='20'><rect \"x='1' width='9' height='9'/></svg><p>after</p>",
             &RenderOptions::default(),
         )
         .unwrap();
+        // A name that HTML allows and SVG does not is left out, and nothing is said of it.
         assert!(output.warnings.is_empty(), "{:?}", output.warnings);
         let doc = parse(&output.pdf);
         let images = doc
@@ -543,21 +545,11 @@ mod tests {
                     .is_ok_and(|name| name == b"Image")
             })
             .count();
-        assert_eq!(images, 1, "the SVG is a picture");
-        // Its label is part of the picture, not text of the page.
+        assert_eq!(images, 0, "the SVG is shapes, not a picture");
+        // Its label is text of the page.
         let text = doc.extract_text(&[1]).unwrap();
         assert!(text.contains("before"), "{text:?}");
-        assert!(!text.contains("12%"), "{text:?}");
-
-        // One that cannot be drawn is warned about, and the rest of the page is rendered.
-        let output = render(
-            "<svg width='20' height='20'><rect \"x='1' width='9' height='9'/></svg><p>after</p>",
-            &RenderOptions::default(),
-        )
-        .unwrap();
-        assert_eq!(output.warnings.len(), 1, "{:?}", output.warnings);
-        assert!(output.warnings[0].contains("could not draw an `<svg>` element"));
-        let text = parse(&output.pdf).extract_text(&[1]).unwrap();
+        assert!(text.contains("12%"), "{text:?}");
         assert!(text.contains("after"), "{text:?}");
     }
 

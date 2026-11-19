@@ -17,6 +17,7 @@ use crate::fragment::BoxFragment;
 use crate::fragment::ElementBox;
 use crate::images::{ElementImage, Image, Images, natural_size, orientation};
 use crate::paginate::LaidPage;
+use crate::svg::SvgPicture;
 
 /// The image types `image-set()` options may name and that can be decoded.
 const SUPPORTED_TYPES: [&str; 7] = [
@@ -47,6 +48,8 @@ pub enum Picture {
     Fade(Vec<(Picture, f32)>),
     /// `element()`: an element as painted.
     Element(ElementImage),
+    /// An `<svg>` element.
+    Svg(Arc<SvgPicture>),
     /// The document of an `iframe`.
     Frame(Frame),
 }
@@ -162,6 +165,10 @@ impl Picture {
                 .natural
                 .filter(|&(w, h)| w > 0.0 && h > 0.0)
                 .map(|(w, h)| w / h),
+            Picture::Svg(svg) if svg.shape_only() => {
+                let (w, h) = svg.size();
+                (w > 0.0 && h > 0.0).then(|| w / h)
+            }
             _ => None,
         }
     }
@@ -201,6 +208,7 @@ impl Picture {
             }
             Picture::Gradient(_) | Picture::Color(_) | Picture::Frame(_) => None,
             Picture::Element(element) => Some(element.size),
+            Picture::Svg(svg) => Some(svg.size()),
             // The weighted average of the sizes of the images that have one (§ 2.6).
             Picture::Fade(layers) => {
                 let sized: Vec<((f32, f32), f32)> = layers
@@ -334,6 +342,15 @@ impl Picture {
                 }
                 items.push(DisplayItem::PopClip);
                 items.push(DisplayItem::PopClip);
+            }
+            Picture::Svg(svg) => {
+                let start = items.len();
+                svg.paint(rect, style.image_rendering.smooth(), items);
+                if opacity < 1.0 {
+                    for item in &mut items[start..] {
+                        fade(item, opacity);
+                    }
+                }
             }
             Picture::Fade(layers) => {
                 // Each layer is drawn over the ones before, so its opacity is its fraction

@@ -1438,15 +1438,15 @@ impl Builder<'_> {
     /// descendants, which have no boxes of their own. One that cannot be drawn is an empty
     /// box.
     fn svg(&self, node: NodeId, style: &Arc<ComputedValues>) -> Embedding {
-        let image =
+        let picture =
             crate::svg_element::picture(self.document, self.styles, self.images, node, style);
         Embedding::Replaced(Replaced {
-            size: match &image {
-                Some(image) if image.shape_only => None,
-                Some(image) => Some(natural_size(image, style)),
+            size: match &picture {
+                Some(picture) if picture.shape_only() => None,
+                Some(picture) => Some(picture.size()),
                 None => Some((300.0, 150.0)),
             },
-            picture: image.map(Picture::raster),
+            picture: picture.map(Picture::Svg),
             widget: None,
         })
     }
