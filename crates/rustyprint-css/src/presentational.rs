@@ -1,4 +1,5 @@
-//! Presentational hints: HTML attributes that map to CSS (HTML § 10 Rendering).
+//! Presentational hints: HTML attributes that map to CSS (HTML § 10 Rendering), and the
+//! presentation attributes of SVG elements (SVG 2 § 6.6).
 //!
 //! Hints for properties the engine does not support yet are dropped when parsed.
 
@@ -10,6 +11,9 @@ pub fn presentational_hints(document: &Document, node: NodeId) -> Vec<(&'static 
     let Some(element) = document.element(node) else {
         return Vec::new();
     };
+    if element.name.ns == ns!(svg) {
+        return svg_hints(document, node, element);
+    }
     if element.name.ns != ns!(html) {
         return Vec::new();
     }
@@ -339,6 +343,63 @@ pub fn presentational_hints(document: &Document, node: NodeId) -> Vec<(&'static 
     hints
 }
 
+/// The presentation attributes of SVG elements that the engine has properties for. Rules
+/// in the document's stylesheets override them, as they do in a browser.
+const SVG_PRESENTATION: &[&str] = &[
+    "color",
+    "display",
+    "dominant-baseline",
+    "fill",
+    "fill-opacity",
+    "font-family",
+    "font-size",
+    "font-style",
+    "font-weight",
+    "opacity",
+    "shape-rendering",
+    "stroke",
+    "stroke-dasharray",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "stroke-opacity",
+    "stroke-width",
+    "text-anchor",
+    "visibility",
+];
+
+/// The declarations the attributes of an SVG element imply. A number where CSS wants a
+/// length is in user units, which are CSS pixels.
+fn svg_hints(document: &Document, node: NodeId, element: &Element) -> Vec<(&'static str, String)> {
+    let user_units = |value: &str| match value.trim().parse::<f32>() {
+        Ok(number) if number.is_finite() => format!("{number}px"),
+        _ => value.trim().to_owned(),
+    };
+    let mut hints = Vec::new();
+    for &property in SVG_PRESENTATION {
+        if let Some(value) = element.attr(property) {
+            let value = match property {
+                "font-size" => user_units(value),
+                _ => value.trim().to_owned(),
+            };
+            hints.push((property, value));
+        }
+    }
+    // The size of an `<svg>` element in HTML content, which sizes its box. An inner
+    // `<svg>` is placed by the SVG it is in.
+    let outermost = document
+        .parent_element(node)
+        .and_then(|parent| document.element(parent))
+        .is_none_or(|parent| parent.name.ns != ns!(svg));
+    if element.name.local == local_name!("svg") && outermost {
+        for property in ["width", "height"] {
+            if let Some(value) = element.attr(property) {
+                hints.push((property, user_units(value)));
+            }
+        }
+    }
+    hints
+}
+
 /// The table an element belongs to.
 fn table_of(document: &Document, node: NodeId) -> Option<&Element> {
     document
@@ -501,6 +562,43 @@ mod tests {
         // The famous "chucknorris" is red.
         assert_eq!(legacy_color("chucknorris").unwrap(), "rgb(192, 0, 0)");
         assert_eq!(legacy_color("transparent"), None);
+    }
+
+    #[test]
+    fn svg_presentation_attributes() {
+        let document = Document::parse(
+            "<svg width=200 height=50% viewBox='0 0 4 2' fill=red font-size=20>\
+             <svg width=10><text font-size=1.5em stroke-width=2 x=4>a</text></svg></svg>",
+        );
+        let hints = |name: &str| {
+            let node = document
+                .descendants(document.root())
+                .find(|&node| {
+                    document
+                        .element(node)
+                        .is_some_and(|element| &*element.name.local == name)
+                })
+                .unwrap();
+            presentational_hints(&document, node)
+        };
+        // Numbers are user units. The outermost element's size is the size of its box.
+        assert_eq!(
+            hints("svg"),
+            [
+                ("fill", "red".to_owned()),
+                ("font-size", "20px".to_owned()),
+                ("width", "200px".to_owned()),
+                ("height", "50%".to_owned()),
+            ]
+        );
+        // Other attributes, such as positions, are not properties.
+        assert_eq!(
+            hints("text"),
+            [
+                ("font-size", "1.5em".to_owned()),
+                ("stroke-width", "2".to_owned())
+            ]
+        );
     }
 
     #[test]
