@@ -91,7 +91,8 @@ pub struct Limits {
     /// A pixel takes four bytes while it is drawn, and as many again for each filter, mask
     /// or transparent group it is drawn through; a fifth is added if the drawing is not
     /// opaque. Drawn, it takes three bytes, or four if not opaque, until its page is
-    /// written. The default of 64 megapixels is 256 MB at the most that stays.
+    /// written, so the default of 64 megapixels is some 256 MB at the most for a
+    /// document.
     pub max_svg_pixels: u64,
     /// How long a render may take; `None` for no deadline.
     pub timeout: Option<Duration>,

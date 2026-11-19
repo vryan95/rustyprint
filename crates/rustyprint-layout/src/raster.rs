@@ -78,8 +78,8 @@ impl Raster {
     }
 
     /// The raster as an image with straight alpha, made from its own pixels and not beside
-    /// them: a drawing takes four bytes a pixel while it is made into an image, and five
-    /// if any pixel is not opaque, where a copy would take eight.
+    /// them: a large drawing takes four bytes a pixel while it is made into an image, and
+    /// five if any pixel is not opaque, where a copy takes eight.
     pub fn into_image(self) -> Image {
         let (width, height) = (self.pixmap.width(), self.pixmap.height());
         let pixels = (width as usize) * (height as usize);
@@ -105,7 +105,15 @@ impl Raster {
             }
         }
         samples.truncate(pixels * 3);
-        samples.shrink_to_fit();
+        // The quarter that is no longer used is given back. Not every allocator gives back
+        // the end of a block, and a document may hold thousands of small drawings, so a
+        // small one is copied to a block of its own size: that copy is a few megabytes at
+        // the most, and only a large drawing is left to the allocator.
+        if pixels < LARGE_DRAWING {
+            samples = samples.as_slice().to_vec();
+        } else {
+            samples.shrink_to_fit();
+        }
         Image {
             width,
             height,
@@ -138,6 +146,9 @@ impl Raster {
         }
     }
 }
+
+/// The pixels from which a drawing is made into an image without a copy of its samples.
+const LARGE_DRAWING: usize = 1 << 20;
 
 /// Paints `items` into `raster`.
 pub(crate) fn draw(items: &[DisplayItem], raster: &mut Raster) {
