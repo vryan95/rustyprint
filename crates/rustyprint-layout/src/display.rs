@@ -183,12 +183,15 @@ pub enum DisplayItem {
         color: Color,
         rule: FillRule,
     },
-    /// A stroked path, for dashed and dotted rounded borders.
+    /// A stroked path, for dashed and dotted rounded borders and for SVG shapes.
     StrokePath {
         path: Path,
         width: f32,
         color: Color,
         style: LineStyle,
+        /// The ends, corners and dashes of a stroke that states them, as an SVG shape's
+        /// does, in place of `style`.
+        shape: Option<Arc<StrokeShape>>,
     },
     /// An image scaled to fill `rect`.
     Image {
@@ -494,6 +497,35 @@ impl Path {
     }
 }
 
+/// The ends, corners and dashes of a stroke (SVG 2 § 13.5).
+#[derive(Debug, Clone, PartialEq)]
+pub struct StrokeShape {
+    pub cap: LineCap,
+    pub join: LineJoin,
+    /// How far a mitered corner may reach, in line widths, before it is beveled.
+    pub miter_limit: f32,
+    /// The lengths of dashes and gaps in turn, or none for a solid line.
+    pub dashes: Vec<f32>,
+    /// How far into the dashes the stroke starts.
+    pub dash_offset: f32,
+}
+
+/// The end of an open stroke.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LineCap {
+    Butt,
+    Round,
+    Square,
+}
+
+/// The corner where two segments of a stroke meet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LineJoin {
+    Miter,
+    Round,
+    Bevel,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineStyle {
     Solid,
@@ -588,11 +620,13 @@ impl DisplayItem {
                 width,
                 color,
                 style,
+                shape,
             } => DisplayItem::StrokePath {
                 path: path.translated(dx, dy),
                 width: *width,
                 color: *color,
                 style: *style,
+                shape: shape.clone(),
             },
             DisplayItem::Image {
                 image,

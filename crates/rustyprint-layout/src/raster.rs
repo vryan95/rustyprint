@@ -8,8 +8,8 @@ use std::sync::{Arc, Weak};
 use tiny_skia as sk;
 
 use crate::display::{
-    BlendMode, Color, DisplayItem, FillRule, Group, LineStyle, Matrix, Path, PathSegment, Point,
-    Rect, Shading, ShadingKind, TextRun, multiply,
+    BlendMode, Color, DisplayItem, FillRule, Group, LineCap, LineJoin, LineStyle, Matrix, Path,
+    PathSegment, Point, Rect, Shading, ShadingKind, StrokeShape, TextRun, multiply,
 };
 use crate::images::{Image, ImageData};
 
@@ -300,6 +300,15 @@ pub(crate) fn blend_mode(mode: BlendMode) -> sk::BlendMode {
     }
 }
 
+/// Dashes and gaps as pairs: an odd number of lengths is the list twice (SVG 2 § 13.5.6).
+fn even_dashes(dashes: &[f32]) -> Vec<f32> {
+    if dashes.len() % 2 == 1 {
+        dashes.repeat(2)
+    } else {
+        dashes.to_vec()
+    }
+}
+
 /// A display path as a `tiny-skia` path.
 pub(crate) fn sk_path(path: &Path) -> Option<sk::Path> {
     let mut builder = sk::PathBuilder::new();
@@ -389,8 +398,6 @@ impl Painter {
     }
 
     fn stroke(&mut self, path: Option<sk::Path>, c: Color, width: f32, style: LineStyle) {
-        let Some(path) = path else { return };
-        let paint = self.paint(c);
         let mut stroke = sk::Stroke {
             width,
             line_join: sk::LineJoin::Round,
@@ -404,10 +411,36 @@ impl Painter {
                 stroke.dash = sk::StrokeDash::new(vec![0.0, 2.0 * width], 0.0);
             }
         }
+        self.stroke_with(path, c, &stroke);
+    }
+
+    /// Strokes a path with the ends, corners and dashes of `shape`.
+    fn stroke_shaped(&mut self, path: Option<sk::Path>, c: Color, width: f32, shape: &StrokeShape) {
+        let stroke = sk::Stroke {
+            width,
+            miter_limit: shape.miter_limit,
+            line_cap: match shape.cap {
+                LineCap::Butt => sk::LineCap::Butt,
+                LineCap::Round => sk::LineCap::Round,
+                LineCap::Square => sk::LineCap::Square,
+            },
+            line_join: match shape.join {
+                LineJoin::Miter => sk::LineJoin::Miter,
+                LineJoin::Round => sk::LineJoin::Round,
+                LineJoin::Bevel => sk::LineJoin::Bevel,
+            },
+            dash: sk::StrokeDash::new(even_dashes(&shape.dashes), shape.dash_offset),
+        };
+        self.stroke_with(path, c, &stroke);
+    }
+
+    fn stroke_with(&mut self, path: Option<sk::Path>, c: Color, stroke: &sk::Stroke) {
+        let Some(path) = path else { return };
+        let paint = self.paint(c);
         let m = transform(self.state.matrix);
         let clip = self.state.clip.clone();
         self.pixmap()
-            .stroke_path(&path, &paint, &stroke, m, clip.as_deref());
+            .stroke_path(&path, &paint, stroke, m, clip.as_deref());
     }
 
     fn item(&mut self, item: &DisplayItem) {
@@ -440,7 +473,11 @@ impl Painter {
                 width,
                 color,
                 style,
-            } => self.stroke(sk_path(path), *color, *width, *style),
+                shape,
+            } => match shape {
+                Some(shape) => self.stroke_shaped(sk_path(path), *color, *width, shape),
+                None => self.stroke(sk_path(path), *color, *width, *style),
+            },
             DisplayItem::Image {
                 image,
                 rect,

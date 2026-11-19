@@ -13,11 +13,11 @@ use pdf_writer::types::{
 };
 use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect, Ref, Str, TextStr};
 use rustyprint_layout::display::Group;
-use rustyprint_layout::display::LineStyle;
 use rustyprint_layout::display::PrintMarks;
 use rustyprint_layout::display::{
     Bookmark, Destination, Document, LinkTarget, Page, Shading, ShadingKind,
 };
+use rustyprint_layout::display::{LineCap, LineJoin, LineStyle};
 use rustyprint_layout::{
     Color, DisplayItem, FillRule, Font, Image, ImageData, Path, PathSegment, Point, TextRun,
 };
@@ -452,6 +452,7 @@ impl Writer {
                     width,
                     color,
                     style,
+                    shape,
                 } => {
                     content.save_state();
                     set_stroke(content, *color, &self.palette);
@@ -460,13 +461,33 @@ impl Writer {
                     // Fit a whole number of dashes or dots around the path.
                     let length = path.length() * PX_TO_PT;
                     let period = |target: f32| length / (length / target).round().max(1.0);
-                    match style {
-                        LineStyle::Solid => {}
-                        LineStyle::Dashed => {
+                    match (shape, style) {
+                        // The stroke of an SVG shape, as it is stated.
+                        (Some(shape), _) => {
+                            content.set_line_cap(match shape.cap {
+                                LineCap::Butt => LineCapStyle::ButtCap,
+                                LineCap::Round => LineCapStyle::RoundCap,
+                                LineCap::Square => LineCapStyle::ProjectingSquareCap,
+                            });
+                            content.set_line_join(match shape.join {
+                                LineJoin::Miter => LineJoinStyle::MiterJoin,
+                                LineJoin::Round => LineJoinStyle::RoundJoin,
+                                LineJoin::Bevel => LineJoinStyle::BevelJoin,
+                            });
+                            content.set_miter_limit(shape.miter_limit.max(1.0));
+                            if !shape.dashes.is_empty() {
+                                content.set_dash_pattern(
+                                    shape.dashes.iter().map(|dash| dash * PX_TO_PT),
+                                    shape.dash_offset * PX_TO_PT,
+                                );
+                            }
+                        }
+                        (None, LineStyle::Solid) => {}
+                        (None, LineStyle::Dashed) => {
                             let dash = period(6.0 * w) / 2.0;
                             content.set_dash_pattern([dash, dash], 0.0);
                         }
-                        LineStyle::Dotted => {
+                        (None, LineStyle::Dotted) => {
                             content.set_line_cap(LineCapStyle::RoundCap);
                             content.set_dash_pattern([0.0, period(2.0 * w)], 0.0);
                         }

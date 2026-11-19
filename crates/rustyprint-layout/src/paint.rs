@@ -541,6 +541,7 @@ fn border_shape(style: &ComputedValues, areas: &BoxAreas) -> Option<(Path, Vec<D
                 width: style.border_top_width,
                 color: border_color,
                 style: LineStyle::Solid,
+                shape: None,
             });
         }
         outline
@@ -1671,6 +1672,7 @@ fn paint_rounded_frame(frame: &Frame, outer: &RoundedRect, items: &mut Vec<Displ
                 width,
                 color,
                 style: line_style(border_style),
+                shape: None,
             }),
             BorderStyle::None | BorderStyle::Hidden => unreachable!("skipped above"),
         }
