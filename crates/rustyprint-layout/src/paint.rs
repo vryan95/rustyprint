@@ -372,7 +372,7 @@ fn paint_contents<'f>(
             );
         }
     } else if let Some(replaced) = &fragment.replaced
-        && matches!(replaced.picture, Some(Picture::Svg(_)))
+        && matches!(&replaced.picture, Some(Picture::Svg(svg)) if svg.is_element())
     {
         // The drawing of a hidden `<svg>` element holds only what is made visible inside it.
         let content = areas(&shape, fragment.border, fragment.padding).content;

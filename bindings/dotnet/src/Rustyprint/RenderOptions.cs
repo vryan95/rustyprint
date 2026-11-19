@@ -230,9 +230,10 @@ public sealed class RenderLimits
     public long? MaxImagePixels { get; set; }
 
     /// <summary>
-    /// Pixels drawn, in all, for the svg elements of a document that cannot be drawn as shapes,
-    /// such as ones with gradients or filters; one that needs more than are left is left blank
-    /// with a warning. Default: 64000000.
+    /// Pixels drawn, in all, for the svg elements and SVG image files that cannot be drawn as
+    /// shapes, such as ones with gradients or filters, of a document. One that needs more
+    /// than are left is left blank with a warning. A pixel takes 4 bytes of memory until its page is written, and as much again
+    /// for each filter, mask or transparent group it is drawn through. Default: 64000000.
     /// </summary>
     public long? MaxSvgPixels { get; set; }
 

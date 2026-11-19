@@ -1,8 +1,9 @@
 //! SVG images. An `<svg>` element in a document is drawn as shapes and text, so it prints
 //! sharply and takes no pixels; what shapes cannot express, such as a gradient or a filter,
-//! is drawn to pixels at the size the element is shown at. An SVG file is drawn to pixels,
-//! with more of them than its size in CSS pixels. Text is in the fonts the engine draws
-//! page text in.
+//! is drawn to pixels at the size the element is shown at. An SVG file is drawn the same
+//! way, except where its pixels themselves are asked for, as for a part of it: it is then
+//! drawn to pixels once, with more of them than its size in CSS pixels. Text is in the
+//! fonts the engine draws page text in.
 
 use std::cell::Cell;
 use std::collections::HashMap;
@@ -239,13 +240,15 @@ fn expanded_shapes(xml: &usvg::roxmltree::Document) -> u64 {
     count.of(xml.root_element())
 }
 
-/// Draws an SVG file with at most `max_pixels` pixels, and says what was left out of it.
+/// Draws an SVG file with at most `max_pixels` pixels, taken from `budget`, and says what
+/// was left out of it. `None` if the budget has too few pixels left, which it warns of.
 /// Text is drawn in the fonts the engine draws page text in.
 pub(crate) fn rasterize(
     bytes: &[u8],
     max_pixels: u64,
     resources: Resources,
-) -> Result<(Image, Vec<String>), String> {
+    budget: &PixelBudget,
+) -> Result<Option<(Image, Vec<String>)>, String> {
     let parsed = parse(bytes, max_pixels, resources)?;
     let (width, height) = (parsed.tree.size().width(), parsed.tree.size().height());
     let long = width.max(height);
@@ -257,6 +260,10 @@ pub(crate) fn rasterize(
             "an SVG image of {width}×{height} cannot be drawn within {max_pixels} pixels"
         ));
     }
+    if !budget.take(u64::from(pixel_width) * u64::from(pixel_height)) {
+        return Ok(None);
+    }
+    rustyprint_dom::budget::check_deadline();
     let transform =
         tiny_skia::Transform::from_scale(pixel_width as f32 / width, pixel_height as f32 / height);
     let mut image = draw(&parsed.tree, pixel_width, pixel_height, transform)
@@ -264,7 +271,7 @@ pub(crate) fn rasterize(
     image.natural = Some((width, height));
     image.shape_only = parsed.shape_only;
     image.fit = parsed.fit;
-    Ok((image, parsed.warnings))
+    Ok(Some((image, parsed.warnings)))
 }
 
 /// The pixels a drawing `width` by `height` CSS pixels has at `scale` pixels for each, or
@@ -293,7 +300,7 @@ fn draw(
         rect: Rect::new(0.0, 0.0, width as f32, height as f32),
         scale: 1.0,
     };
-    Some(raster.to_image())
+    Some(raster.into_image())
 }
 
 /// The pixels the SVGs of one document may be drawn to, all together, where they cannot be
@@ -328,7 +335,7 @@ impl PixelBudget {
     /// What to warn of when a drawing was left blank.
     pub(crate) fn warning(&self) -> String {
         format!(
-            "an `<svg>` element was left blank: it has to be drawn to pixels, and the \
+            "an SVG was left blank: it has to be drawn to pixels, and the \
              limit of {} pixels for such drawings is used up",
             self.max
         )
@@ -346,7 +353,7 @@ impl PixelBudget {
     }
 }
 
-/// The picture of an `<svg>` element.
+/// The picture of an `<svg>` element, or of an SVG file.
 #[derive(Debug)]
 pub struct SvgPicture {
     /// The size of the drawing in CSS pixels: of the `viewBox`, or else of the element.
@@ -354,6 +361,8 @@ pub struct SvgPicture {
     shape_only: bool,
     fit: Option<Fit>,
     content: Content,
+    /// Whether it is the picture of an element, whose descendants the document styles.
+    element: bool,
 }
 
 #[derive(Debug)]
@@ -415,7 +424,22 @@ impl SvgPicture {
             shape_only: parsed.shape_only,
             fit: parsed.fit,
             content,
+            element: true,
         }
+    }
+
+    /// The picture as that of an SVG file, which the document's styles do not reach.
+    pub(crate) fn of_file(self) -> Self {
+        Self {
+            element: false,
+            ..self
+        }
+    }
+
+    /// Whether it is the picture of an `<svg>` element, where a hidden element may hold
+    /// what its own style makes visible.
+    pub(crate) fn is_element(&self) -> bool {
+        self.element
     }
 
     /// The size of the drawing in CSS pixels.

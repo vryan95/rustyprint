@@ -88,8 +88,11 @@ impl Image {
     /// most `max_pixels` pixels.
     fn decode_within(bytes: &[u8], max_pixels: u64) -> Result<Image, String> {
         if crate::svg::is_svg(bytes) {
-            return crate::svg::rasterize(bytes, max_pixels, crate::svg::Resources::default())
-                .map(|(image, _)| image);
+            let unlimited = PixelBudget::new(u64::MAX);
+            let resources = crate::svg::Resources::default();
+            return crate::svg::rasterize(bytes, max_pixels, resources, &unlimited)?
+                .map(|(image, _)| image)
+                .ok_or_else(|| "an SVG image without pixels to draw it to".to_owned());
         }
         let orientation = exif_orientation(bytes);
         if let Some((width, height, components)) = jpeg_header(bytes)
@@ -337,10 +340,21 @@ impl FileKey {
     }
 }
 
+/// What the image file at a URL is drawn from.
+pub(crate) enum FilePicture {
+    Image(Arc<Image>),
+    /// An SVG file, drawn as an `<svg>` element is.
+    Svg(Arc<SvgPicture>),
+}
+
 /// Loads and decodes the images a document refers to, each once.
 pub struct Images<'a> {
     load: LoadFile<'a>,
     cache: RefCell<HashMap<String, Option<Arc<Image>>>>,
+    /// The pictures of SVG files, by URL.
+    svg_file_urls: RefCell<HashMap<String, Arc<SvgPicture>>>,
+    /// The pictures of SVG files by their bytes: the same file at two URLs is one picture.
+    svg_file_pictures: RefCell<HashMap<FileKey, Option<Arc<SvgPicture>>>>,
     /// The pictures of `<svg>` elements, by their markup.
     svgs: RefCell<HashMap<String, Option<Arc<SvgPicture>>>>,
     /// The files that images inside `<svg>` elements link to, by URL, each loaded once.
@@ -375,6 +389,8 @@ impl<'a> Images<'a> {
         Self {
             load,
             cache: RefCell::new(HashMap::new()),
+            svg_file_urls: RefCell::new(HashMap::new()),
+            svg_file_pictures: RefCell::new(HashMap::new()),
             svgs: RefCell::new(HashMap::new()),
             svg_files: RefCell::new(HashMap::new()),
             svg_images: RefCell::new(HashMap::new()),
@@ -396,8 +412,9 @@ impl<'a> Images<'a> {
         }
     }
 
-    /// Draws at most `max` pixels in all for the `<svg>` elements that cannot be drawn as
-    /// shapes. One that needs more than are left is left blank, with a warning.
+    /// Draws at most `max` pixels in all for the `<svg>` elements and SVG files that
+    /// cannot be drawn as shapes. One that needs more than are left is left blank, with a
+    /// warning.
     pub fn with_max_svg_pixels(self, max: u64) -> Self {
         Self {
             svg_pixels: Arc::new(PixelBudget::new(max)),
@@ -420,14 +437,88 @@ impl<'a> Images<'a> {
         if let Some(cached) = self.cache.borrow().get(url) {
             return cached.clone();
         }
-        let image = match (self.load)(url) {
+        self.decoded(url, (self.load)(url))
+    }
+
+    /// What the image file at `url` is drawn from, or `None` if it cannot be loaded or
+    /// decoded. An SVG file is drawn as an `<svg>` element is: as shapes and text where
+    /// it can be, which takes no pixels, and else to pixels at the size it is shown at.
+    pub(crate) fn picture(&self, url: &str) -> Option<FilePicture> {
+        if let Some(svg) = self.svg_file_urls.borrow().get(url) {
+            return Some(FilePicture::Svg(svg.clone()));
+        }
+        if let Some(cached) = self.cache.borrow().get(url) {
+            return cached.clone().map(FilePicture::Image);
+        }
+        match (self.load)(url) {
+            Some(bytes) if crate::svg::is_svg(&bytes) => {
+                let svg = self.svg_file(url, &bytes);
+                match &svg {
+                    Some(svg) => {
+                        let mut known = self.svg_file_urls.borrow_mut();
+                        known.insert(url.to_owned(), svg.clone());
+                    }
+                    None => {
+                        self.cache.borrow_mut().insert(url.to_owned(), None);
+                    }
+                }
+                svg.map(FilePicture::Svg)
+            }
+            bytes => self.decoded(url, bytes).map(FilePicture::Image),
+        }
+    }
+
+    /// The picture of the SVG file `bytes`, loaded from `url`. Files with the same bytes
+    /// share one picture. `None` with a warning if it cannot be read.
+    fn svg_file(&self, url: &str, bytes: &[u8]) -> Option<Arc<SvgPicture>> {
+        let key = FileKey::of(bytes);
+        if let Some(known) = self.svg_file_pictures.borrow().get(&key) {
+            return known.clone();
+        }
+        rustyprint_dom::budget::check_deadline();
+        let resources = crate::svg::Resources {
+            fonts: self.svg_fonts.clone(),
+            ..Default::default()
+        };
+        let picture = match crate::svg::parse(bytes, self.max_pixels, resources) {
+            Ok(mut parsed) => {
+                for warning in std::mem::take(&mut parsed.warnings) {
+                    self.warn(warning);
+                }
+                let picture = SvgPicture::new(
+                    parsed,
+                    &ComputedValues::initial(),
+                    &|bytes| self.svg_image(bytes),
+                    self.max_pixels,
+                    &self.svg_pixels,
+                    &self.svg_shapes,
+                    &|warning| self.warn(warning),
+                );
+                Some(Arc::new(picture.of_file()))
+            }
+            Err(error) => {
+                self.warn(format!("could not decode image `{url}`: {error}"));
+                None
+            }
+        };
+        self.svg_file_pictures
+            .borrow_mut()
+            .insert(key, picture.clone());
+        picture
+    }
+
+    /// The image of the file `bytes` loaded from `url`, or of none that could be loaded.
+    fn decoded(&self, url: &str, bytes: Option<Vec<u8>>) -> Option<Arc<Image>> {
+        let image = match bytes {
             None => {
                 self.warn(format!("could not load image `{url}`"));
                 None
             }
             Some(bytes) if self.too_large(url, &bytes) => None,
             Some(bytes) => match self.decode(&bytes) {
-                Ok(image) => Some(Arc::new(image)),
+                // Left blank, which the limit on pixels warns of.
+                Ok(None) => None,
+                Ok(Some(image)) => Some(Arc::new(image)),
                 Err(error) => {
                     self.warn(format!("could not decode image `{url}`: {error}"));
                     None
@@ -441,20 +532,24 @@ impl<'a> Images<'a> {
     }
 
     /// Decodes an image file. An SVG file is drawn to pixels, with the fonts the document
-    /// has given its SVGs so far.
-    fn decode(&self, bytes: &[u8]) -> Result<Image, String> {
+    /// has given its SVGs so far, or is `None` if the document has too few pixels left
+    /// for it: its pixels are under the limit on those of `<svg>` elements.
+    fn decode(&self, bytes: &[u8]) -> Result<Option<Image>, String> {
         if !crate::svg::is_svg(bytes) {
-            return Image::decode_within(bytes, self.max_pixels);
+            return Image::decode_within(bytes, self.max_pixels).map(Some);
         }
         let resources = crate::svg::Resources {
             fonts: self.svg_fonts.clone(),
             ..Default::default()
         };
-        let (image, warnings) = crate::svg::rasterize(bytes, self.max_pixels, resources)?;
+        let drawn = crate::svg::rasterize(bytes, self.max_pixels, resources, &self.svg_pixels)?;
+        let Some((image, warnings)) = drawn else {
+            return Ok(None);
+        };
         for warning in warnings {
             self.warn(warning);
         }
-        Ok(image)
+        Ok(Some(image))
     }
 
     /// The picture of an `<svg>` element with `style`, written out as the SVG file

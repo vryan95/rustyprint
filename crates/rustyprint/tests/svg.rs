@@ -133,7 +133,7 @@ fn drawings_in_pixels_past_the_limit_are_left_blank_with_a_warning() {
     assert_eq!(image_count(&output.pdf), 10);
     assert_eq!(output.warnings.len(), 1, "{:?}", output.warnings);
     assert!(
-        output.warnings[0].contains("an `<svg>` element was left blank"),
+        output.warnings[0].contains("an SVG was left blank"),
         "{:?}",
         output.warnings
     );
@@ -304,4 +304,31 @@ fn a_path_that_use_repeats_past_the_limit_on_shapes_is_left_blank_with_a_warning
         text.contains("before") && text.contains("after"),
         "{text:?}"
     );
+}
+
+#[test]
+fn hundreds_of_icon_files_are_shapes() {
+    // Three hundred icons unlike each other, each a file: none is drawn to pixels.
+    let mut options = RenderOptions::default();
+    let mut html = String::new();
+    for i in 0..300 {
+        let icon = format!(
+            "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'>\
+             <circle cx='8' cy='8' r='{}' fill='#1f77b4'/></svg>",
+            2.0 + i as f32 / 100.0
+        );
+        options
+            .assets
+            .files
+            .insert(format!("icon{i}.svg"), icon.into_bytes());
+        html.push_str(&format!("<img src='icon{i}.svg'> "));
+    }
+    let output = rendered(&html, &options);
+    assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+    assert_eq!(image_count(&output.pdf), 0);
+    let fills: usize = pages(&output.pdf)
+        .iter()
+        .map(|(operators, _)| count(operators, "f"))
+        .sum();
+    assert_eq!(fills, 300);
 }

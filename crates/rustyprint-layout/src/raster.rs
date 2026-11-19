@@ -77,6 +77,51 @@ impl Raster {
         }
     }
 
+    /// The raster as an image with straight alpha, made from its own pixels and not beside
+    /// them: a drawing takes four bytes a pixel while it is made into an image, and five
+    /// if any pixel is not opaque, where a copy would take eight.
+    pub fn into_image(self) -> Image {
+        let (width, height) = (self.pixmap.width(), self.pixmap.height());
+        let pixels = (width as usize) * (height as usize);
+        let mut samples = self.pixmap.take();
+        // Made when the first pixel that is not opaque is met.
+        let mut alpha: Option<Vec<u8>> = None;
+        for index in 0..pixels {
+            let [r, g, b, a] = [0, 1, 2, 3].map(|channel| samples[index * 4 + channel]);
+            let color = tiny_skia::PremultipliedColorU8::from_rgba(r, g, b, a)
+                .unwrap_or(tiny_skia::PremultipliedColorU8::TRANSPARENT)
+                .demultiply();
+            // Three bytes are written where four were read, so none is written early.
+            samples[index * 3] = color.red();
+            samples[index * 3 + 1] = color.green();
+            samples[index * 3 + 2] = color.blue();
+            if a != 255 && alpha.is_none() {
+                let mut opaque = Vec::with_capacity(pixels);
+                opaque.resize(index, 255);
+                alpha = Some(opaque);
+            }
+            if let Some(alpha) = &mut alpha {
+                alpha.push(a);
+            }
+        }
+        samples.truncate(pixels * 3);
+        samples.shrink_to_fit();
+        Image {
+            width,
+            height,
+            data: ImageData::Pixels {
+                samples,
+                gray: false,
+                alpha,
+            },
+            orientation: 1,
+            resolution: None,
+            natural: None,
+            shape_only: false,
+            fit: None,
+        }
+    }
+
     /// The image item that draws the raster where it came from.
     pub fn to_item(&self) -> DisplayItem {
         DisplayItem::Image {

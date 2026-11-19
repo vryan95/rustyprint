@@ -35,6 +35,7 @@ const UNLIMITED: Within = Within {
 
 /// What `body` (with no body margin) paints on an 800 × 1000 page area. `red.png` is a
 /// 10 × 10 red image, as is the file whose name has the characters XML escapes,
+/// `icon.svg` and `fade.svg` are [`ICON_FILE`] and [`FADE_FILE`],
 /// `turned.jpg` is a photo that its EXIF orientation turns a quarter, and
 /// `label.ttf` is a monospace font.
 fn paint_within(body: &str, within: Within) -> Painted {
@@ -73,6 +74,12 @@ fn paint_within(body: &str, within: Within) -> Painted {
         if url == "turned.jpg" {
             return Some(TURNED.to_vec());
         }
+        // The same files are also at another address.
+        match url.trim_start_matches("copy/") {
+            "icon.svg" => return Some(ICON_FILE.as_bytes().to_vec()),
+            "fade.svg" => return Some(FADE_FILE.as_bytes().to_vec()),
+            _ => {}
+        }
         matches!(url, "red.png" | ESCAPED_NAME).then(|| png.clone())
     };
     let images = Images::new(&load_file)
@@ -90,6 +97,16 @@ fn paint_within(body: &str, within: Within) -> Painted {
 
 /// A photo of 40 × 20 pixels whose EXIF orientation turns it a quarter, to 20 × 40.
 const TURNED: &[u8] = include_bytes!("../../../tests/fixtures/css-properties/assets/turned.jpg");
+
+/// An SVG file that is shapes: a red disc.
+const ICON_FILE: &str = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'>\
+    <circle cx='8' cy='8' r='6' fill='#ff0000'/></svg>";
+
+/// An SVG file that shapes cannot express: 40 × 10, filled with a gradient of one color.
+const FADE_FILE: &str = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='10'>\
+    <linearGradient id='fade'><stop offset='0' stop-color='#00ff00'/>\
+    <stop offset='1' stop-color='#00ff00'/></linearGradient>\
+    <rect width='40' height='10' fill='url(#fade)'/></svg>";
 
 /// A file name with the characters that XML escapes or ends a section with.
 const ESCAPED_NAME: &str = "a&b<c\"]]>.png";
@@ -842,7 +859,7 @@ fn drawings_in_pixels_stay_within_the_documents_limit() {
     // The rest are left blank, which is said once.
     assert_eq!(painted.warnings.len(), 1, "{:?}", painted.warnings);
     assert!(
-        painted.warnings[0].starts_with("an `<svg>` element was left blank"),
+        painted.warnings[0].starts_with("an SVG was left blank"),
         "{:?}",
         painted.warnings
     );
@@ -1149,4 +1166,79 @@ fn the_shapes_of_a_document_are_within_one_limit() {
     assert_eq!(strokes(Color::rgba(0, 0, 255, 255)), 0);
     // The blank one keeps its box.
     assert_eq!(drawings(&painted.items).len(), 3);
+}
+
+#[test]
+fn an_svg_file_is_drawn_as_shapes_and_takes_no_pixels() {
+    for body in [
+        "<img src='icon.svg' width='32' height='32'>",
+        "<div style='width: 32px; height: 32px; background: url(icon.svg) 0 0 / 32px 32px'></div>",
+    ] {
+        let painted = paint_within(body, UNLIMITED);
+        assert!(painted.warnings.is_empty(), "{:?}", painted.warnings);
+        assert_eq!(painted.svg_pixels, 0, "{body}");
+        assert!(images(&painted.items).is_empty(), "{body}");
+        let pictures = pictures(&painted.items);
+        assert_eq!(pictures.len(), 1, "{body}");
+        let (image, rect) = &pictures[0];
+        assert_size(*rect, 32.0, 32.0);
+        assert_eq!(rgba(image, 16.0, 16.0), RED, "{body}");
+        assert_eq!(rgba(image, 1.0, 1.0), CLEAR, "{body}");
+    }
+}
+
+#[test]
+fn an_svg_file_drawn_to_pixels_is_within_the_limit_on_svg_pixels() {
+    // At the size it is shown at, four pixels to a CSS pixel, as an `<svg>` element is:
+    // not at the thousand pixels a file's own pixels are drawn with.
+    let shown = "<img src='fade.svg'>";
+    let painted = paint_within(shown, UNLIMITED);
+    assert!(painted.warnings.is_empty(), "{:?}", painted.warnings);
+    assert_eq!(painted.svg_pixels, 160 * 40);
+    let (image, rect) = &pictures(&painted.items)[0];
+    assert_size(*rect, 40.0, 10.0);
+    assert_eq!(rgba(image, 20.0, 5.0), GREEN);
+    // The same file at another address is the same picture, drawn once.
+    let twice = paint_within("<img src='fade.svg'><img src='copy/fade.svg'>", UNLIMITED);
+    assert_eq!(twice.svg_pixels, 160 * 40);
+    assert_eq!(images(&twice.items).len(), 2);
+    // Without the pixels for it, it is left blank.
+    let within = Within {
+        svg_pixels: 160 * 40 - 1,
+        ..UNLIMITED
+    };
+    let painted = paint_within(shown, within);
+    assert!(images(&painted.items).is_empty());
+    assert_eq!(painted.warnings.len(), 1, "{:?}", painted.warnings);
+    assert!(
+        painted.warnings[0].contains("was left blank"),
+        "{:?}",
+        painted.warnings
+    );
+}
+
+#[test]
+fn the_pixels_of_an_svg_file_that_is_cut_from_are_within_the_limit() {
+    // A part of an image is cut from its pixels, which a file has a thousand of along
+    // its longer side.
+    let part = "<div style='width: 20px; height: 10px; \
+                background: url(fade.svg#xywh=0,0,512,256) no-repeat'></div>";
+    let painted = paint_within(part, UNLIMITED);
+    assert!(painted.warnings.is_empty(), "{:?}", painted.warnings);
+    assert_eq!(painted.svg_pixels, 1024 * 256);
+    assert_eq!(images(&painted.items).len(), 1);
+    let within = Within {
+        svg_pixels: 1024 * 256 - 1,
+        ..UNLIMITED
+    };
+    let painted = paint_within(part, within);
+    assert!(images(&painted.items).is_empty());
+    assert_eq!(painted.warnings.len(), 1, "{:?}", painted.warnings);
+}
+
+#[test]
+fn a_hidden_image_of_an_svg_file_is_not_drawn() {
+    let painted = paint_within("<img src='icon.svg' style='visibility: hidden'>", UNLIMITED);
+    assert!(painted.warnings.is_empty(), "{:?}", painted.warnings);
+    assert!(painted.items.is_empty(), "{:?}", painted.items);
 }

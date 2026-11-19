@@ -15,7 +15,7 @@ use crate::boxes::BlockBox;
 use crate::display::{Color, DisplayItem, Rect, Shading};
 use crate::fragment::BoxFragment;
 use crate::fragment::ElementBox;
-use crate::images::{ElementImage, Image, Images, natural_size, orientation};
+use crate::images::{ElementImage, FilePicture, Image, Images, natural_size, orientation};
 use crate::paginate::LaidPage;
 use crate::svg::SvgPicture;
 
@@ -48,7 +48,7 @@ pub enum Picture {
     Fade(Vec<(Picture, f32)>),
     /// `element()`: an element as painted.
     Element(ElementImage),
-    /// An `<svg>` element.
+    /// An `<svg>` element, or an SVG file.
     Svg(Arc<SvgPicture>),
     /// The document of an `iframe`.
     Frame(Frame),
@@ -77,15 +77,28 @@ impl Picture {
     /// The image `value` gives in an element with `style`, or `None` for `none` and for
     /// invalid images, which paint nothing.
     pub fn resolve(value: &ImageValue, images: &Images, style: &ComputedValues) -> Option<Self> {
+        Self::resolve_as(value, images, style, false)
+    }
+
+    /// The image `value` gives, as [`Picture::resolve`] does. With `pixels`, an SVG file
+    /// is the pixels it is drawn to once, which is what can be flipped and given a
+    /// resolution.
+    fn resolve_as(
+        value: &ImageValue,
+        images: &Images,
+        style: &ComputedValues,
+        pixels: bool,
+    ) -> Option<Self> {
         match value {
             ImageValue::None | ImageValue::SpecifiedGradient(_) => None,
-            ImageValue::Url(url) => url_picture(url, images),
+            ImageValue::Url(url) => url_picture(url, images, pixels),
             ImageValue::Gradient(gradient) => Some(Picture::Gradient(gradient.clone())),
             ImageValue::Image(function) => {
+                let pixels = pixels || function.rtl.is_some();
                 let loaded = function
                     .src
                     .as_ref()
-                    .and_then(|src| url_picture(src, images));
+                    .and_then(|src| url_picture(src, images, pixels));
                 match loaded {
                     Some(Picture::Raster {
                         image, dppx, crop, ..
@@ -122,7 +135,7 @@ impl Picture {
                     .collect();
                 options.sort_by(|a, b| b.resolution.total_cmp(&a.resolution));
                 options.into_iter().find_map(|option| {
-                    match Picture::resolve(&option.image, images, style)? {
+                    match Picture::resolve_as(&option.image, images, style, true)? {
                         Picture::Raster {
                             image, flip, crop, ..
                         } => Some(Picture::Raster {
@@ -142,7 +155,9 @@ impl Picture {
                     .zip(fractions)
                     .filter_map(|((source, _), fraction)| {
                         let picture = match source {
-                            FadeSource::Image(image) => Picture::resolve(image, images, style)?,
+                            FadeSource::Image(image) => {
+                                Picture::resolve_as(image, images, style, pixels)?
+                            }
                             FadeSource::Color(c) => Picture::Color(color(c, style)),
                         };
                         Some((picture, fraction))
@@ -152,6 +167,23 @@ impl Picture {
             }
             ImageValue::Element(id) => images.element(id).map(Picture::Element),
             ImageValue::Paint(_) => None,
+        }
+    }
+
+    /// The picture of the image file at `url`, or `None` if it cannot be shown.
+    pub(crate) fn file(url: &str, images: &Images) -> Option<Self> {
+        Some(match images.picture(url)? {
+            FilePicture::Image(image) => Picture::raster(image),
+            FilePicture::Svg(svg) => Picture::Svg(svg),
+        })
+    }
+
+    /// Whether the picture has a shape and no size of its own.
+    pub(crate) fn shape_only(&self) -> bool {
+        match self {
+            Picture::Raster { image, .. } => image.shape_only,
+            Picture::Svg(svg) => svg.shape_only(),
+            _ => false,
         }
     }
 
@@ -371,12 +403,17 @@ impl Picture {
     }
 }
 
-/// The image at a URL, which may end in a `#xywh=` media fragment.
-fn url_picture(url: &str, images: &Images) -> Option<Picture> {
+/// The image at a URL, which may end in a `#xywh=` media fragment. A part of an image is
+/// cut from its pixels, so an SVG file with a fragment is drawn to pixels, as it is when
+/// `pixels` asks for them.
+fn url_picture(url: &str, images: &Images, pixels: bool) -> Option<Picture> {
     let (file, crop) = match url.split_once('#') {
         Some((file, fragment)) => (file, Some(fragment)),
         None => (url, None),
     };
+    if crop.is_none() && !pixels {
+        return Picture::file(file, images);
+    }
     let image = images.get(file)?;
     let crop = crop.and_then(|fragment| media_fragment(fragment, &image));
     Some(Picture::Raster {

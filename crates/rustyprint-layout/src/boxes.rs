@@ -30,7 +30,7 @@ use rustyprint_dom::{Document, Element, NodeData, NodeId, local_name, ns};
 
 mod controls;
 
-use crate::images::{Image, Images, natural_size};
+use crate::images::Images;
 use crate::picture::{Frame, Picture};
 use crate::table;
 use controls::Control;
@@ -1348,11 +1348,18 @@ impl Builder<'_> {
     /// What an HTML element that can embed content renders as (HTML § 15.4).
     fn embedding(&self, element: &Element, style: &ComputedValues) -> Embedding {
         let attr = |name: &str| element.attr(name).map(str::trim).filter(|v| !v.is_empty());
-        let image = |url: Option<&str>| url.and_then(|url| self.images.get(url));
-        let replaced = |image: Arc<Image>| {
+        let image = |url: Option<&str>| url.and_then(|url| Picture::file(url, self.images));
+        // The size of an image file at `density` image pixels for each CSS pixel.
+        let size = |picture: &Picture, density: f32| {
+            let natural = picture
+                .natural_size(style)
+                .filter(|_| !picture.shape_only());
+            natural.map(|(w, h)| (w / density, h / density))
+        };
+        let replaced = |picture: Picture| {
             Embedding::Replaced(Replaced {
-                size: (!image.shape_only).then(|| natural_size(&image, style)),
-                picture: Some(Picture::raster(image)),
+                size: size(&picture, 1.0),
+                picture: Some(picture),
                 widget: None,
             })
         };
@@ -1369,11 +1376,10 @@ impl Builder<'_> {
                         .and_then(first_srcset)
                         .map_or((None, 1.0), |(url, density)| (Some(url), density)),
                 };
-                if let Some(image) = image(src) {
-                    let (w, h) = natural_size(&image, style);
+                if let Some(picture) = image(src) {
                     return Embedding::Replaced(Replaced {
-                        size: (!image.shape_only).then_some((w / density, h / density)),
-                        picture: Some(Picture::raster(image)),
+                        size: size(&picture, density),
+                        picture: Some(picture),
                         widget: None,
                     });
                 }
