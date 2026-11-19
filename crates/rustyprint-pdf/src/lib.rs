@@ -503,7 +503,11 @@ impl Writer {
                                 LineJoin::Bevel => LineJoinStyle::BevelJoin,
                             });
                             content.set_miter_limit(shape.miter_limit.max(1.0));
-                            if !shape.dashes.is_empty() {
+                            // Dashes too short to be seen are a solid line, which is
+                            // what a browser draws once there are too many to make. A
+                            // viewer would otherwise make millions of them.
+                            let period: f32 = shape.dashes.iter().sum();
+                            if period * PX_TO_PT * scale_of(to_page) >= MIN_DASH_PERIOD {
                                 content.set_dash_pattern(
                                     shape.dashes.iter().map(|dash| dash * PX_TO_PT),
                                     shape.dash_offset * PX_TO_PT,
@@ -1124,6 +1128,16 @@ fn pdf_matrix([a, b, c, d, e, f]: Matrix, height: f32) -> Matrix {
         c * height + e * PX_TO_PT,
         height * (1.0 - d) - f * PX_TO_PT,
     ]
+}
+
+/// The shortest dash and gap, together, that are drawn as dashes, in points on the page:
+/// one dot of a 1200 dpi printer. A shorter pattern cannot be told from a solid line.
+const MIN_DASH_PERIOD: f32 = 72.0 / 1200.0;
+
+/// How many times larger a transformation draws, as the square root of what it does to
+/// an area.
+fn scale_of(matrix: Matrix) -> f32 {
+    (matrix[0] * matrix[3] - matrix[1] * matrix[2]).abs().sqrt()
 }
 
 /// How far from the page's corner a group may paint, in points: more than any page.

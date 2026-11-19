@@ -252,3 +252,26 @@ fn a_shape_whose_coordinates_overflow_is_left_out_of_a_valid_pdf() {
         assert!(count(operators, "f") >= 1, "{broken}: {operators:?}");
     }
 }
+
+#[test]
+fn dashes_too_short_to_see_are_a_solid_line() {
+    let dashes = |svg: &str| {
+        let output = rendered(svg, &RenderOptions::default());
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+        let (operators, _) = &pages(&output.pdf)[0];
+        assert_eq!(count(operators, "S"), 1, "{operators:?}");
+        count(operators, "d")
+    };
+    let line = |attributes: &str, dashes: &str| {
+        format!(
+            "<svg width='400' height='20' {attributes}>\
+             <path d='M 0 10 H 400' stroke='#000000' stroke-dasharray='{dashes}'/></svg>"
+        )
+    };
+    assert_eq!(dashes(&line("", "3 3")), 1);
+    // A viewer would have to make millions of these along the line.
+    assert_eq!(dashes(&line("", "0.0001")), 0);
+    // What counts is the length on the page: this drawing is a thousandth of its size.
+    assert_eq!(dashes(&line("viewBox='0 0 400000 20000'", "3 3")), 0);
+    assert_eq!(dashes(&line("viewBox='0 0 400000 20000'", "3000 3000")), 1);
+}
