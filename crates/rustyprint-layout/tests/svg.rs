@@ -1242,3 +1242,24 @@ fn a_hidden_image_of_an_svg_file_is_not_drawn() {
     assert!(painted.warnings.is_empty(), "{:?}", painted.warnings);
     assert!(painted.items.is_empty(), "{:?}", painted.items);
 }
+
+#[test]
+fn a_hidden_drawing_that_shapes_cannot_express_takes_no_pixels() {
+    // A filter is what shapes cannot express, whether or not what it filters is visible.
+    let drawing = |style: &str| {
+        format!(
+            "<svg width='40' height='10' style='visibility: hidden'>\
+             <filter id='blur'><feGaussianBlur stdDeviation='1'/></filter>\
+             <g filter='url(#blur)'><rect width='40' height='10' fill='#00ff00' {style}/></g></svg>"
+        )
+    };
+    // Nothing in it is visible, so it is not drawn to pixels to show nothing.
+    let painted = paint_within(&drawing(""), UNLIMITED);
+    assert!(painted.warnings.is_empty(), "{:?}", painted.warnings);
+    assert_eq!(painted.svg_pixels, 0);
+    assert!(images(&painted.items).is_empty());
+    // What it makes visible is drawn, and to pixels.
+    let painted = paint_within(&drawing("style='visibility: visible'"), UNLIMITED);
+    assert_eq!(painted.svg_pixels, 160 * 40);
+    assert_eq!(images(&painted.items).len(), 1);
+}

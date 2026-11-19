@@ -412,6 +412,11 @@ impl SvgPicture {
                 warn(too_many_shapes());
                 Content::Items(Arc::from([]))
             }
+            // Nothing of it shows, as in a hidden element that makes nothing visible, so
+            // there is nothing to draw to pixels.
+            Err(Refused::Unsupported) if !shows(parsed.tree.root()) => {
+                Content::Items(Arc::from([]))
+            }
             Err(Refused::Unsupported) => Content::Pixels {
                 tree: Box::new(parsed.tree),
                 max_pixels,
@@ -530,6 +535,16 @@ impl SvgPicture {
         drawn.push((size, image.clone()));
         image
     }
+}
+
+/// Whether anything in `group` is visible.
+fn shows(group: &usvg::Group) -> bool {
+    group.children().iter().any(|child| match child {
+        usvg::Node::Group(group) => shows(group),
+        usvg::Node::Path(path) => path.is_visible(),
+        usvg::Node::Image(image) => image.is_visible(),
+        usvg::Node::Text(text) => shows(text.flattened()),
+    })
 }
 
 /// Whether the SVG has a shape and no size of its own: a `viewBox`, and neither a `width`
