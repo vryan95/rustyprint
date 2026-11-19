@@ -521,6 +521,47 @@ mod tests {
     }
 
     #[test]
+    fn embeds_svg_elements() {
+        let output = render(
+            "<p>before</p><svg width='200' height='120' viewBox='0 0 200 120'>\
+             <rect width='200' height='120' fill='#ff0000'/>\
+             <text x='120' y='60' font-size='20'>12%</text></svg>",
+            &RenderOptions::default(),
+        )
+        .unwrap();
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+        let doc = parse(&output.pdf);
+        let images = doc
+            .objects
+            .values()
+            .filter_map(|object| object.as_stream().ok())
+            .filter(|stream| {
+                stream
+                    .dict
+                    .get(b"Subtype")
+                    .and_then(|s| s.as_name())
+                    .is_ok_and(|name| name == b"Image")
+            })
+            .count();
+        assert_eq!(images, 1, "the SVG is a picture");
+        // Its label is part of the picture, not text of the page.
+        let text = doc.extract_text(&[1]).unwrap();
+        assert!(text.contains("before"), "{text:?}");
+        assert!(!text.contains("12%"), "{text:?}");
+
+        // One that cannot be drawn is warned about, and the rest of the page is rendered.
+        let output = render(
+            "<svg width='20' height='20'><rect \"x='1' width='9' height='9'/></svg><p>after</p>",
+            &RenderOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(output.warnings.len(), 1, "{:?}", output.warnings);
+        assert!(output.warnings[0].contains("could not draw an `<svg>` element"));
+        let text = parse(&output.pdf).extract_text(&[1]).unwrap();
+        assert!(text.contains("after"), "{text:?}");
+    }
+
+    #[test]
     fn linked_stylesheets_load_from_assets() {
         let mut options = RenderOptions::default();
         options
