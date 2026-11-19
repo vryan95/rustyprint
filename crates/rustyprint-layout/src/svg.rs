@@ -262,18 +262,23 @@ type Drawn = ((u32, u32), Option<Arc<Image>>);
 
 impl SvgPicture {
     /// The picture of a parsed `<svg>` element whose style is `style`. Images it holds are
-    /// decoded by `decode`; `max_pixels` and `budget` limit what is drawn to pixels.
+    /// decoded by `decode`; `max_pixels` and `budget` limit what is drawn to pixels, and
+    /// `warn` is told what was left out of it.
     pub(crate) fn new(
         parsed: Parsed,
         style: &ComputedValues,
         decode: &dyn Fn(&[u8]) -> Option<Arc<Image>>,
         max_pixels: u64,
         budget: &Arc<PixelBudget>,
+        warn: &dyn Fn(String),
     ) -> Self {
         let size = (parsed.tree.size().width(), parsed.tree.size().height());
         let context = crate::svg_shapes::Context { style, decode };
         let content = match crate::svg_shapes::items(&parsed.tree, &context) {
-            Ok(items) => Content::Items(items.into()),
+            Ok(drawing) => {
+                drawing.warnings.into_iter().for_each(warn);
+                Content::Items(drawing.items.into())
+            }
             Err(_) => Content::Pixels {
                 tree: Box::new(parsed.tree),
                 max_pixels,

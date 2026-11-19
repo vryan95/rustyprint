@@ -483,6 +483,7 @@ impl<'a> Images<'a> {
                     &|bytes| self.svg_image(bytes),
                     self.max_pixels,
                     &self.svg_pixels,
+                    &|warning| self.warn(warning),
                 )))
             }
             Err(error) => {

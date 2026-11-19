@@ -13,7 +13,7 @@ use unicode_bidi::{BidiClass, bidi_class};
 
 use crate::display::{
     BlendMode, Color, DisplayItem, FillRule, Group, IDENTITY, LineCap, LineJoin, LineStyle, Matrix,
-    Path, PathSegment, Point, Rect, StrokeShape, TextRun, multiply,
+    Path, PathSegment, Point, Rect, StrokeShape, TextRun, drawable, multiply,
 };
 use crate::fonts::FontChoice;
 use crate::images::Image;
@@ -30,25 +30,54 @@ pub(crate) struct Context<'a> {
 /// What an SVG has that display items cannot express.
 pub(crate) type Refused = &'static str;
 
-/// The display items of `tree`, in its own CSS pixels from its top left corner.
-pub(crate) fn items(tree: &usvg::Tree, context: &Context) -> Result<Vec<DisplayItem>, Refused> {
+/// An SVG as display items.
+pub(crate) struct Drawing {
+    /// In the SVG's own CSS pixels from its top left corner.
+    pub items: Vec<DisplayItem>,
+    /// What was left out of it.
+    pub warnings: Vec<String>,
+}
+
+/// The display items of `tree`.
+pub(crate) fn items(tree: &usvg::Tree, context: &Context) -> Result<Drawing, Refused> {
     let mut painter = Painter {
         context,
         items: Vec::new(),
+        left_out: false,
         fonts: HashMap::new(),
     };
     painter.group(tree.root())?;
-    Ok(painter.items)
+    let warnings = painter.left_out.then(|| {
+        "part of an SVG was left out: it has a coordinate that is not a number, or is too \
+         large to draw"
+            .to_owned()
+    });
+    Ok(Drawing {
+        items: painter.items,
+        warnings: warnings.into_iter().collect(),
+    })
 }
 
 struct Painter<'a> {
     context: &'a Context<'a>,
     items: Vec<DisplayItem>,
+    /// Whether something was left out for a number that cannot be drawn.
+    left_out: bool,
     /// The engine's choice for each font the text asks for.
     fonts: HashMap<usvg::Font, FontChoice>,
 }
 
 impl Painter<'_> {
+    /// Adds what paints, unless one of its numbers is not a number or has overflowed:
+    /// that is left out, since no file can hold it.
+    fn paint(&mut self, item: DisplayItem) {
+        if item.is_drawable() {
+            self.items.push(item);
+        } else {
+            self.left_out = true;
+        }
+    }
+
     fn group(&mut self, group: &usvg::Group) -> Result<(), Refused> {
         rustyprint_dom::budget::check_deadline();
         let opacity = group.opacity().get();
@@ -65,6 +94,10 @@ impl Painter<'_> {
         let start = self.items.len();
         let mut pushed = 0;
         let transform = matrix(group.transform());
+        if !drawable(&transform) {
+            self.left_out = true;
+            return Ok(());
+        }
         if transform != IDENTITY {
             self.items.push(DisplayItem::PushTransform(transform));
             pushed += 1;
@@ -73,6 +106,11 @@ impl Painter<'_> {
             let mut clips = Vec::new();
             if !clip_paths(clip, &mut clips)? {
                 // Clipped to nothing.
+                self.items.truncate(start);
+                return Ok(());
+            }
+            if clips.iter().any(|(path, _)| !path.is_drawable()) {
+                self.left_out = true;
                 self.items.truncate(start);
                 return Ok(());
             }
@@ -165,13 +203,17 @@ impl Painter<'_> {
             usvg::PaintOrder::FillAndStroke => [fill, stroke],
             usvg::PaintOrder::StrokeAndFill => [stroke, fill],
         };
-        self.items
-            .extend(painted.into_iter().flatten().filter(|item| match item {
+        for item in painted.into_iter().flatten() {
+            let transparent = match &item {
                 DisplayItem::Path { color, .. } | DisplayItem::StrokePath { color, .. } => {
-                    !color.is_transparent()
+                    color.is_transparent()
                 }
-                _ => true,
-            }));
+                _ => false,
+            };
+            if !transparent {
+                self.paint(item);
+            }
+        }
         Ok(())
     }
 
@@ -203,7 +245,7 @@ impl Painter<'_> {
                     } else {
                         rect
                     };
-                    self.items.push(DisplayItem::Image {
+                    self.paint(DisplayItem::Image {
                         image: decoded,
                         rect,
                         smooth: !matches!(
@@ -218,6 +260,10 @@ impl Painter<'_> {
                 }
             }
             usvg::ImageKind::SVG(tree) => {
+                if !drawable(&[rect.width, rect.height]) {
+                    self.left_out = true;
+                    return Ok(());
+                }
                 self.items.push(DisplayItem::PushClip(rect));
                 self.group(tree.root())?;
                 self.items.push(DisplayItem::PopClip);
@@ -231,7 +277,9 @@ impl Painter<'_> {
     fn text(&mut self, text: &usvg::Text) -> Result<(), Refused> {
         match self.runs(text) {
             Some(runs) => {
-                self.items.extend(runs.into_iter().map(DisplayItem::Text));
+                for run in runs {
+                    self.paint(DisplayItem::Text(run));
+                }
                 Ok(())
             }
             None => self.group(text.flattened()),

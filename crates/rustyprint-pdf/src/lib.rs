@@ -12,11 +12,13 @@ use pdf_writer::types::{
     LineJoinStyle, MaskType, TextRenderingMode,
 };
 use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect, Ref, Str, TextStr};
+use rustyprint_layout::Rect as LayoutRect;
 use rustyprint_layout::display::Group;
 use rustyprint_layout::display::PrintMarks;
 use rustyprint_layout::display::{
     Bookmark, Destination, Document, LinkTarget, Page, Shading, ShadingKind,
 };
+use rustyprint_layout::display::{IDENTITY, Matrix, drawable, invert, multiply, transform_rect};
 use rustyprint_layout::display::{LineCap, LineJoin, LineStyle};
 use rustyprint_layout::{
     Color, DisplayItem, FillRule, Font, Image, ImageData, Path, PathSegment, Point, TextRun,
@@ -220,7 +222,7 @@ impl Writer {
                 marks(&mut content, page.marks, width, height, bleed);
             }
             let mut used = Resources::default();
-            self.render(&mut content, &mut used, &page.items, height);
+            self.render(&mut content, &mut used, &page.items, height, IDENTITY);
             let content_id = self.refs.next();
             pending.push((content_id, content.finish().into_vec()));
 
@@ -328,16 +330,42 @@ impl Writer {
         res: &mut Resources,
         items: &[DisplayItem],
         height: f32,
+        outer: Matrix,
     ) {
+        // The transformation from the coordinates being written to the page's, and what
+        // it was before each open clip and transform.
+        let mut to_page = outer;
+        let mut before: Vec<Matrix> = Vec::new();
         let mut index = 0;
         while index < items.len() {
             let item = &items[index];
             index += 1;
             if let DisplayItem::PushGroup(group) = item {
                 let end = group_end(items, index);
-                self.group(content, res, group, &items[index..end], height);
+                self.group(content, res, group, &items[index..end], height, to_page);
                 index = (end + 1).min(items.len());
                 continue;
+            }
+            // A number that is not one, or that overflows when it is placed on the page,
+            // is never written: the item is left out, and so is what it would clip or move.
+            if !item.is_drawable() {
+                if opens(item) {
+                    before.push(to_page);
+                    content.save_state();
+                    content.rect(0.0, 0.0, 0.0, 0.0);
+                    content.clip_nonzero();
+                    content.end_path();
+                }
+                continue;
+            }
+            match item {
+                DisplayItem::PushTransform(matrix) => {
+                    before.push(to_page);
+                    to_page = multiply(to_page, pdf_matrix(*matrix, height));
+                }
+                DisplayItem::PopClip => to_page = before.pop().unwrap_or(to_page),
+                _ if opens(item) => before.push(to_page),
+                _ => {}
             }
             let alpha = item_alpha(item);
             if alpha < 255 {
@@ -556,17 +584,9 @@ impl Writer {
                         }
                     }
                 }
-                DisplayItem::PushTransform([a, b, c, d, e, f]) => {
-                    // The matrix in PDF space, whose y axis points up from the bottom.
+                DisplayItem::PushTransform(matrix) => {
                     content.save_state();
-                    content.transform([
-                        *a,
-                        -b,
-                        -c,
-                        *d,
-                        c * height + e * PX_TO_PT,
-                        height * (1.0 - d) - f * PX_TO_PT,
-                    ]);
+                    content.transform(pdf_matrix(*matrix, height));
                 }
                 DisplayItem::PopClip => {
                     content.restore_state();
@@ -590,15 +610,17 @@ impl Writer {
         group: &Group,
         items: &[DisplayItem],
         height: f32,
+        to_page: Matrix,
     ) {
         let mut inner = Content::new();
         let mut used = Resources::default();
-        self.render(&mut inner, &mut used, items, height);
+        self.render(&mut inner, &mut used, items, height, to_page);
+        let bbox = group_box(to_page);
         let data = compress_to_vec_zlib(&inner.finish(), COMPRESSION_LEVEL);
         let form_id = self.refs.next();
         let mut form = self.pdf.form_xobject(form_id, &data);
         form.filter(Filter::FlateDecode);
-        form.bbox(Rect::new(-1.0e5, -1.0e5, 1.0e5, 1.0e5));
+        form.bbox(bbox);
         form.group()
             .transparency()
             .isolated(group.isolated)
@@ -635,7 +657,7 @@ impl Writer {
             let data = mask_content.finish();
             let mask_id = self.refs.next();
             let mut form = self.pdf.form_xobject(mask_id, &data);
-            form.bbox(Rect::new(-1.0e5, -1.0e5, 1.0e5, 1.0e5));
+            form.bbox(bbox);
             form.group().transparency().color_space().device_gray();
             form.resources()
                 .x_objects()
@@ -1078,6 +1100,51 @@ impl Writer {
             }
         }
     }
+}
+
+/// Whether `item` starts a clip or a transform, which a `PopClip` ends.
+fn opens(item: &DisplayItem) -> bool {
+    matches!(
+        item,
+        DisplayItem::PushClip(_)
+            | DisplayItem::PushClipPath { .. }
+            | DisplayItem::PushClipText(_)
+            | DisplayItem::PushTransform(_)
+    )
+}
+
+/// A transformation of the display list in PDF space, whose y axis points up from the
+/// bottom of a page `height` points high.
+fn pdf_matrix([a, b, c, d, e, f]: Matrix, height: f32) -> Matrix {
+    [
+        a,
+        -b,
+        -c,
+        d,
+        c * height + e * PX_TO_PT,
+        height * (1.0 - d) - f * PX_TO_PT,
+    ]
+}
+
+/// How far from the page's corner a group may paint, in points: more than any page.
+const GROUP_REACH: f32 = 1.0e5;
+
+/// The bounding box of a transparency group written where `to_page` takes its coordinates
+/// to the page's. The box is in the group's own coordinates, so it is the page's reach
+/// seen from there: inside a drawing scaled down a thousand times, as an SVG with a large
+/// `viewBox` is, a box of the page's size would cut the drawing off.
+fn group_box(to_page: Matrix) -> Rect {
+    let reach = LayoutRect::new(
+        -GROUP_REACH,
+        -GROUP_REACH,
+        2.0 * GROUP_REACH,
+        2.0 * GROUP_REACH,
+    );
+    let seen = invert(to_page)
+        .map(|from_page| transform_rect(from_page, reach))
+        .filter(|seen| drawable(&[seen.x, seen.y, seen.right(), seen.bottom()]))
+        .unwrap_or(reach);
+    Rect::new(seen.x, seen.y, seen.right(), seen.bottom())
 }
 
 /// The index of the `PopGroup` that ends a group whose items start at `start`, or the end of

@@ -359,6 +359,16 @@ pub fn apply(m: Matrix, p: Point) -> Point {
     )
 }
 
+/// The largest coordinate that is drawn. A number past it, or one that is not a number at
+/// all, comes of an overflow, as in an SVG with a coordinate of `1e38` that is then scaled;
+/// a file holding one is not a valid PDF. Numbers within it can be multiplied together.
+pub const MAX_COORDINATE: f32 = 1.0e15;
+
+/// Whether every one of `values` is a number that can be drawn.
+pub fn drawable(values: &[f32]) -> bool {
+    values.iter().all(|value| value.abs() <= MAX_COORDINATE)
+}
+
 /// The smallest rectangle containing `rect` transformed by `m`.
 pub fn transform_rect(m: Matrix, rect: Rect) -> Rect {
     let corners = [
@@ -495,6 +505,16 @@ impl Path {
     pub fn bounds(&self) -> Option<Rect> {
         Rect::enclosing(self.points())
     }
+
+    /// Whether every coordinate of the path is a number that can be drawn.
+    pub fn is_drawable(&self) -> bool {
+        let point = |p: Point| drawable(&[p.x, p.y]);
+        self.segments.iter().all(|segment| match *segment {
+            PathSegment::MoveTo(p) | PathSegment::LineTo(p) => point(p),
+            PathSegment::CubicTo(a, b, c) => point(a) && point(b) && point(c),
+            PathSegment::Close => true,
+        })
+    }
 }
 
 /// The ends, corners and dashes of a stroke (SVG 2 § 13.5).
@@ -566,6 +586,44 @@ impl DisplayItem {
             | DisplayItem::PushGroup(_)
             | DisplayItem::PopGroup
             | DisplayItem::Backdrop(_) => None,
+        }
+    }
+
+    /// Whether every number that places the item can be drawn: see [`MAX_COORDINATE`].
+    pub fn is_drawable(&self) -> bool {
+        let point = |p: &Point| drawable(&[p.x, p.y]);
+        let rect = |r: &Rect| drawable(&[r.x, r.y, r.width, r.height]);
+        match self {
+            DisplayItem::Text(run) => run.is_drawable(),
+            DisplayItem::Rect { rect: r, .. }
+            | DisplayItem::Image { rect: r, .. }
+            | DisplayItem::Gradient { rect: r, .. }
+            | DisplayItem::PushClip(r) => rect(r),
+            DisplayItem::Polygon { points, .. } => points.iter().all(point),
+            DisplayItem::Polyline { points, width, .. } => {
+                drawable(&[*width]) && points.iter().all(point)
+            }
+            DisplayItem::Line {
+                from, to, width, ..
+            } => point(from) && point(to) && drawable(&[*width]),
+            DisplayItem::Path { path, .. } | DisplayItem::PushClipPath { path, .. } => {
+                path.is_drawable()
+            }
+            DisplayItem::StrokePath {
+                path, width, shape, ..
+            } => {
+                drawable(&[*width])
+                    && shape.as_ref().is_none_or(|shape| {
+                        drawable(&[shape.miter_limit, shape.dash_offset]) && drawable(&shape.dashes)
+                    })
+                    && path.is_drawable()
+            }
+            DisplayItem::PushClipText(runs) => runs.iter().all(TextRun::is_drawable),
+            DisplayItem::PushTransform(matrix) => drawable(matrix),
+            DisplayItem::PopClip
+            | DisplayItem::PushGroup(_)
+            | DisplayItem::PopGroup
+            | DisplayItem::Backdrop(_) => true,
         }
     }
 
@@ -761,6 +819,22 @@ impl TextRun {
     /// Total advance width of the run.
     pub fn width(&self) -> f32 {
         self.glyphs.iter().map(|g| g.x_advance).sum()
+    }
+
+    /// Whether every number that places the run and its glyphs can be drawn.
+    pub fn is_drawable(&self) -> bool {
+        let stroke = self.stroke.map_or(0.0, |stroke| stroke.width);
+        drawable(&[
+            self.origin.x,
+            self.origin.y,
+            self.size,
+            self.embolden,
+            self.oblique,
+            stroke,
+        ]) && self
+            .glyphs
+            .iter()
+            .all(|glyph| drawable(&[glyph.x_advance, glyph.x_offset, glyph.y_offset]))
     }
 }
 

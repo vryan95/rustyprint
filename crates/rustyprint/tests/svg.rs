@@ -156,3 +156,99 @@ fn a_drawing_that_does_not_fit_on_a_page_moves_to_the_next() {
     assert_eq!(count(&pages[1].0, "f"), 2);
     assert!(pages[1].1.contains("January") && pages[1].1.contains("last"));
 }
+
+/// The bounding box and the content of each transparency group of a PDF.
+fn groups(pdf: &[u8]) -> Vec<([f32; 4], lopdf::content::Content)> {
+    let doc = lopdf::Document::load_mem(pdf).expect("valid PDF");
+    let number = |object: &lopdf::Object| object.as_float().expect("a number");
+    doc.objects
+        .values()
+        .filter_map(|object| object.as_stream().ok())
+        .filter(|stream| {
+            let subtype = stream.dict.get(b"Subtype").and_then(|s| s.as_name());
+            subtype.is_ok_and(|name| name == b"Form")
+        })
+        .map(|stream| {
+            let bbox = stream.dict.get(b"BBox").and_then(|b| b.as_array());
+            let bbox: Vec<f32> = bbox.expect("a bounding box").iter().map(number).collect();
+            let content = stream.decompressed_content().expect("content");
+            let content = lopdf::content::Content::decode(&content).expect("operators");
+            ([bbox[0], bbox[1], bbox[2], bbox[3]], content)
+        })
+        .collect()
+}
+
+#[test]
+fn a_group_of_a_drawing_with_a_large_view_box_is_not_cut_off() {
+    // The drawing is scaled down a thousand times, so its shapes are far from the corner
+    // in their own coordinates; the group's box has to reach them there.
+    let output = rendered(
+        "<svg width='400' height='400' viewBox='0 0 400000 400000'><g opacity='0.5'>\
+         <rect x='300000' y='300000' width='50000' height='50000' fill='#ff0000'/>\
+         <rect x='320000' y='320000' width='50000' height='50000' fill='#0000ff'/></g></svg>",
+        &RenderOptions::default(),
+    );
+    assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+    let groups = groups(&output.pdf);
+    assert_eq!(groups.len(), 1);
+    let ([left, bottom, right, top], content) = &groups[0];
+    // The corners of its two rectangles, in the group's coordinates, are inside its box.
+    let corners: Vec<(f32, f32)> = content
+        .operations
+        .iter()
+        .filter(|operation| matches!(&*operation.operator, "m" | "l"))
+        .map(|operation| {
+            let at = |index: usize| operation.operands[index].as_float().expect("a number");
+            (at(0), at(1))
+        })
+        .collect();
+    assert!(corners.len() >= 8, "{corners:?}");
+    for (x, y) in corners {
+        assert!(
+            *left <= x && x <= *right && *bottom <= y && y <= *top,
+            "({x}, {y}) in {:?}",
+            groups[0].0
+        );
+    }
+}
+
+#[test]
+fn a_shape_whose_coordinates_overflow_is_left_out_of_a_valid_pdf() {
+    for (broken, warns) in [
+        (
+            "<rect x='1e39' width='10' height='10' fill='#0000ff'/>",
+            false,
+        ),
+        ("<path d='M 0 0 L 1e39 0 L 5 5 Z' fill='#0000ff'/>", false),
+        (
+            "<g transform='scale(1e30)'><rect width='1e30' height='1e30' fill='#0000ff'/></g>",
+            true,
+        ),
+        (
+            "<path d='M 0 0 L 5 0 L 5 5 Z' fill='#0000ff' stroke='#000000' \
+             stroke-width='1e30'/>",
+            true,
+        ),
+    ] {
+        let output = rendered(
+            &format!(
+                "<svg width='40' height='40'>{broken}\
+                 <rect width='20' height='20' fill='#ff0000'/></svg>"
+            ),
+            &RenderOptions::default(),
+        );
+        let left_out = output
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("part of an SVG was left out"));
+        assert_eq!(left_out, warns, "{broken}: {:?}", output.warnings);
+        // Every number of the page is a number, and the shape that can be drawn is there.
+        let doc = lopdf::Document::load_mem(&output.pdf).expect("valid PDF");
+        let (_, page) = doc.get_pages().into_iter().next().expect("a page");
+        let content = doc.get_page_content(page);
+        let text = String::from_utf8_lossy(&content).to_ascii_lowercase();
+        assert!(!text.contains("inf") && !text.contains("nan"), "{broken}");
+        let (operators, _) = &pages(&output.pdf)[0];
+        assert!(count(operators, "f") >= 1, "{broken}: {operators:?}");
+    }
+}
