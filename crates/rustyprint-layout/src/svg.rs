@@ -1,8 +1,16 @@
-//! SVG images: an SVG file is drawn to pixels, with more of them than its size in CSS
-//! pixels so that it prints sharply.
+//! SVG images: an SVG file, or an `<svg>` element in a document, is drawn to pixels, with
+//! more of them than its size in CSS pixels so that it prints sharply. Its text is drawn in
+//! the fonts the engine draws page text in.
+
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use resvg::{tiny_skia, usvg};
+use rustyprint_css::ComputedValues;
+use rustyprint_css::properties::types::{FamilyName, FontStyle, GenericFamily};
+use usvg::fontdb;
 
+use crate::Font;
 use crate::images::{Fit, Image, ImageData};
 
 /// The image pixels drawn for each CSS pixel of the SVG's size: 384 per inch.
@@ -23,16 +31,40 @@ pub(crate) fn is_svg(bytes: &[u8]) -> bool {
         .is_some_and(|&byte| byte == b'<')
 }
 
+/// What an SVG is drawn with besides its own markup.
+#[derive(Default)]
+pub(crate) struct Resources {
+    /// The style whose fonts the text is drawn in: its `@font-face` rules and its
+    /// fallbacks. Without one, as for an SVG file, text uses the bundled fonts.
+    pub style: Option<Arc<ComputedValues>>,
+    /// The files that `<image>` elements link to, already loaded, by the URL as written.
+    pub files: HashMap<String, Arc<Vec<u8>>>,
+}
+
 /// Draws an SVG file with at most `max_pixels` pixels.
 ///
 /// As for an SVG image in a browser, nothing outside the file is loaded: an image the SVG
-/// links to by URL is not drawn. Text is not drawn either.
-pub(crate) fn rasterize(bytes: &[u8], max_pixels: u64) -> Result<Image, String> {
+/// links to by URL is drawn only if `resources` holds it, which it does for an `<svg>`
+/// element in a document. Text is drawn in the fonts the engine draws page text in.
+pub(crate) fn rasterize(
+    bytes: &[u8],
+    max_pixels: u64,
+    resources: Resources,
+) -> Result<Image, String> {
+    let Resources { style, files } = resources;
+    let data = usvg::ImageHrefResolver::default_data_resolver();
     let options = usvg::Options {
         image_href_resolver: usvg::ImageHrefResolver {
             resolve_data: usvg::ImageHrefResolver::default_data_resolver(),
-            resolve_string: Box::new(|_, _| None),
+            // The kind of file is read from its bytes.
+            resolve_string: Box::new(move |href, options| {
+                data("text/plain", files.get(href)?.clone(), options)
+            }),
         },
+        font_resolver: font_resolver(style.unwrap_or_else(|| Arc::new(ComputedValues::initial()))),
+        // The font of text that names none, as for page text.
+        font_family: "serif".into(),
+        font_size: MEDIUM_FONT_SIZE,
         ..usvg::Options::default()
     };
     let text = std::str::from_utf8(bytes).map_err(|error| error.to_string())?;
@@ -126,5 +158,68 @@ fn fit(root: usvg::roxmltree::Node) -> Option<Fit> {
     Some(Fit {
         align: (along(x)?, along(y)?),
         slice,
+    })
+}
+
+/// The size of text that sets none, in CSS pixels: `medium`.
+const MEDIUM_FONT_SIZE: f32 = 16.0;
+
+/// Chooses the fonts of SVG text as the engine chooses them for page text with `style`:
+/// from its `@font-face` rules and the bundled families, with the same fallbacks.
+fn font_resolver(style: Arc<ComputedValues>) -> usvg::FontResolver<'static> {
+    // The fonts given to the SVG so far. A font is its file's bytes, so it is copied once.
+    let loaded: Arc<Mutex<Vec<(Font, fontdb::ID)>>> = Arc::default();
+    let load = move |font: &Font, database: &mut Arc<fontdb::Database>| {
+        let mut loaded = loaded.lock().ok()?;
+        if let Some((_, id)) = loaded.iter().find(|(known, _)| known.same_file(font)) {
+            return Some(*id);
+        }
+        let source = fontdb::Source::Binary(Arc::new(font.data().to_vec()));
+        let ids = Arc::make_mut(database).load_font_source(source);
+        let id = *ids.get(font.index() as usize)?;
+        loaded.push((font.clone(), id));
+        Some(id)
+    };
+    let (select_style, select_load) = (style.clone(), load.clone());
+    usvg::FontResolver {
+        select_font: Box::new(move |font, database| {
+            let mut wanted = (*select_style).clone();
+            wanted.font_family = font.families().iter().map(family_name).collect();
+            wanted.font_weight = f32::from(font.weight());
+            wanted.font_style = match font.style() {
+                usvg::FontStyle::Normal => FontStyle::Normal,
+                usvg::FontStyle::Italic => FontStyle::Italic,
+                usvg::FontStyle::Oblique => FontStyle::Oblique(14.0),
+            };
+            select_load(&crate::fonts::select(&wanted).font, database)
+        }),
+        select_fallback: Box::new(move |c, used, database| {
+            let choice = crate::fonts::select(&style);
+            choice
+                .fallbacks
+                .into_iter()
+                .chain(crate::fonts::script_fallback(&style, c))
+                .filter(|font| font.covers(c))
+                .filter_map(|font| load(&font, database))
+                .find(|id| !used.contains(id))
+        }),
+    }
+}
+
+/// A family of SVG text as a family of page text. A generic family written as a name, as
+/// the default family is, is the generic family.
+fn family_name(family: &usvg::FontFamily) -> FamilyName {
+    FamilyName::Generic(match family {
+        usvg::FontFamily::Serif => GenericFamily::Serif,
+        usvg::FontFamily::SansSerif => GenericFamily::SansSerif,
+        usvg::FontFamily::Cursive => GenericFamily::Cursive,
+        usvg::FontFamily::Fantasy => GenericFamily::Fantasy,
+        usvg::FontFamily::Monospace => GenericFamily::Monospace,
+        usvg::FontFamily::Named(name) => match name.to_ascii_lowercase().as_str() {
+            "serif" => GenericFamily::Serif,
+            "sans-serif" => GenericFamily::SansSerif,
+            "monospace" => GenericFamily::Monospace,
+            _ => return FamilyName::Named(name.clone()),
+        },
     })
 }

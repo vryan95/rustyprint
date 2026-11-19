@@ -86,7 +86,7 @@ impl Image {
     /// most `max_pixels` pixels.
     fn decode_within(bytes: &[u8], max_pixels: u64) -> Result<Image, String> {
         if crate::svg::is_svg(bytes) {
-            return crate::svg::rasterize(bytes, max_pixels);
+            return crate::svg::rasterize(bytes, max_pixels, crate::svg::Resources::default());
         }
         let orientation = exif_orientation(bytes);
         if let Some((width, height, components)) = jpeg_header(bytes)
@@ -307,6 +307,8 @@ pub type LoadFile<'a> = &'a dyn Fn(&str) -> Option<Vec<u8>>;
 pub struct Images<'a> {
     load: LoadFile<'a>,
     cache: RefCell<HashMap<String, Option<Arc<Image>>>>,
+    /// The pictures of `<svg>` elements, by their markup.
+    svgs: RefCell<HashMap<String, Option<Arc<Image>>>>,
     /// Elements painted for `element()`, by ID.
     elements: RefCell<HashMap<String, ElementImage>>,
     /// How many `iframe` documents are being built inside each other.
@@ -329,6 +331,7 @@ impl<'a> Images<'a> {
         Self {
             load,
             cache: RefCell::new(HashMap::new()),
+            svgs: RefCell::new(HashMap::new()),
             elements: RefCell::new(HashMap::new()),
             frames: Cell::new(0),
             max_pixels: u64::MAX,
@@ -372,6 +375,40 @@ impl<'a> Images<'a> {
             .borrow_mut()
             .insert(url.to_owned(), image.clone());
         image
+    }
+
+    /// The picture of an `<svg>` element written out as the SVG file `markup`, drawn with
+    /// `resources`, or `None` with a warning if it cannot be drawn.
+    pub(crate) fn svg_element(
+        &self,
+        markup: &str,
+        resources: crate::svg::Resources,
+    ) -> Option<Arc<Image>> {
+        if let Some(drawn) = self.svgs.borrow().get(markup) {
+            return drawn.clone();
+        }
+        rustyprint_dom::budget::check_deadline();
+        let image = match crate::svg::rasterize(markup.as_bytes(), self.max_pixels, resources) {
+            Ok(image) => Some(Arc::new(image)),
+            Err(error) => {
+                self.warn(format!("could not draw an `<svg>` element: {error}"));
+                None
+            }
+        };
+        self.svgs
+            .borrow_mut()
+            .insert(markup.to_owned(), image.clone());
+        image
+    }
+
+    /// The bytes of the image file at `url`, for an image inside another, or `None` with a
+    /// warning if it cannot be loaded or has more pixels than allowed.
+    pub(crate) fn file(&self, url: &str) -> Option<Vec<u8>> {
+        let Some(bytes) = (self.load)(url) else {
+            self.warn(format!("could not load image `{url}`"));
+            return None;
+        };
+        (!self.too_large(url, &bytes)).then_some(bytes)
     }
 
     /// Whether the image in `bytes` has more pixels than allowed, which is warned about.
@@ -710,6 +747,33 @@ mod tests {
         std::fs::remove_file(&path).ok();
         assert_eq!(rgba(&outside, 500, 500)[3], 0);
         assert_eq!(rgba(&linked, 500, 500)[3], 0);
+    }
+
+    #[test]
+    fn svg_text_is_drawn() {
+        let svg = |content: &str| {
+            let svg = format!(
+                r#"<svg xmlns="http://www.w3.org/2000/svg" width="100" height="20">{content}</svg>"#
+            );
+            Image::decode(svg.as_bytes()).unwrap()
+        };
+        // Black where the glyphs are, in pixels of the picture, four to a CSS pixel.
+        let inked = |image: &Image| {
+            (0..image.height)
+                .flat_map(|y| (0..image.width).map(move |x| (x, y)))
+                .filter(|&(x, y)| rgba(image, x, y) == [0, 0, 0, 255])
+                .count()
+        };
+        assert_eq!(inked(&svg("")), 0);
+        let regular = inked(&svg(
+            r#"<text x="2" y="15" font-size="12">Total 12%</text>"#,
+        ));
+        assert!(regular > 500, "{regular} pixels of text");
+        // A face of the bundled families is chosen as for page text.
+        let bold = inked(&svg(
+            r#"<text x="2" y="15" font-size="12" font-family="sans-serif" font-weight="bold">Total 12%</text>"#,
+        ));
+        assert!(bold > regular, "{bold} pixels of bold text");
     }
 
     #[test]

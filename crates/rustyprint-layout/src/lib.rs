@@ -34,6 +34,7 @@ mod ruby;
 mod shadow;
 mod shapes;
 mod svg;
+mod svg_element;
 pub mod table;
 mod text;
 mod transform;

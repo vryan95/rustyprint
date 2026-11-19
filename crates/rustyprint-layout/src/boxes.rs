@@ -996,8 +996,13 @@ impl Builder<'_> {
     ) {
         {
             {
+                let svg = element.name.ns == ns!(svg) && element.name.local == local_name!("svg");
                 if style.display == Display::Contents {
-                    self.children(contents, node, &style, false);
+                    // An `<svg>` element has no boxes to leave in its place: it is not
+                    // rendered (CSS Display 4 § 2.5).
+                    if !svg {
+                        self.children(contents, node, &style, false);
+                    }
                     return;
                 }
                 if self
@@ -1039,8 +1044,15 @@ impl Builder<'_> {
                     }
                     return;
                 }
-                if element.name.ns == ns!(html) {
-                    match self.embedding(element, &style) {
+                let embedding = if element.name.ns == ns!(html) {
+                    Some(self.embedding(element, &style))
+                } else if svg {
+                    Some(self.svg(node, &style))
+                } else {
+                    None
+                };
+                if let Some(embedding) = embedding {
+                    match embedding {
                         Embedding::Children => {}
                         Embedding::Nothing => return,
                         Embedding::Text(alt) => {
@@ -1420,6 +1432,23 @@ impl Builder<'_> {
             }
             _ => Embedding::Children,
         }
+    }
+
+    /// What an `<svg>` element renders as: a picture drawn from the element and its
+    /// descendants, which have no boxes of their own. One that cannot be drawn is an empty
+    /// box.
+    fn svg(&self, node: NodeId, style: &Arc<ComputedValues>) -> Embedding {
+        let image =
+            crate::svg_element::picture(self.document, self.styles, self.images, node, style);
+        Embedding::Replaced(Replaced {
+            size: match &image {
+                Some(image) if image.shape_only => None,
+                Some(image) => Some(natural_size(image, style)),
+                None => Some((300.0, 150.0)),
+            },
+            picture: image.map(Picture::raster),
+            widget: None,
+        })
     }
 
     /// The document an `iframe` shows: its `srcdoc`, or else the file at `src`, styled with
