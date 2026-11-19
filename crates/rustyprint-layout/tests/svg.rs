@@ -1006,4 +1006,75 @@ fn a_hidden_svg_element_draws_nothing_but_what_is_made_visible() {
     assert_eq!(rgba(&image, 10.0, 10.0), CLEAR);
     assert_eq!(rgba(&image, 30.0, 10.0), BLUE);
     assert!(!has_ink(&image, 0..40, 22..40), "hidden text");
+    // And so can a shape inside an element that is itself hidden, whose box is not drawn.
+    let items = paint(&format!(
+        "<style>.shown {{ visibility: visible }}</style>\
+         <svg width='40' height='40' style='visibility: hidden; background: #00ff00'>{chart}</svg>"
+    ));
+    assert!(texts(&items).is_empty());
+    assert!(
+        !items
+            .iter()
+            .any(|item| matches!(item, DisplayItem::Rect { .. })),
+        "the background of a hidden box"
+    );
+    let (image, _) = &pictures(&items)[0];
+    assert_eq!(rgba(image, 10.0, 10.0), CLEAR);
+    assert_eq!(rgba(image, 30.0, 10.0), BLUE);
+}
+
+/// A chart with a label that is seen, and a part that is not: a shape at the left and a
+/// word below it, in a group with `attributes`.
+fn chart_with_unseen_part(rules: &str, attributes: &str) -> String {
+    format!(
+        "<style>{rules}</style>
+         <svg width='100' height='60' style='font-family: monospace'>
+           <text x='40' y='15' font-size='10'>seen</text>
+           <g {attributes}>
+             <path d='M0 0h20v20h-20z' fill='#ff0000'/>
+             <text x='0' y='40' font-size='10'>unseen</text>
+           </g>
+         </svg>"
+    )
+}
+
+#[test]
+fn what_is_not_seen_is_not_drawn_and_is_not_text() {
+    for (what, rules, attributes) in [
+        ("a style attribute", "", "style='opacity: 0'"),
+        ("a class rule", ".axis { opacity: 0 }", "class='axis'"),
+        ("an attribute", "", "opacity='0'"),
+        (
+            "inside a group that is seen",
+            "",
+            "opacity='0.5'><g opacity='0'",
+        ),
+        ("hidden", ".axis { visibility: hidden }", "class='axis'"),
+        ("not displayed", ".axis { display: none }", "class='axis'"),
+        (
+            "paints of no opacity",
+            ".axis { fill-opacity: 0; stroke-opacity: 0 }",
+            "class='axis'",
+        ),
+    ] {
+        // The end of the `<svg>` closes a group left open.
+        let items = paint(&chart_with_unseen_part(rules, attributes));
+        let found: Vec<&str> = texts(&items).iter().map(|(text, ..)| *text).collect();
+        assert_eq!(found, ["seen"], "{what}");
+        let (image, _) = &pictures(&items)[0];
+        assert_eq!(rgba(image, 10.0, 10.0), CLEAR, "{what}");
+        assert!(!has_ink(image, 0..40, 30..45), "{what}: the unseen word");
+        assert!(has_ink(image, 40..65, 5..17), "{what}: the label");
+    }
+}
+
+#[test]
+fn a_group_that_is_partly_seen_is_drawn() {
+    let items = paint(&chart_with_unseen_part("", "style='opacity: 0.5'"));
+    let found: Vec<&str> = texts(&items).iter().map(|(text, ..)| *text).collect();
+    assert_eq!(found, ["seen", "unseen"]);
+    let (image, _) = &pictures(&items)[0];
+    let [r, g, b, a] = rgba(image, 10.0, 10.0);
+    assert!(r > 200 && g < 80 && b < 80, "a red shape");
+    assert!((120..=135).contains(&a), "half seen: {a}");
 }

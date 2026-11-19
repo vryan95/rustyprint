@@ -51,6 +51,11 @@ struct Painter<'a> {
 impl Painter<'_> {
     fn group(&mut self, group: &usvg::Group) -> Result<(), Refused> {
         rustyprint_dom::budget::check_deadline();
+        let opacity = group.opacity().get();
+        // What is wholly transparent paints nothing, and its text is not text of the page.
+        if opacity == 0.0 {
+            return Ok(());
+        }
         if !group.filters().is_empty() {
             return Err("a filter");
         }
@@ -76,7 +81,6 @@ impl Painter<'_> {
                 pushed += 1;
             }
         }
-        let opacity = group.opacity().get();
         let blend = blend_mode(group.blend_mode());
         match group.children() {
             // The opacity of a lone shape with one paint is that paint's.
