@@ -1078,3 +1078,16 @@ fn a_group_that_is_partly_seen_is_drawn() {
     assert!(r > 200 && g < 80 && b < 80, "a red shape");
     assert!((120..=135).contains(&a), "half seen: {a}");
 }
+
+#[test]
+fn a_curve_is_filled_though_it_is_one_segment() {
+    // The curve and the line back to its start enclose an area, which a browser fills.
+    let (image, _) =
+        picture("<svg width='100' height='60'><path d='M0 0 Q50 100 100 0' fill='#ff0000'/></svg>");
+    assert_eq!(rgba(&image, 50.0, 20.0), RED);
+    assert_eq!(rgba(&image, 50.0, 56.0), CLEAR);
+    // A straight line still has no inside.
+    let (image, _) =
+        picture("<svg width='100' height='60'><path d='M0 0 L100 60' fill='#ff0000'/></svg>");
+    assert_eq!(rgba(&image, 50.0, 30.0), CLEAR);
+}

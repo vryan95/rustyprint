@@ -127,7 +127,7 @@ impl Painter<'_> {
         let outline = outline(path.data());
         let fill = match path.fill() {
             // A single straight line, as of a `<line>`, has no inside to fill.
-            Some(_) if outline.segments.len() < 3 => None,
+            Some(_) if !encloses(&outline) => None,
             Some(fill) => Some(DisplayItem::Path {
                 path: outline.clone(),
                 color: color(fill.paint(), fill.opacity().get() * opacity)?,
@@ -443,6 +443,24 @@ fn matrix(transform: usvg::Transform) -> Matrix {
         transform.tx,
         transform.ty,
     ]
+}
+
+/// Whether a shape has an inside to fill: a curve, or a contour of two lines or more. A
+/// curve and the line that closes it enclose an area, as in `M0 0 Q50 50 100 0`.
+fn encloses(outline: &Path) -> bool {
+    let mut lines = 0;
+    outline.segments.iter().any(|segment| match segment {
+        PathSegment::MoveTo(_) => {
+            lines = 0;
+            false
+        }
+        PathSegment::LineTo(_) => {
+            lines += 1;
+            lines >= 2
+        }
+        PathSegment::CubicTo(..) => true,
+        PathSegment::Close => false,
+    })
 }
 
 /// The contours of a shape. A quadratic curve is the cubic curve of the same shape.
