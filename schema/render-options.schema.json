@@ -108,6 +108,11 @@
           "type": "integer",
           "minimum": 0
         },
+        "max_svg_pixels": {
+          "description": "Pixels drawn, in all, for the svg elements of a document that cannot be drawn as shapes, such as ones with gradients or filters; one that needs more than are left is left blank with a warning. Default: 64000000.",
+          "type": "integer",
+          "minimum": 0
+        },
         "timeout_ms": {
           "description": "How long the render may take, or null for no deadline. Default: 60000.",
           "type": ["integer", "null"],

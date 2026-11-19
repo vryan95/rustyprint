@@ -32,6 +32,7 @@ fn default_limits() {
     assert_eq!(limits.max_depth, 512);
     assert_eq!(limits.max_pages, 2_000);
     assert_eq!(limits.max_image_pixels, 100_000_000);
+    assert_eq!(limits.max_svg_pixels, 64_000_000);
     assert_eq!(limits.timeout, Some(Duration::from_secs(60)));
 }
 

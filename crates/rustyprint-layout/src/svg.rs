@@ -184,12 +184,13 @@ fn draw(
 }
 
 /// The pixels the SVGs of one document may be drawn to, all together, where they cannot be
-/// drawn as shapes. The pictures of the document share it, and warn through it.
+/// drawn as shapes. The pictures of the document share it.
 #[derive(Debug)]
 pub(crate) struct PixelBudget {
     max: u64,
     used: AtomicU64,
-    warnings: Mutex<Vec<String>>,
+    /// How many drawings were left blank for want of pixels.
+    refused: AtomicU64,
 }
 
 impl PixelBudget {
@@ -197,7 +198,7 @@ impl PixelBudget {
         Self {
             max,
             used: AtomicU64::new(0),
-            warnings: Mutex::new(Vec::new()),
+            refused: AtomicU64::new(0),
         }
     }
 
@@ -206,28 +207,25 @@ impl PixelBudget {
         self.used.load(Ordering::Relaxed)
     }
 
-    /// The problems found while painting, in the order they were found.
-    pub fn warnings(&self) -> Vec<String> {
-        self.warnings
-            .lock()
-            .map(|warnings| warnings.clone())
-            .unwrap_or_default()
+    /// How many drawings were left blank so far.
+    pub(crate) fn refused(&self) -> u64 {
+        self.refused.load(Ordering::Relaxed)
     }
 
-    /// Takes `pixels` from what is left, or warns that there are too few.
-    fn take(&self, pixels: u64) -> bool {
+    /// What to warn of when a drawing was left blank.
+    pub(crate) fn warning(&self) -> String {
+        format!(
+            "an `<svg>` element was left blank: it has to be drawn to pixels, and the \
+             limit of {} pixels for such drawings is used up",
+            self.max
+        )
+    }
+
+    /// Takes `pixels` from what is left, or counts a drawing left blank.
+    pub(crate) fn take(&self, pixels: u64) -> bool {
         let used = self.used();
         if pixels > self.max.saturating_sub(used) {
-            let message = format!(
-                "an `<svg>` element was left blank: it has to be drawn to pixels, and the \
-                 document's limit of {} pixels for such drawings is used up",
-                self.max
-            );
-            if let Ok(mut warnings) = self.warnings.lock()
-                && !warnings.contains(&message)
-            {
-                warnings.push(message);
-            }
+            self.refused.fetch_add(1, Ordering::Relaxed);
             return false;
         }
         self.used.store(used + pixels, Ordering::Relaxed);

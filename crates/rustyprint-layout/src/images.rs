@@ -597,7 +597,10 @@ impl<'a> Images<'a> {
     /// Problems loading and drawing images, in the order they were found.
     pub fn warnings(&self) -> Vec<String> {
         let mut warnings = self.warnings.borrow().clone();
-        warnings.extend(self.svg_pixels.warnings());
+        // Once for the document, however many of its drawings were left blank.
+        if self.svg_pixels.refused() > 0 {
+            warnings.push(self.svg_pixels.warning());
+        }
         warnings
     }
 }

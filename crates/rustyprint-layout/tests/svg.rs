@@ -42,20 +42,16 @@ fn paint_within(body: &str, within: Within) -> Painted {
     let load = |_: &str| None;
     let load_font = |url: &str| {
         let mono: &[u8] = include_bytes!("../../../fonts/NotoSansMono-Regular.ttf");
-        (url == "label.ttf").then(|| Arc::from(mono))
+        (url == "label.ttf").then(|| mono.to_vec())
     };
     let styles = compute_styles(
         &document,
         &StyleOptions {
             page_size: (800.0, 1000.0),
-            media_size: (800.0, 1000.0),
-            zoom: 1.0,
             stylesheet: None,
-            parsed_stylesheet: None,
             load: &load,
             font_metrics: None,
             load_font: Some(&load_font),
-            screen: false,
         },
     );
     let page = PageOptions {

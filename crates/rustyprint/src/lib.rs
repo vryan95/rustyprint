@@ -70,7 +70,7 @@ impl RenderOptions {
 
 /// Bounds on the work a render may do. Exceeding one fails the render with
 /// [`Error::LimitExceeded`] or [`Error::Timeout`], except that images over `max_image_pixels`
-/// are skipped with a warning.
+/// are skipped with a warning, and so are `<svg>` elements past `max_svg_pixels`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Limits {
     /// Size of the HTML in bytes.
@@ -83,6 +83,10 @@ pub struct Limits {
     pub max_pages: usize,
     /// Width times height of an image.
     pub max_image_pixels: u64,
+    /// Pixels drawn, in all, for the `<svg>` elements of a document that cannot be drawn as
+    /// shapes, such as ones with gradients or filters. Each pixel takes about four bytes
+    /// while the document is rendered.
+    pub max_svg_pixels: u64,
     /// How long a render may take; `None` for no deadline.
     pub timeout: Option<Duration>,
 }
@@ -95,6 +99,7 @@ impl Default for Limits {
             max_depth: 512,
             max_pages: 2_000,
             max_image_pixels: 100_000_000,
+            max_svg_pixels: 64_000_000,
             timeout: Some(Duration::from_secs(60)),
         }
     }
@@ -238,7 +243,9 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     let load = |url: &str| get(url).and_then(|bytes| String::from_utf8(bytes).ok());
     let load_font = |url: &str| get(url);
     let load_file = |url: &str| get(url);
-    let images = Images::new(&load_file).with_max_pixels(options.limits.max_image_pixels);
+    let images = Images::new(&load_file)
+        .with_max_pixels(options.limits.max_image_pixels)
+        .with_max_svg_pixels(options.limits.max_svg_pixels);
     let styles = rustyprint_layout::style(
         &document,
         &StyleOptions {

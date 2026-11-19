@@ -34,6 +34,8 @@ export interface Limits {
   maxPages?: number
   /** Width times height of an image. Default: 100000000. */
   maxImagePixels?: number
+  /** Pixels drawn, in all, for the svg elements that cannot be drawn as shapes; one that needs more is left blank with a warning. Default: 64000000. */
+  maxSvgPixels?: number
   /** How long the render may take, or null for no deadline. Default: 60000. */
   timeoutMs?: number | null
 }

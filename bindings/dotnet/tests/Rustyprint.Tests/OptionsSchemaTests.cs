@@ -77,6 +77,7 @@ public class OptionsSchemaTests
                 MaxDepth = 100,
                 MaxPages = 10,
                 MaxImagePixels = 1_000_000,
+                MaxSvgPixels = 1_000_000,
                 Timeout = TimeSpan.FromSeconds(30),
             },
         };
