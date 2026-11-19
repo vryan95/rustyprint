@@ -193,7 +193,9 @@ impl RoundedRect {
             }
         }
         segments.push(PathSegment::Close);
-        Path { segments }
+        Path {
+            segments: segments.into(),
+        }
     }
 }
 

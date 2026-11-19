@@ -275,3 +275,33 @@ fn dashes_too_short_to_see_are_a_solid_line() {
     assert_eq!(dashes(&line("viewBox='0 0 400000 20000'", "3 3")), 0);
     assert_eq!(dashes(&line("viewBox='0 0 400000 20000'", "3000 3000")), 1);
 }
+
+#[test]
+fn a_path_that_use_repeats_past_the_limit_on_shapes_is_left_blank_with_a_warning() {
+    // Two thousand segments, used five thousand times: ten million of them to draw.
+    let path = "l1 1".repeat(2000);
+    let uses: String = (0..5000)
+        .map(|i| format!("<use href='#p' x='{}' y='{}'/>", i % 100, i / 100))
+        .collect();
+    let html = format!(
+        "<p>before</p><svg width='200' height='100'><defs>\
+         <path id='p' d='M0 0{path}' fill='none' stroke='#000000'/></defs>{uses}</svg>\
+         <svg width='40' height='10'><path d='M 0 5 L 40 5' stroke='#000000'/></svg>\
+         <p>after</p>"
+    );
+    let output = rendered(&html, &RenderOptions::default());
+    assert_eq!(output.warnings.len(), 1, "{:?}", output.warnings);
+    assert!(
+        output.warnings[0].contains("an SVG was left blank"),
+        "{:?}",
+        output.warnings
+    );
+    // The page has the small drawing's one line, and none of the ten million.
+    let (operators, text) = &pages(&output.pdf)[0];
+    assert_eq!(count(operators, "S"), 1, "the small drawing");
+    assert_eq!(count(operators, "l"), 1, "{} lines", count(operators, "l"));
+    assert!(
+        text.contains("before") && text.contains("after"),
+        "{text:?}"
+    );
+}

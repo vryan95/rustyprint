@@ -4,6 +4,7 @@
 //! What display items cannot express is refused, and the SVG is then drawn to pixels: a
 //! gradient, a pattern, a mask, a filter, and a clip path made of several shapes.
 
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -25,10 +26,27 @@ pub(crate) struct Context<'a> {
     pub style: &'a ComputedValues,
     /// Decodes an image file the SVG holds, or gives `None` for one that cannot be shown.
     pub decode: &'a dyn Fn(&[u8]) -> Option<Arc<Image>>,
+    /// How many more path segments and glyphs the document may draw. A drawing takes what
+    /// it draws from it.
+    pub shapes: &'a Cell<u64>,
 }
 
 /// What an SVG has that display items cannot express.
-pub(crate) type Refused = &'static str;
+type Unsupported = &'static str;
+
+/// Why an SVG is not drawn as display items.
+pub(crate) enum Refused {
+    /// It has what display items cannot express, and is drawn to pixels.
+    Unsupported,
+    /// It has more shapes than the document has left, and is left blank.
+    TooLarge,
+}
+
+impl From<Unsupported> for Refused {
+    fn from(_: Unsupported) -> Self {
+        Refused::Unsupported
+    }
+}
 
 /// An SVG as display items.
 pub(crate) struct Drawing {
@@ -44,9 +62,11 @@ pub(crate) fn items(tree: &usvg::Tree, context: &Context) -> Result<Drawing, Ref
         context,
         items: Vec::new(),
         left_out: false,
+        shapes: context.shapes.get(),
         fonts: HashMap::new(),
     };
     painter.group(tree.root())?;
+    context.shapes.set(painter.shapes);
     let warnings = painter.left_out.then(|| {
         "part of an SVG was left out: it has a coordinate that is not a number, or is too \
          large to draw"
@@ -63,6 +83,8 @@ struct Painter<'a> {
     items: Vec<DisplayItem>,
     /// Whether something was left out for a number that cannot be drawn.
     left_out: bool,
+    /// How many more path segments and glyphs may be drawn.
+    shapes: u64,
     /// The engine's choice for each font the text asks for.
     fonts: HashMap<usvg::Font, FontChoice>,
 }
@@ -78,6 +100,15 @@ impl Painter<'_> {
         }
     }
 
+    /// Takes `count` path segments or glyphs from what the document has left.
+    fn take(&mut self, count: usize) -> Result<(), Refused> {
+        self.shapes = self
+            .shapes
+            .checked_sub(count as u64)
+            .ok_or(Refused::TooLarge)?;
+        Ok(())
+    }
+
     fn group(&mut self, group: &usvg::Group) -> Result<(), Refused> {
         rustyprint_dom::budget::check_deadline();
         let opacity = group.opacity().get();
@@ -86,10 +117,10 @@ impl Painter<'_> {
             return Ok(());
         }
         if !group.filters().is_empty() {
-            return Err("a filter");
+            return Err("a filter".into());
         }
         if group.mask().is_some() {
-            return Err("a mask");
+            return Err("a mask".into());
         }
         let start = self.items.len();
         let mut pushed = 0;
@@ -115,6 +146,7 @@ impl Painter<'_> {
                 return Ok(());
             }
             for (path, rule) in clips {
+                self.take(path.segments.len())?;
                 self.items.push(DisplayItem::PushClipPath { path, rule });
                 pushed += 1;
             }
@@ -162,6 +194,9 @@ impl Painter<'_> {
         if !path.is_visible() {
             return Ok(());
         }
+        // A shape that is filled and stroked is written twice, from one outline.
+        let paints = usize::from(path.fill().is_some()) + usize::from(path.stroke().is_some());
+        self.take(path.data().len() * paints)?;
         let outline = outline(path.data());
         let fill = match path.fill() {
             // A single straight line, as of a `<line>`, has no inside to fill.
@@ -245,6 +280,7 @@ impl Painter<'_> {
                     } else {
                         rect
                     };
+                    self.take(1)?;
                     self.paint(DisplayItem::Image {
                         image: decoded,
                         rect,
@@ -278,6 +314,7 @@ impl Painter<'_> {
         match self.runs(text) {
             Some(runs) => {
                 for run in runs {
+                    self.take(run.glyphs.len())?;
                     self.paint(DisplayItem::Text(run));
                 }
                 Ok(())
@@ -434,7 +471,7 @@ fn right_to_left(c: char) -> bool {
 
 /// The shapes a clip path clips to, each to be applied in turn, in the coordinates of the
 /// clipped group. `false` if it has no shape, and so clips everything away.
-fn clip_paths(clip: &usvg::ClipPath, out: &mut Vec<(Path, FillRule)>) -> Result<bool, Refused> {
+fn clip_paths(clip: &usvg::ClipPath, out: &mut Vec<(Path, FillRule)>) -> Result<bool, Unsupported> {
     if let Some(outer) = clip.clip_path()
         && !clip_paths(outer, out)?
     {
@@ -457,7 +494,7 @@ fn clip_shapes(
     group: &usvg::Group,
     transform: Matrix,
     out: &mut Vec<(Path, FillRule)>,
-) -> Result<(), Refused> {
+) -> Result<(), Unsupported> {
     if group.clip_path().is_some() || group.mask().is_some() || !group.filters().is_empty() {
         return Err("a clip path whose shapes are clipped");
     }
@@ -479,7 +516,7 @@ fn clip_shapes(
 }
 
 /// A solid paint with `opacity`. Any other paint is refused.
-fn color(paint: &usvg::Paint, opacity: f32) -> Result<Color, Refused> {
+fn color(paint: &usvg::Paint, opacity: f32) -> Result<Color, Unsupported> {
     match paint {
         usvg::Paint::Color(c) => Ok(Color::rgba(c.red, c.green, c.blue, alpha(opacity))),
         usvg::Paint::LinearGradient(_) | usvg::Paint::RadialGradient(_) => Err("a gradient"),
@@ -534,7 +571,11 @@ fn outline(path: &usvg::tiny_skia_path::Path) -> Path {
     let mut pen = Point::default();
     let mut start = pen;
     let mut segments = Vec::with_capacity(path.len());
-    for segment in path.segments() {
+    for (index, segment) in path.segments().enumerate() {
+        // A path may be most of a large file.
+        if index % 4096 == 4095 {
+            rustyprint_dom::budget::check_deadline();
+        }
         segments.push(match segment {
             Segment::MoveTo(p) => {
                 pen = point(p);
@@ -567,7 +608,9 @@ fn outline(path: &usvg::tiny_skia_path::Path) -> Path {
             }
         });
     }
-    Path { segments }
+    Path {
+        segments: segments.into(),
+    }
 }
 
 fn blend_mode(mode: usvg::BlendMode) -> BlendMode {

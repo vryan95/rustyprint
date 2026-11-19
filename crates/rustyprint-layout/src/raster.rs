@@ -312,7 +312,7 @@ fn even_dashes(dashes: &[f32]) -> Vec<f32> {
 /// A display path as a `tiny-skia` path.
 pub(crate) fn sk_path(path: &Path) -> Option<sk::Path> {
     let mut builder = sk::PathBuilder::new();
-    for segment in &path.segments {
+    for segment in path.segments.iter() {
         match *segment {
             PathSegment::MoveTo(p) => builder.move_to(p.x, p.y),
             PathSegment::LineTo(p) => builder.line_to(p.x, p.y),

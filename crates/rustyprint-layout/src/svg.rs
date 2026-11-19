@@ -4,6 +4,7 @@
 //! with more of them than its size in CSS pixels. Text is in the fonts the engine draws
 //! page text in.
 
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -25,6 +26,21 @@ const SCALE: f32 = 4.0;
 const MIN_LONG_SIDE: f32 = 1024.0;
 /// The most pixels along the longer side.
 const MAX_LONG_SIDE: f32 = 4096.0;
+
+/// The most path segments and glyphs the SVGs of one document are drawn with as shapes,
+/// counting each use of what `<use>` repeats. A segment takes 28 bytes in the display list
+/// and about as many in the PDF, so this is some 200 MB at the worst; a document of five
+/// thousand charts has well under a tenth of it. Past it an SVG is left blank with a
+/// warning, as one past `max_svg_pixels` is.
+pub(crate) const MAX_SHAPES: u64 = 4_000_000;
+
+/// What to warn of when an SVG was left blank for having too many shapes.
+pub(crate) fn too_many_shapes() -> String {
+    format!(
+        "an SVG was left blank: the SVGs of the document draw more than {MAX_SHAPES} path \
+         segments and glyphs, counting what each `<use>` repeats"
+    )
+}
 
 /// Whether `bytes` is an XML file, which for an image means SVG: markup after an optional
 /// byte order mark and white space.
@@ -104,26 +120,123 @@ pub(crate) fn parse(bytes: &[u8], max_pixels: u64, resources: Resources) -> Resu
         ..usvg::Options::default()
     };
     let text = std::str::from_utf8(bytes).map_err(|error| error.to_string())?;
-    let xml = usvg::roxmltree::Document::parse_with_options(
-        text,
-        usvg::roxmltree::ParsingOptions {
+    let read = |text| {
+        let options = usvg::roxmltree::ParsingOptions {
             allow_dtd: true,
             ..Default::default()
-        },
-    )
-    .map_err(|error| error.to_string())?;
+        };
+        usvg::roxmltree::Document::parse_with_options(text, options)
+            .map_err(|error| error.to_string())
+    };
+    let mut xml = read(text)?;
+    // One that would be read into more shapes than a document may draw is not read at
+    // all, since reading is what takes the time and the memory: `<use>` can repeat a
+    // large path ten thousand times. It keeps its size, and is blank.
+    let blank;
+    let too_many = expanded_shapes(&xml) > MAX_SHAPES;
+    if too_many {
+        blank = root_alone(text, &xml);
+        xml = read(&blank)?;
+    }
     let tree = usvg::Tree::from_xmltree(&xml, &options).map_err(|error| error.to_string())?;
     drop(options);
-    let warnings = warnings
+    let mut warnings = warnings
         .lock()
         .map(|mut warnings| std::mem::take(&mut *warnings))
         .unwrap_or_default();
+    if too_many {
+        warnings.push(too_many_shapes());
+    }
     Ok(Parsed {
         tree,
         shape_only: shape_only(xml.root_element()),
         fit: fit(xml.root_element()),
         warnings,
     })
+}
+
+/// The outermost element of the SVG `text` without its content.
+fn root_alone(text: &str, xml: &usvg::roxmltree::Document) -> String {
+    let root = xml.root_element();
+    let all = root.range();
+    let content = root
+        .first_child()
+        .map_or(all.end, |child| child.range().start);
+    let open = &text[all.start..content];
+    // The name as it is written, with its prefix if it has one.
+    let name = open[1..]
+        .split(|c: char| c.is_whitespace() || matches!(c, '>' | '/'))
+        .next()
+        .unwrap_or("svg");
+    match open.trim_end().strip_suffix("/>") {
+        Some(_) => open.to_owned(),
+        None => format!("{open}</{name}>"),
+    }
+}
+
+/// How deep the elements that `<use>` elements refer to are followed.
+const MAX_USE_DEPTH: usize = 1024;
+
+/// About how many path segments and glyphs an SVG is read into, and no fewer than half of
+/// them: every element where it is, and again wherever a `<use>` repeats it.
+fn expanded_shapes(xml: &usvg::roxmltree::Document) -> u64 {
+    use usvg::roxmltree::{Node, NodeId};
+    struct Count<'a, 'input> {
+        by_id: HashMap<&'a str, Node<'a, 'input>>,
+        known: HashMap<NodeId, u64>,
+        open: Vec<NodeId>,
+    }
+    impl<'a> Count<'a, '_> {
+        fn of(&mut self, node: Node<'a, '_>) -> u64 {
+            if let Some(known) = self.known.get(&node.id()) {
+                return *known;
+            }
+            // An element that uses itself draws nothing.
+            if self.open.contains(&node.id()) {
+                return 0;
+            }
+            if self.open.len() > MAX_USE_DEPTH {
+                return u64::MAX;
+            }
+            rustyprint_dom::budget::check_deadline();
+            self.open.push(node.id());
+            // The shortest way to write a segment is two characters, and most take
+            // several times that, so a quarter of the length is not far under.
+            let written = |name: &str| node.attribute(name).map_or(0, |d| d.len() as u64 / 4);
+            let mut count = match node.tag_name().name() {
+                "path" => written("d"),
+                "polyline" | "polygon" => written("points"),
+                "rect" | "circle" | "ellipse" | "line" => 8,
+                _ if node.is_text() => node.text().map_or(0, |text| text.len() as u64),
+                _ => 0,
+            };
+            if node.tag_name().name() == "use" {
+                let link = node.attributes().find(|a| a.name() == "href");
+                let target = link
+                    .and_then(|link| link.value().trim().strip_prefix('#'))
+                    .and_then(|id| self.by_id.get(id).copied());
+                if let Some(target) = target {
+                    count = count.saturating_add(self.of(target));
+                }
+            }
+            for child in node.children() {
+                count = count.saturating_add(self.of(child));
+            }
+            self.open.pop();
+            self.known.insert(node.id(), count);
+            count
+        }
+    }
+    let by_id = xml
+        .descendants()
+        .filter_map(|node| Some((node.attribute("id")?, node)))
+        .collect();
+    let mut count = Count {
+        by_id,
+        known: HashMap::new(),
+        open: Vec::new(),
+    };
+    count.of(xml.root_element())
 }
 
 /// Draws an SVG file with at most `max_pixels` pixels, and says what was left out of it.
@@ -262,24 +375,35 @@ type Drawn = ((u32, u32), Option<Arc<Image>>);
 
 impl SvgPicture {
     /// The picture of a parsed `<svg>` element whose style is `style`. Images it holds are
-    /// decoded by `decode`; `max_pixels` and `budget` limit what is drawn to pixels, and
-    /// `warn` is told what was left out of it.
+    /// decoded by `decode`; `max_pixels` and `budget` limit what is drawn to pixels,
+    /// `shapes` is how many more path segments and glyphs the document may draw, and
+    /// `warn` is told what was left out.
     pub(crate) fn new(
         parsed: Parsed,
         style: &ComputedValues,
         decode: &dyn Fn(&[u8]) -> Option<Arc<Image>>,
         max_pixels: u64,
         budget: &Arc<PixelBudget>,
+        shapes: &Cell<u64>,
         warn: &dyn Fn(String),
     ) -> Self {
+        use crate::svg_shapes::Refused;
         let size = (parsed.tree.size().width(), parsed.tree.size().height());
-        let context = crate::svg_shapes::Context { style, decode };
+        let context = crate::svg_shapes::Context {
+            style,
+            decode,
+            shapes,
+        };
         let content = match crate::svg_shapes::items(&parsed.tree, &context) {
             Ok(drawing) => {
                 drawing.warnings.into_iter().for_each(warn);
                 Content::Items(drawing.items.into())
             }
-            Err(_) => Content::Pixels {
+            Err(Refused::TooLarge) => {
+                warn(too_many_shapes());
+                Content::Items(Arc::from([]))
+            }
+            Err(Refused::Unsupported) => Content::Pixels {
                 tree: Box::new(parsed.tree),
                 max_pixels,
                 budget: budget.clone(),

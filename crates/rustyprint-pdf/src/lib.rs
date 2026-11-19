@@ -1479,7 +1479,7 @@ fn marks(content: &mut Content, marks: PrintMarks, width: f32, height: f32, blee
 /// Adds the contours of `path` to the current path, in PDF coordinates.
 fn curves(content: &mut Content, path: &Path, page_height: f32) {
     let pt = |p: Point| (p.x * PX_TO_PT, page_height - p.y * PX_TO_PT);
-    for segment in &path.segments {
+    for segment in path.segments.iter() {
         match *segment {
             PathSegment::MoveTo(p) => {
                 let (x, y) = pt(p);

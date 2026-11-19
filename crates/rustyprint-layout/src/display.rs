@@ -399,10 +399,12 @@ pub enum PathSegment {
     Close,
 }
 
-/// Contours of lines and cubic Bézier curves.
+/// Contours of lines and cubic Bézier curves. Its segments are shared: copying a path, as
+/// the fill and the stroke of one shape do and every painting of a picture does, copies
+/// none of them.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Path {
-    pub segments: Vec<PathSegment>,
+    pub segments: Arc<Vec<PathSegment>>,
 }
 
 impl Path {
@@ -410,21 +412,26 @@ impl Path {
     pub fn polygon(points: &[Point]) -> Path {
         let mut path = Path::default();
         for (i, &p) in points.iter().enumerate() {
-            path.segments.push(if i == 0 {
+            path.push(if i == 0 {
                 PathSegment::MoveTo(p)
             } else {
                 PathSegment::LineTo(p)
             });
         }
         if !points.is_empty() {
-            path.segments.push(PathSegment::Close);
+            path.push(PathSegment::Close);
         }
         path
     }
 
+    /// Adds a step to the path.
+    pub fn push(&mut self, segment: PathSegment) {
+        Arc::make_mut(&mut self.segments).push(segment);
+    }
+
     /// Adds the contours of `other`.
     pub fn extend(&mut self, other: Path) {
-        self.segments.extend(other.segments);
+        Arc::make_mut(&mut self.segments).extend(other.segments.iter().copied());
     }
 
     /// Every point of the path, control points included.
@@ -444,19 +451,18 @@ impl Path {
     /// The path transformed by `m`.
     pub fn transformed(&self, m: Matrix) -> Path {
         let point = |p: Point| apply(m, p);
+        let segments: Vec<PathSegment> = self
+            .segments
+            .iter()
+            .map(|segment| match *segment {
+                PathSegment::MoveTo(p) => PathSegment::MoveTo(point(p)),
+                PathSegment::LineTo(p) => PathSegment::LineTo(point(p)),
+                PathSegment::CubicTo(a, b, c) => PathSegment::CubicTo(point(a), point(b), point(c)),
+                PathSegment::Close => PathSegment::Close,
+            })
+            .collect();
         Path {
-            segments: self
-                .segments
-                .iter()
-                .map(|segment| match *segment {
-                    PathSegment::MoveTo(p) => PathSegment::MoveTo(point(p)),
-                    PathSegment::LineTo(p) => PathSegment::LineTo(point(p)),
-                    PathSegment::CubicTo(a, b, c) => {
-                        PathSegment::CubicTo(point(a), point(b), point(c))
-                    }
-                    PathSegment::Close => PathSegment::Close,
-                })
-                .collect(),
+            segments: Arc::new(segments),
         }
     }
 
@@ -466,7 +472,7 @@ impl Path {
         let mut length = 0.0;
         let mut start = Point::default();
         let mut pen = Point::default();
-        for segment in &self.segments {
+        for segment in self.segments.iter() {
             match *segment {
                 PathSegment::MoveTo(p) => {
                     start = p;

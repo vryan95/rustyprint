@@ -1117,3 +1117,36 @@ fn a_photo_in_an_svg_element_is_turned_as_its_file_says() {
     // Upright it is half as wide as it is tall, in the middle of the box of its pixels.
     assert_eq!(turned, [(6, Rect::new(15.0, 0.0, 10.0, 20.0))]);
 }
+
+#[test]
+fn the_shapes_of_a_document_are_within_one_limit() {
+    // Each drawing has 1.4 million segments, 2000 used 700 times, which is within the
+    // limit of four million; the third takes the document past it.
+    let path = "l1 1".repeat(2000);
+    let drawing = |color: &str| {
+        let uses: String = (0..700)
+            .map(|i| format!("<use href='#{color}' x='{i}'/>"))
+            .collect();
+        format!(
+            "<svg width='200' height='100'><defs>\
+             <path id='{color}' d='M0 0{path}' fill='none' stroke='{color}'/></defs>{uses}</svg>"
+        )
+    };
+    let body = format!("{}{}{}", drawing("red"), drawing("green"), drawing("blue"));
+    let painted = paint_within(&body, UNLIMITED);
+    assert_eq!(painted.warnings.len(), 1, "{:?}", painted.warnings);
+    assert!(
+        painted.warnings[0].contains("an SVG was left blank"),
+        "{:?}",
+        painted.warnings
+    );
+    let strokes = |color: Color| {
+        let stroked = |item: &&DisplayItem| matches!(item, DisplayItem::StrokePath { color: c, .. } if *c == color);
+        painted.items.iter().filter(stroked).count()
+    };
+    assert_eq!(strokes(Color::rgba(255, 0, 0, 255)), 700);
+    assert_eq!(strokes(Color::rgba(0, 128, 0, 255)), 700);
+    assert_eq!(strokes(Color::rgba(0, 0, 255, 255)), 0);
+    // The blank one keeps its box.
+    assert_eq!(drawings(&painted.items).len(), 3);
+}
