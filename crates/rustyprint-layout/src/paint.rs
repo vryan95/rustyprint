@@ -371,6 +371,12 @@ fn paint_contents<'f>(
                 &mut out.items,
             );
         }
+    } else if let Some(replaced) = &fragment.replaced
+        && matches!(replaced.picture, Some(Picture::Svg(_)))
+    {
+        // The drawing of a hidden `<svg>` element holds only what is made visible inside it.
+        let content = areas(&shape, fragment.border, fragment.padding).content;
+        paint_replaced(style, replaced, content.rect, out.images, &mut out.items);
     }
     if root {
         out.split = Some(out.items.len());
