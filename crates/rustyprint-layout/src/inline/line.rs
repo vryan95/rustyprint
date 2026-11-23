@@ -5,13 +5,13 @@ use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
 use rustyprint_css::properties::types::{
-    AlignmentBaseline, BaselineShift, DecorationLength, Direction, LengthPercentage, LineHeight,
-    Paint, TextAlign, TextAlignLast, TextDecorationSkipInk, TextDecorationStyle, TextJustify,
+    AlignmentBaseline, BaselineShift, DecorationLength, Direction, LineHeight, Paint, TextAlign,
+    TextAlignLast, TextDecorationSkipInk, TextDecorationStyle, TextJustify,
 };
 use rustyprint_css::values::AbsoluteColor;
 
 use super::breaking::{Breaker, LineBreak};
-use super::paragraph::{Paragraph, SpanKind, is_ideograph, is_word_separator, spacing};
+use super::paragraph::{InlineBox, Paragraph, SpanKind, is_ideograph, is_word_separator, spacing};
 use crate::Font;
 use crate::display::{Color, Point, Rect, TextRun, TextStroke};
 use crate::fonts::select;
@@ -650,13 +650,12 @@ impl LineContext<'_> {
                 piece.inline_box == b
                     && matches!(
                         piece.kind,
-                        Kind::Text { .. } | Kind::Extra { .. } | Kind::Atomic(_)
+                        Kind::Text { .. } | Kind::Extra { .. } | Kind::Tab | Kind::Atomic(_)
                     )
             })
         };
-        let collapses = |b: usize| {
-            quirks && !owns_content(b) && (b == 0 || !has_vertical_edges(&p.boxes[b].style))
-        };
+        let collapses =
+            |b: usize| quirks && !owns_content(b) && (b == 0 || !has_vertical_edges(&p.boxes[b]));
         let mut root_extent = if collapses(0) && !only_break {
             root.zero_line_height_bounds()
         } else {
@@ -1291,12 +1290,8 @@ fn offset_items(items: &mut [LineItem], dx: f32, dy: f32) {
 
 /// Whether an inline box has a vertical border or padding, which keeps its line height in the
 /// line height calculation quirk.
-fn has_vertical_edges(style: &ComputedValues) -> bool {
-    let length = |v: &LengthPercentage| v.as_length().unwrap_or(0.0);
-    style.border_top_width > 0.0
-        || style.border_bottom_width > 0.0
-        || length(&style.padding_top) > 0.0
-        || length(&style.padding_bottom) > 0.0
+fn has_vertical_edges(b: &InlineBox) -> bool {
+    b.border.vertical() > 0.0 || b.padding.vertical() > 0.0
 }
 
 #[cfg(test)]

@@ -1,7 +1,9 @@
 use rustyprint_css::{StyleOptions, compute_styles};
 use rustyprint_dom::Document;
 use rustyprint_layout::fragment::{BoxFragment, Fragment};
-use rustyprint_layout::{DisplayItem, Images, PageOptions, Sides, Size, layout, layout_pages};
+use rustyprint_layout::{
+    DisplayItem, Images, PageOptions, Sides, Size, layout, layout_pages, layout_tree,
+};
 
 const PAGE: Size = Size::new(400.0, 300.0);
 
@@ -231,6 +233,63 @@ fn without_a_doctype_a_line_holding_only_a_br_keeps_the_blocks_line_height() {
     let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }</style>\
                 <p style='--id: p; margin: 0'><br><span style='font-size: 8px'></span></p>";
     assert!(find(&pages_of(body)[0], "p").rect.height >= 40.0);
+}
+
+#[test]
+fn without_a_doctype_a_preserved_tab_is_the_blocks_own_text() {
+    let body = "<style>body { margin: 0; font-size: 20px }</style>\
+                <pre style='--id: p; margin: 0; line-height: 40px'>\t<span \
+                style='font-size: 8px; line-height: 10px'>x</span></pre>";
+    let height = find(&pages_of(body)[0], "p").rect.height;
+    assert!(height >= 40.0, "{height}");
+}
+
+#[test]
+fn without_a_doctype_percentage_padding_keeps_an_inline_boxs_line_height() {
+    let body = |padding: &str| {
+        format!(
+            "<style>body {{ margin: 0; font-size: 20px; line-height: 10px }}\
+             b {{ font-size: 8px; line-height: 10px }}</style>\
+             <p style='--id: p; margin: 0'><span style='line-height: 40px; \
+             padding-top: {padding}'><b>x</b></span></p>"
+        )
+    };
+    let padded = find(&pages_of(&body("1%"))[0], "p").rect.height;
+    let bare = find(&pages_of(&body("0"))[0], "p").rect.height;
+    assert!(padded >= 40.0, "{padded}");
+    assert!(bare < 30.0, "{bare}");
+}
+
+/// The root's fragment from `layout_tree`, the unpaginated layout container queries use.
+fn tree_of(html: &str) -> BoxFragment {
+    let document = Document::parse(html);
+    let load = |_: &str| None;
+    let styles = compute_styles(
+        &document,
+        &StyleOptions {
+            page_size: (PAGE.width, PAGE.height),
+            stylesheet: None,
+            load: &load,
+            font_metrics: None,
+            load_font: None,
+        },
+    );
+    layout_tree(&document, &styles, &options(), &Images::none()).expect("a root box")
+}
+
+#[test]
+fn the_unpaginated_layout_uses_the_documents_own_quirks_mode() {
+    let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }\
+                span { font-size: 8px; line-height: 10px }</style>\
+                <p style='--id: p; margin: 0'><span>one</span></p>";
+    let standards = format!("<!DOCTYPE html>{body}");
+    // Each layout follows its own document, whatever this thread laid out before it.
+    pages_of(&standards);
+    let quirks = find(&tree_of(body), "p").rect.height;
+    assert!(quirks < 30.0, "{quirks}");
+    pages_of(body);
+    let standards = find(&tree_of(&standards), "p").rect.height;
+    assert!(standards >= 40.0, "{standards}");
 }
 
 #[test]
