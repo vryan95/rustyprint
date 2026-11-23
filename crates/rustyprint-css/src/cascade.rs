@@ -101,6 +101,8 @@ pub struct Styles {
     pub size_containers: bool,
     /// The document's color profiles; native colors refer to them by index.
     pub color_profiles: Arc<[ColorProfile]>,
+    /// Whether the document is styled for a screen, which has no pages, rather than print.
+    pub screen: bool,
 }
 
 /// A warning with the stylesheet it came from.
@@ -165,6 +167,7 @@ impl Styles {
             font_rules: self.font_rules.clone(),
             size_containers: self.size_containers,
             color_profiles: self.color_profiles.clone(),
+            screen: self.screen,
             position_try: self
                 .position_try
                 .iter()
@@ -198,6 +201,7 @@ pub fn compute_styles_in(
         warnings: rules.warnings.clone(),
         counter_styles: rules.counter_styles.clone(),
         font_rules: rules.font_rules.clone(),
+        screen: options.screen,
         ..Default::default()
     };
     let mut root_parent = ComputedValues::initial();

@@ -82,8 +82,8 @@ pub fn layout_tree(
 ) -> Option<fragment::BoxFragment> {
     let area = page.area();
     let built = boxes::build_with_targets(document, styles, images, &boxes::Targets::default())?;
-    // Page numbers of link targets come from the paginated layout.
-    let root = if built.uses_targets {
+    // Page numbers of link targets come from the paginated layout. A screen has no pages.
+    let root = if built.uses_targets && !styles.screen {
         paginated(document, styles, page, images).0.root
     } else {
         built.root

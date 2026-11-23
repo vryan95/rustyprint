@@ -464,10 +464,13 @@ impl MediaCondition {
     }
 }
 
-/// The value of a discrete media feature in print output, or `None` if the feature is
-/// unknown. `scan` has no value: it applies only to TV displays.
-fn discrete_value(name: &str) -> Option<Option<&'static str>> {
+/// The value of a discrete media feature in print output, or on a screen, or `None` if the
+/// feature is unknown. `scan` has no value: it applies only to TV displays. A screen
+/// scrolls the content that overflows it and updates it as it changes.
+fn discrete_value(name: &str, screen: bool) -> Option<Option<&'static str>> {
     Some(Some(match name {
+        "overflow-block" | "overflow-inline" if screen => "scroll",
+        "update" if screen => "fast",
         "any-hover" | "hover" | "any-pointer" | "pointer" | "forced-colors" | "inverted-colors"
         | "overflow-inline" | "scripting" | "update" => "none",
         "color-gamut" => "srgb",
@@ -497,7 +500,7 @@ impl MediaFeature {
     fn evaluate(&self, env: &MediaEnvironment) -> Option<bool> {
         match self {
             MediaFeature::Boolean(name) => {
-                if let Some(value) = discrete_value(name) {
+                if let Some(value) = discrete_value(name, env.screen) {
                     return Some(value.is_some_and(|v| v != "none" && v != "no-preference"));
                 }
                 if name == "orientation" {
@@ -516,7 +519,7 @@ impl MediaFeature {
                 value,
             } => {
                 if prefix.is_none() {
-                    if let Some(actual) = discrete_value(name) {
+                    if let Some(actual) = discrete_value(name, env.screen) {
                         let MediaValue::Ident(wanted) = value else {
                             return None;
                         };
@@ -638,6 +641,18 @@ mod tests {
         assert!(!matches_on("not screen", true));
         assert!(matches_on("screen, print", true));
         assert!(!matches_on("tv", true));
+    }
+
+    #[test]
+    fn media_features_of_a_screen() {
+        assert!(matches_on("(overflow-block: scroll)", true));
+        assert!(!matches_on("(overflow-block: paged)", true));
+        assert!(matches_on("(overflow-inline: scroll)", true));
+        assert!(matches_on("(update: fast)", true));
+        assert!(matches_on("(update)", true));
+        assert!(!matches_on("(overflow-block: scroll)", false));
+        assert!(matches_on("(overflow-block: paged)", false));
+        assert!(!matches_on("(update)", false));
     }
 
     #[test]

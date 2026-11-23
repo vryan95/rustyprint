@@ -208,9 +208,10 @@ pub fn render(html: &str, options: &RenderOptions) -> Result<Output, Error> {
 /// [`RenderOptions::scale`] of the page area's width divided by this width. Of `options`,
 /// the stylesheet, the assets and the limits apply.
 pub fn content_width(html: &str, window: Size, options: &RenderOptions) -> Result<f32, Error> {
-    if !(window.width > 0.0 && window.height > 0.0) {
+    let positive = |length: f32| length > 0.0 && length.is_finite();
+    if !(positive(window.width) && positive(window.height)) {
         return Err(Error::InvalidOptions(format!(
-            "the window must be wider and taller than 0, not {} by {}",
+            "the window must be wider and taller than 0, and finite, not {} by {}",
             window.width, window.height
         )));
     }
@@ -317,7 +318,7 @@ fn content_width_on_this_thread(html: &str, window: Size, options: &RenderOption
         &images,
     );
     let root = rustyprint_layout::layout_tree(&document, &styles, &page, &images);
-    let right = root.map_or(0.0, |root| root.overflow_right());
+    let right = root.map_or(0.0, |root| root.scroll_right());
     right.max(window.width)
 }
 
@@ -796,6 +797,59 @@ mod tests {
     }
 
     #[test]
+    fn content_width_counts_boxes_where_their_transforms_take_them() {
+        let html = "<body style='margin: 0'>\
+                    <div style='width: 100px; height: 10px; transform: translateX(1000px)'></div>";
+        assert_eq!(width_of(html), 1100.0);
+    }
+
+    #[test]
+    fn content_width_does_not_count_boxes_fixed_to_the_window() {
+        let fixed = "<div style='position: fixed; left: 2000px; width: 100px; height: 10px'></div>";
+        assert_eq!(width_of(fixed), 800.0);
+        // Inside a transform, a fixed box scrolls with the transformed box.
+        let transformed =
+            format!("<body style='margin: 0'><div style='transform: translateX(0)'>{fixed}</div>");
+        assert_eq!(width_of(&transformed), 2100.0);
+    }
+
+    #[test]
+    fn content_width_lays_out_past_forced_breaks() {
+        let html = "<body style='margin: 0'><div style='break-after: page'>First</div>\
+                    <div style='width: 2000px'>Wide</div>";
+        assert_eq!(width_of(html), 2000.0);
+        let in_cell = "<body style='margin: 0'><table style='border-spacing: 0'><tr><td style='padding: 0'>\
+                       <div style='break-after: page'>First</div><div style='width: 2000px'>Wide</div>";
+        assert_eq!(width_of(in_cell), 2000.0);
+    }
+
+    #[test]
+    fn content_width_does_not_paginate_for_page_numbers() {
+        // `target-counter()` page numbers come from pages, which a window does not have.
+        let html = format!(
+            "<style>a::after {{ content: target-counter(attr(href url), page) }}</style>\
+             <a href='#end'>to the end</a>{}<p id='end'>End</p>",
+            "<p>Line</p>".repeat(200)
+        );
+        let options = RenderOptions {
+            limits: Limits {
+                max_pages: 1,
+                ..Limits::default()
+            },
+            ..RenderOptions::default()
+        };
+        let width = content_width(&html, WINDOW, &options);
+        assert_eq!(width.ok(), Some(800.0));
+    }
+
+    #[test]
+    fn content_width_sees_the_media_features_of_a_screen() {
+        let html = "<style>body { margin: 0 } @media (overflow-block: scroll) { div { width: 1000px } }</style>\
+                    <div>Wide</div>";
+        assert_eq!(width_of(html), 1000.0);
+    }
+
+    #[test]
     fn content_width_keeps_to_the_limits_and_refuses_an_empty_window() {
         let limits = Limits {
             max_input_bytes: 4,
@@ -810,12 +864,19 @@ mod tests {
             matches!(exceeded, Err(Error::LimitExceeded { .. })),
             "{exceeded:?}"
         );
-        let empty = content_width(
-            "<p>Hello</p>",
-            Size::new(0.0, 600.0),
-            &RenderOptions::default(),
-        );
-        assert!(matches!(empty, Err(Error::InvalidOptions(_))), "{empty:?}");
+        for (width, height) in [
+            (0.0, 600.0),
+            (f32::INFINITY, 600.0),
+            (800.0, f32::INFINITY),
+            (f32::NAN, 600.0),
+        ] {
+            let window = Size::new(width, height);
+            let refused = content_width("<p>Hello</p>", window, &RenderOptions::default());
+            assert!(
+                matches!(refused, Err(Error::InvalidOptions(_))),
+                "{window:?}: {refused:?}"
+            );
+        }
     }
 
     #[test]

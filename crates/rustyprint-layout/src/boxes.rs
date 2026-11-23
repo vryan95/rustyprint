@@ -1458,7 +1458,8 @@ impl Builder<'_> {
                 load: &load,
                 font_metrics: Some(&crate::font_metrics),
                 load_font: Some(&load_font),
-                screen: false,
+                // A frame is on the medium its document is on.
+                screen: self.styles.screen,
             },
         );
         for warning in &styles.warnings {

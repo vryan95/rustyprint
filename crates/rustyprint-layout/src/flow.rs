@@ -1,6 +1,7 @@
 //! Block layout: widths, heights and margin collapsing (CSS 2.1 §§ 8.3, 10.3–10.7), and
 //! breaking block and inline content across pages (CSS Fragmentation 3).
 
+use std::cell::Cell;
 use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
@@ -350,9 +351,30 @@ pub(crate) fn breaks_page(block: &BlockBox, token: &BreakToken) -> bool {
     }
 }
 
+thread_local! {
+    // Whether the root being laid out is fragmented into pages. A box inside it can lay
+    // out without a fragmentainer, as when `break-inside: avoid` keeps it whole, and still
+    // breaks where a break is forced. A window, the layout that measures size containers
+    // and a frame's document are one continuous flow, in which forced breaks do nothing.
+    static FRAGMENTED: Cell<bool> = const { Cell::new(false) };
+}
+
 /// Lays out the root element in a page area, from `resume` if earlier pages broke it.
 /// Without a fragmentainer, everything goes on one page area as tall as it needs.
 pub(crate) fn layout_root(
+    root: &BlockBox,
+    page_width: f32,
+    page_height: f32,
+    fragmentainer: Option<Fragmentainer>,
+    resume: Option<&BreakToken>,
+) -> (BoxFragment, Option<BreakToken>) {
+    let outer = FRAGMENTED.with(|f| f.replace(fragmentainer.is_some()));
+    let laid = layout_root_in(root, page_width, page_height, fragmentainer, resume);
+    FRAGMENTED.with(|f| f.set(outer));
+    laid
+}
+
+fn layout_root_in(
     root: &BlockBox,
     page_width: f32,
     page_height: f32,
@@ -828,7 +850,9 @@ fn layout_flow(
                 } else {
                     None
                 };
+                // A layout that is one continuous flow has no page or column to break to.
                 if index > start
+                    && (fragmentainer.is_some() || FRAGMENTED.with(Cell::get))
                     && let Some(side) = forced_between(&blocks[index - 1], child, columns)
                 {
                     break_token = Some(BreakToken {

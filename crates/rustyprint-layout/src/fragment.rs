@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
-use rustyprint_css::properties::types::{Overflow, TextDecorationStyle};
+use rustyprint_css::properties::types::{Overflow, Position, TextDecorationStyle};
 use rustyprint_dom::NodeId;
 
 use crate::display::{Color, Rect, Size, TextRun};
@@ -391,7 +391,18 @@ impl BoxFragment {
     /// box: the right edge of its border box and, unless the box clips them, of the boxes
     /// and text inside it, where their transforms take them.
     pub fn overflow_right(&self) -> f32 {
-        let right = self.untransformed_overflow_right();
+        self.reach_right(true)
+    }
+
+    /// How far right a window scrolls to show what this root box lays out: its
+    /// [`overflow_right`](Self::overflow_right) without the boxes fixed to the viewport,
+    /// which do not scroll. Boxes fixed inside a transform scroll with it, and count.
+    pub fn scroll_right(&self) -> f32 {
+        self.reach_right(false)
+    }
+
+    fn reach_right(&self, viewport_fixed: bool) -> f32 {
+        let right = self.untransformed_overflow_right(viewport_fixed);
         if !crate::transform::has_transform(&self.style) {
             return right;
         }
@@ -408,17 +419,27 @@ impl BoxFragment {
             .map_or(right, |m| crate::display::transform_rect(m, reach).right())
     }
 
-    fn untransformed_overflow_right(&self) -> f32 {
+    /// The root box holds the boxes fixed to the viewport: `viewport_fixed` is whether its
+    /// fixed children count.
+    fn untransformed_overflow_right(&self, viewport_fixed: bool) -> f32 {
         let own = self.rect.right();
         if self.style.overflow_x != Overflow::Visible || self.style.used_contain().paint {
             return own;
         }
-        let inside = self.children.iter().map(|child| match child {
-            Fragment::Box(child) => child.overflow_right(),
-            // A turned line's items are in axes of their own: the line's box stands for them.
-            Fragment::Line(line) if line.turned().is_some() => line.rect.right(),
-            Fragment::Line(line) => line.rect.x + items_right(&line.items),
-        });
+        let counted = |child: &&Fragment| match child {
+            Fragment::Box(child) => viewport_fixed || child.style.position != Position::Fixed,
+            Fragment::Line(_) => true,
+        };
+        let inside = self
+            .children
+            .iter()
+            .filter(counted)
+            .map(|child| match child {
+                Fragment::Box(child) => child.overflow_right(),
+                // A turned line's items are in axes of their own: the line's box stands for them.
+                Fragment::Line(line) if line.turned().is_some() => line.rect.right(),
+                Fragment::Line(line) => line.rect.x + items_right(&line.items),
+            });
         inside.fold(own, |right, child| right.max(self.rect.x + child))
     }
 
