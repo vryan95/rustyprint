@@ -473,6 +473,7 @@ pub(crate) fn convert_box(fragment: &mut BoxFragment, turn: Turn, container: Siz
     fragment.rect = turn.rect(fragment.rect, container);
     fragment.border = turn.sides(fragment.border);
     fragment.padding = turn.sides(fragment.padding);
+    fragment.cut = fragment.cut.turned(turn);
     if let Some(style) = fragment.style.unrotated.clone() {
         fragment.style = style;
     }

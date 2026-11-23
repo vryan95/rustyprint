@@ -5,7 +5,7 @@ use rustyprint_css::properties::types::{Direction, RubyAlign};
 
 use crate::boxes::{AnnotationSide, BlockBox, Ruby};
 use crate::flow::{self, CollapsibleMargin, EPSILON, Laid};
-use crate::fragment::{BoxFragment, Fragment, LineFragment, LineItem, Sides};
+use crate::fragment::{BoxFragment, Cut, Fragment, LineFragment, LineItem, Sides};
 
 /// Room to lay bases and annotations out on one line: ruby does not wrap inside a segment.
 const UNBOUNDED: f32 = 1.0e6;
@@ -140,6 +140,7 @@ pub(crate) fn layout(block: &BlockBox, ruby: &Ruby) -> Laid {
             replaced: None,
             legend: None,
             out_of_flow: None,
+            cut: Cut::default(),
         },
         margin: Sides {
             left: -left,

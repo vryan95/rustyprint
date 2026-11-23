@@ -5,6 +5,7 @@ use rustyprint_css::ComputedValues;
 use rustyprint_css::properties::types::BoxShadowValue;
 
 use crate::display::{Color, DisplayItem, FillRule, Path, Rect};
+use crate::fragment::Cut;
 use crate::rounded::RoundedRect;
 
 fn color(shadow: &BoxShadowValue, style: &ComputedValues) -> Color {
@@ -28,13 +29,61 @@ fn fill(path: Path, rule: FillRule, color: Color, blur: f32, items: &mut Vec<Dis
     items.extend(crate::filter::blurred(shape, blur / 2.0));
 }
 
-/// Paints the outer shadows of a box whose border box is `border_box`, the last shadow
-/// lowest.
+/// Paints the outer shadows of a box fragment whose border box is `border_box`, the last
+/// shadow lowest. A break leaves no shadow along the edges it `cut`: the shadows are those
+/// of the box continuing past them, cut off there.
 pub(crate) fn paint_outer(
     style: &ComputedValues,
     border_box: &RoundedRect,
+    cut: Cut,
     items: &mut Vec<DisplayItem>,
 ) {
+    if !cut.any() {
+        return paint_shadows(style, border_box, items);
+    }
+    let reach = style
+        .box_shadow
+        .iter()
+        .filter(|s| !s.inset)
+        .map(reach)
+        .fold(0.0, f32::max);
+    if reach == 0.0 {
+        return;
+    }
+    // The box goes on past each cut edge far enough to keep its corners and the ends of
+    // its shadows out of sight, and the shadows show only up to the cut edges.
+    let rect = border_box.rect;
+    let far = reach * 2.0;
+    let past = |cut: bool| if cut { far } else { 0.0 };
+    let mut whole = *border_box;
+    whole.rect = Rect::new(
+        rect.x - past(cut.left),
+        rect.y - past(cut.top),
+        rect.width + past(cut.left) + past(cut.right),
+        rect.height + past(cut.top) + past(cut.bottom),
+    );
+    let shown = |cut: bool, edge: f32, away: f32| if cut { edge } else { edge + away };
+    let left = shown(cut.left, rect.x, -far);
+    let top = shown(cut.top, rect.y, -far);
+    let right = shown(cut.right, rect.right(), far);
+    let bottom = shown(cut.bottom, rect.bottom(), far);
+    items.push(DisplayItem::PushClip(Rect::new(
+        left,
+        top,
+        right - left,
+        bottom - top,
+    )));
+    paint_shadows(style, &whole, items);
+    items.push(DisplayItem::PopClip);
+}
+
+/// How far past the border box a shadow can paint.
+fn reach(shadow: &BoxShadowValue) -> f32 {
+    let s = &shadow.shadow;
+    s.blur * 2.0 + shadow.spread.abs() + s.x.abs() + s.y.abs() + 1.0
+}
+
+fn paint_shadows(style: &ComputedValues, border_box: &RoundedRect, items: &mut Vec<DisplayItem>) {
     for shadow in style.box_shadow.iter().rev().filter(|s| !s.inset) {
         let color = color(shadow, style);
         if color.is_transparent() {
@@ -47,8 +96,7 @@ pub(crate) fn paint_outer(
             continue;
         }
         // Only the part outside the border box shows.
-        let reach = s.blur * 2.0 + shadow.spread.abs() + s.x.abs() + s.y.abs() + 1.0;
-        let mut outside = surrounding(border_box.rect, reach);
+        let mut outside = surrounding(border_box.rect, reach(shadow));
         outside.extend(border_box.path());
         items.push(DisplayItem::PushClipPath {
             path: outside,

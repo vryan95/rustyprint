@@ -20,7 +20,7 @@ use crate::display::Rect;
 use crate::flow::{
     self, BlockKind, BreakToken, CollapsibleMargin, ContainingBlock, Fragmentainer, Laid, Resume,
 };
-use crate::fragment::{BoxFragment, Fragment, Sides};
+use crate::fragment::{BoxFragment, Cut, Fragment, Sides};
 
 /// The most columns a cell spans, and the most rows (HTML § 4.9.11).
 const MAX_COLSPAN: u32 = 1000;
@@ -786,6 +786,7 @@ fn border_strip(
         replaced: None,
         legend: None,
         out_of_flow: None,
+        cut: Cut::default(),
     }))
 }
 
@@ -2062,6 +2063,11 @@ pub(crate) fn layout(
         replaced: None,
         legend: None,
         out_of_flow: None,
+        cut: Cut {
+            top: resumed && !clone,
+            bottom: broke && !clone,
+            ..Cut::default()
+        },
     };
     let top_captions: &[(BoxFragment, Sides)] = if resumed { &[] } else { &p.top_captions };
     let bottom_captions: &[(BoxFragment, Sides)] = if broke { &[] } else { &p.bottom_captions };
@@ -2098,6 +2104,7 @@ pub(crate) fn layout(
             replaced: None,
             legend: None,
             out_of_flow: None,
+            cut: Cut::default(),
         }
     };
 
@@ -2112,6 +2119,7 @@ pub(crate) fn layout(
         },
         forced,
         side: None,
+        past_content: false,
     });
     Laid {
         fragment,
@@ -2161,6 +2169,7 @@ fn part_fragment(
         replaced: None,
         legend: None,
         out_of_flow: None,
+        cut: Cut::default(),
     }
 }
 

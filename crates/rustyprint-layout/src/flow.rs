@@ -14,7 +14,7 @@ use rustyprint_css::values::{CalcContext, CalcNode};
 use crate::boxes::{BlockBox, BlockContents, InlineItem, Replaced};
 use crate::display::{Point, Rect};
 use crate::floats::Floats;
-use crate::fragment::{BoxFragment, Fragment, LineFragment, LineItem, OutOfFlow, Sides};
+use crate::fragment::{BoxFragment, Cut, Fragment, LineFragment, LineItem, OutOfFlow, Sides};
 use crate::inline;
 use crate::picture::Picture;
 use rustyprint_css::properties::types::FrameSizing;
@@ -72,6 +72,22 @@ pub(crate) struct BreakToken {
     pub forced: bool,
     /// The side the next page must be on, for `break-before: left` and similar.
     pub side: Option<PageSide>,
+    /// Whether the box broke after all its content: inside its definite height, or before
+    /// its bottom border and padding. Such a break leaves no room for a parent's end.
+    pub past_content: bool,
+}
+
+impl BreakToken {
+    /// Whether the break, followed down into the box it broke inside, came after all the
+    /// content of the innermost box.
+    pub fn past_content(&self) -> bool {
+        match &self.resume {
+            Resume::Child {
+                token: Some(token), ..
+            } => token.past_content(),
+            _ => self.past_content,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -554,6 +570,73 @@ fn layout_flow(
     if let BlockContents::Ruby(ruby) = &block.contents {
         return crate::ruby::layout(block, ruby);
     }
+    let mut floats_in = floats_in;
+    let count = floats_in.as_ref().map_or(0, |(floats, _)| floats.len());
+    let (laid, retry) = layout_box(
+        block,
+        cb,
+        kind,
+        decorators,
+        fragmentainer,
+        resume,
+        floats_in
+            .as_mut()
+            .map(|(floats, origin)| (&mut **floats, *origin)),
+        false,
+    );
+    if !retry {
+        return laid;
+    }
+    // The content fit but the bottom border and padding did not. As in browsers, they go
+    // to the next page with what follows the last break between boxes or lines that leaves
+    // room for them, and only without one does the box break just before them.
+    let placed = floats_in.as_mut().map(|(floats, _)| {
+        let placed = floats.clone();
+        floats.truncate(count);
+        placed
+    });
+    let (reserved, _) = layout_box(
+        block,
+        cb,
+        kind,
+        decorators,
+        fragmentainer,
+        resume,
+        floats_in
+            .as_mut()
+            .map(|(floats, origin)| (&mut **floats, *origin)),
+        true,
+    );
+    // A box that continues from the page before only breaks between its own children or
+    // lines for this, as in browsers.
+    let taken = |token: &BreakToken| {
+        !token.past_content()
+            && (resume.is_none() || !matches!(token.resume, Resume::Child { token: Some(_), .. }))
+    };
+    if reserved.deferred || reserved.break_token.as_ref().is_some_and(taken) {
+        return reserved;
+    }
+    if let (Some((floats, _)), Some(placed)) = (floats_in, placed) {
+        *floats = placed;
+    }
+    laid
+}
+
+/// Lays out a block container, as [`layout_flow`]. With `reserve_end` its content leaves
+/// room for its bottom border and padding on the page. Without it, a box whose content fits
+/// and whose bottom border and padding do not breaks before them, and the second value says
+/// whether content that can break earlier might take some of it along to the next page.
+#[allow(clippy::too_many_arguments)]
+fn layout_box(
+    block: &BlockBox,
+    cb: ContainingBlock,
+    kind: BlockKind,
+    decorators: &[Arc<ComputedValues>],
+    fragmentainer: Option<Fragmentainer>,
+    resume: Option<&BreakToken>,
+    floats_in: Option<(&mut Floats, Point)>,
+    reserve_end: bool,
+) -> (Laid, bool) {
     let style = &block.style;
     let mut own_decorators = decorators.to_vec();
     if !style.text_decoration_line.is_none() {
@@ -757,7 +840,7 @@ fn layout_flow(
     // Where content must end on this page, from the top of the border box. Cloned
     // decorations need room for the bottom border and padding too.
     let limit = fragmentainer.map(|f| {
-        let bottom = if clone {
+        let bottom = if clone || reserve_end {
             border.bottom + padding.bottom
         } else {
             0.0
@@ -772,7 +855,7 @@ fn layout_flow(
         && content_y > 0.0
         && content_y > limit + EPSILON
     {
-        return deferred(block, border, padding, width, extra);
+        return (deferred(block, border, padding, width, extra), false);
     }
 
     let bfc = establishes_bfc(block, kind == BlockKind::Root, kind.is_independent());
@@ -836,6 +919,7 @@ fn layout_flow(
                         resume: Resume::Child { index, token: None },
                         forced: true,
                         side,
+                        past_content: false,
                     });
                     break;
                 }
@@ -867,6 +951,7 @@ fn layout_flow(
                             resume: Resume::Child { index, token: None },
                             forced: false,
                             side: None,
+                            past_content: false,
                         });
                         break;
                     }
@@ -1016,7 +1101,7 @@ fn layout_flow(
                         if k == 0 {
                             if !f.at_top {
                                 // No break inside the box works: it moves to the next page.
-                                return deferred(block, border, padding, width, extra);
+                                return (deferred(block, border, padding, width, extra), false);
                             }
                             // The box starts the page, so it breaks before this child anyway.
                             k = placed.len();
@@ -1036,6 +1121,7 @@ fn layout_flow(
                             },
                             forced: false,
                             side: None,
+                            past_content: false,
                         });
                         break;
                     }
@@ -1069,6 +1155,7 @@ fn layout_flow(
                         consumed: 0.0,
                         forced: token.forced,
                         side: token.side,
+                        past_content: false,
                         resume: Resume::Child {
                             index,
                             token: Some(Box::new(token)),
@@ -1145,7 +1232,7 @@ fn layout_flow(
                     let mut at = fit.min(count.saturating_sub(widows));
                     if at < first + orphans.min(count - first) || at <= first {
                         if !f.at_top {
-                            return deferred(block, border, padding, width, extra);
+                            return (deferred(block, border, padding, width, extra), false);
                         }
                         at = fit.max(first + 1);
                     }
@@ -1172,6 +1259,7 @@ fn layout_flow(
                     resume: Resume::Line { index: end },
                     forced: false,
                     side: None,
+                    past_content: false,
                 });
             }
         }
@@ -1197,7 +1285,7 @@ fn layout_flow(
             };
             let laid = lay(block, items, space, &own_decorators, fragmentainer, resume);
             if laid.deferred {
-                return deferred(block, border, padding, width, extra);
+                return (deferred(block, border, padding, width, extra), false);
             }
             // Multi-column content continues from its segments, so a definite height that
             // breaks resumes after them.
@@ -1238,7 +1326,7 @@ fn layout_flow(
                 && !f.at_top
                 && needed > f.available + EPSILON
             {
-                return deferred(block, border, padding, width, extra);
+                return (deferred(block, border, padding, width, extra), false);
             }
             fragment.rect.x += content_x;
             fragment.rect.y += content_y;
@@ -1348,15 +1436,41 @@ fn layout_flow(
     }
 
     let monolithic = matches!(block.contents, BlockContents::Turned { .. });
+    // The bottom border and padding that a break leaves for the next page.
+    let end = if clone {
+        0.0
+    } else {
+        border.bottom + padding.bottom
+    };
+    // Whether the box ends before its bottom border and padding, which go to the next page,
+    // and whether an earlier break might take some content along with them.
+    let mut end_moved = false;
+    let mut retry = false;
     if let Some(limit) = limit.filter(|_| !monolithic) {
         let space = (limit - content_y).max(0.0);
+        // The space down to the end of the page, the room kept for the end included.
+        let page_space = if reserve_end { space + end } else { space };
+        let auto = definite_height.is_none() && max_height.is_none();
+        // Boxes in the flow; the containers of flex items, cells and columns size those.
+        let flowing = matches!(kind, BlockKind::Root | BlockKind::InFlow);
         if break_token.is_some() {
-            // A box that broke fills the page if its height continues past it.
+            // A box that broke fills the page: down to the end of the page if its height
+            // continues past it, and always when the height is the content's, as browsers
+            // paint its background and sides on every page it spans.
             if height > cursor {
                 height = height.min(space).max(cursor);
+            } else if auto && flowing {
+                height = page_space.max(cursor);
             } else {
                 height = cursor;
             }
+        } else if reserve_end
+            && (has_content || height > EPSILON)
+            && height + end > page_space + EPSILON
+        {
+            // No earlier break left room for the end: the box breaks just before it.
+            height = height.min(page_space);
+            end_moved = true;
         } else if height > space + EPSILON
             && height <= auto_height + EPSILON
             && content_end <= space + EPSILON
@@ -1365,28 +1479,49 @@ fn layout_flow(
             // margin at the end of a page is truncated (CSS Fragmentation 3 § 5.2).
             height = space;
         } else if height > space + EPSILON {
-            // A definite height runs past the end of the page: the rest goes on the next.
+            // A definite height runs past the end of the page: the rest goes on the next,
+            // and all of it when none of it fits below what comes before it.
+            if space <= EPSILON
+                && cursor <= EPSILON
+                && !resumed
+                && fragmentainer.is_some_and(|f| !f.at_top)
+            {
+                return (deferred(block, border, padding, width, extra), false);
+            }
             height = space.max(cursor);
             break_token = Some(BreakToken {
                 consumed: 0.0,
-                resume: match &block.contents {
-                    BlockContents::Blocks(_) => Resume::Child {
-                        index: all_children,
-                        token: None,
-                    },
-                    BlockContents::Inline(_)
-                    | BlockContents::Flex(_)
-                    | BlockContents::Grid(_)
-                    | BlockContents::Table(_)
-                    | BlockContents::OutOfFlow(_)
-                    | BlockContents::Float(_)
-                    | BlockContents::Turned { .. }
-                    | BlockContents::Ruby(_) => Resume::Line {
-                        index: all_children,
-                    },
-                },
+                resume: finished(block, all_children),
                 forced: false,
                 side: None,
+                past_content: true,
+            });
+        }
+        if break_token.is_none()
+            && !end_moved
+            && (flowing || matches!(kind, BlockKind::Item { .. }))
+            && (has_content || height > EPSILON)
+            && end > 0.0
+            && height + end > page_space + EPSILON
+        {
+            // The content fits and the bottom border and padding do not: the box breaks
+            // before them, unless content that can break earlier takes some along.
+            let breakable = matches!(block.contents, BlockContents::Inline(_))
+                || matches!(&block.contents, BlockContents::Blocks(_) if !crate::multicol::is_multicol(style));
+            retry = auto && breakable && !reserve_end;
+            end_moved = true;
+        }
+        if end_moved {
+            // Breaking before the box is better, where the page has room above it.
+            if fragmentainer.is_some_and(|f| !f.at_top) && !resumed {
+                return (deferred(block, border, padding, width, extra), retry);
+            }
+            break_token = Some(BreakToken {
+                consumed: 0.0,
+                resume: finished(block, all_children),
+                forced: false,
+                side: None,
+                past_content: true,
             });
         }
     }
@@ -1426,6 +1561,11 @@ fn layout_flow(
         replaced: None,
         legend: legend_gap,
         out_of_flow: None,
+        cut: Cut {
+            top: resumed && !clone,
+            bottom: break_token.is_some() && !clone,
+            ..Cut::default()
+        },
     };
     // Transformed and filtered boxes contain fixed descendants too.
     let fixed = crate::effects::contains_fixed(style);
@@ -1448,24 +1588,50 @@ fn layout_flow(
         // Nothing separates the top and bottom margins: they all collapse together.
         let mut all = collapsed_top;
         all.adjoin(collapsed_bottom);
-        return Laid {
+        return (
+            Laid {
+                fragment,
+                margin,
+                collapsed_top: all,
+                collapsed_bottom: CollapsibleMargin::default(),
+                through,
+                break_token: None,
+                deferred: false,
+            },
+            false,
+        );
+    }
+    (
+        Laid {
             fragment,
             margin,
-            collapsed_top: all,
-            collapsed_bottom: CollapsibleMargin::default(),
+            collapsed_top,
+            collapsed_bottom,
             through,
-            break_token: None,
+            break_token,
             deferred: false,
-        };
-    }
-    Laid {
-        fragment,
-        margin,
-        collapsed_top,
-        collapsed_bottom,
-        through,
-        break_token,
-        deferred: false,
+        },
+        retry,
+    )
+}
+
+/// Where a box whose content is all laid out continues: after its last child or line.
+fn finished(block: &BlockBox, all_children: usize) -> Resume {
+    match &block.contents {
+        BlockContents::Blocks(_) => Resume::Child {
+            index: all_children,
+            token: None,
+        },
+        BlockContents::Inline(_)
+        | BlockContents::Flex(_)
+        | BlockContents::Grid(_)
+        | BlockContents::Table(_)
+        | BlockContents::OutOfFlow(_)
+        | BlockContents::Float(_)
+        | BlockContents::Turned { .. }
+        | BlockContents::Ruby(_) => Resume::Line {
+            index: all_children,
+        },
     }
 }
 
@@ -1800,6 +1966,7 @@ fn layout_replaced(
             replaced: Some(replaced),
             legend: None,
             out_of_flow: None,
+            cut: Cut::default(),
         },
         margin: Sides {
             top: margin_top,
@@ -1899,6 +2066,7 @@ fn placeholder(block: &BlockBox, out_of_flow: OutOfFlow) -> Laid {
             replaced: None,
             legend: None,
             out_of_flow: Some(out_of_flow),
+            cut: Cut::default(),
         },
         margin: Sides::default(),
         collapsed_top: CollapsibleMargin::default(),
@@ -1933,6 +2101,7 @@ pub(crate) fn deferred(
             replaced: None,
             legend: None,
             out_of_flow: None,
+            cut: Cut::default(),
         },
         margin: Sides::default(),
         collapsed_top: CollapsibleMargin::default(),

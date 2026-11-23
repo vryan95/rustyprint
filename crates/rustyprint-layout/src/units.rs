@@ -148,6 +148,7 @@ pub(crate) fn paginate(
                 resume: Resume::Row { index: u },
                 forced: true,
                 side,
+                past_content: false,
             });
             break;
         }
@@ -249,6 +250,7 @@ pub(crate) fn paginate(
                     resume: Resume::Row { index: u },
                     forced: false,
                     side: None,
+                    past_content: false,
                 });
                 break;
             }
@@ -273,6 +275,7 @@ pub(crate) fn paginate(
                 },
                 forced: false,
                 side: None,
+                past_content: false,
             });
             break;
         }

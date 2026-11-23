@@ -386,3 +386,179 @@ fn a_cell_taller_than_its_content_by_its_own_height_still_centres_it() {
         content.rect.y
     );
 }
+
+/// The bottom of the fragment tagged `--id: <id>` on a page.
+fn bottom_of(root: &BoxFragment, id: &str) -> f32 {
+    y_of(root, id) + find(root, id).rect.height
+}
+
+/// A box of 10px borders and padding around `content`, tagged `a`.
+fn widget(content: &str) -> String {
+    format!(
+        "<div style='--id: a; border: 10px solid; padding: 10px; background: #eee'>{content}</div>"
+    )
+}
+
+fn table_rows(count: usize) -> String {
+    let row = "<tr><td style='padding: 0; height: 50px'></td></tr>";
+    format!(
+        "<table style='border-spacing: 0'>{}</table>",
+        row.repeat(count)
+    )
+}
+
+#[test]
+fn a_box_whose_content_breaks_fills_the_rest_of_the_page() {
+    // Browsers paint a box's background and sides down to the end of every page it
+    // continues from, wherever its content breaks: between rows, at a forced break, or
+    // between boxes in a flex column or a table cell.
+    let forced = "<div style='height: 100px'></div><div style='break-before: page'></div>";
+    for content in [
+        forced.to_owned(),
+        table_rows(9),
+        format!(
+            "<div style='display: flex; flex-direction: column'>{}</div>",
+            table_rows(9)
+        ),
+    ] {
+        let pages = pages(&widget(&content));
+        assert_eq!(pages.len(), 2, "{content}");
+        assert_eq!(bottom_of(&pages[0], "a"), PAGE.height, "{content}");
+        assert_eq!(find(&pages[1], "a").border.top, 0.0, "{content}");
+        assert_eq!(find(&pages[1], "a").border.bottom, 10.0, "{content}");
+    }
+    let in_cell = pages(&format!(
+        "<table style='border-spacing: 0'><tr><td style='padding: 0'>{}</td></tr></table>",
+        widget(&table_rows(9))
+    ));
+    assert_eq!(in_cell.len(), 2);
+    assert_eq!(bottom_of(&in_cell[0], "a"), PAGE.height);
+    assert_eq!(y_of(&in_cell[1], "a"), 0.0);
+}
+
+#[test]
+fn a_cloned_box_whose_content_breaks_closes_at_the_end_of_the_page() {
+    let pages = pages(&format!(
+        "<div style='--id: a; border: 10px solid; box-decoration-break: clone'>{}</div>",
+        table_rows(9)
+    ));
+    assert_eq!(pages.len(), 2);
+    assert_eq!(bottom_of(&pages[0], "a"), PAGE.height);
+    for page in &pages {
+        assert_eq!(
+            (find(page, "a").border.top, find(page, "a").border.bottom),
+            (10.0, 10.0)
+        );
+    }
+}
+
+#[test]
+fn the_end_of_a_box_that_does_not_fit_goes_to_the_next_page() {
+    // 20px of border and padding above content of 270px leave no room for the 20px below
+    // it, which go to the next page on their own, without stretching the box.
+    for (style, content) in [
+        ("", "<div style='height: 270px'></div>"),
+        ("height: 270px", ""),
+        ("", "<div style='height: 255px; margin-bottom: 30px'></div>"),
+    ] {
+        let pages = pages(&format!(
+            "<div style='--id: a; border: 10px solid; padding: 10px; {style}'>{content}</div>"
+        ));
+        assert_eq!(pages.len(), 2, "{style}{content}");
+        let (first, last) = (find(&pages[0], "a"), find(&pages[1], "a"));
+        let bottom = if content.contains("margin") {
+            300.0
+        } else {
+            290.0
+        };
+        assert_eq!(first.rect.height, bottom, "{style}{content}");
+        assert_eq!((first.border.bottom, first.padding.bottom), (0.0, 0.0));
+        assert_eq!(last.rect.height, 20.0, "{style}{content}");
+        assert_eq!((last.border.top, last.border.bottom), (0.0, 10.0));
+    }
+}
+
+#[test]
+fn content_that_can_break_earlier_goes_along_with_the_end_of_its_box() {
+    // Fourteen blocks or rows of 20px fill the page below the top of the box, and the last
+    // goes to the next page with the bottom border and padding, as in browsers.
+    let row = "<tr><td style='--id: last; padding: 0; height: 20px'></td></tr>";
+    for content in [
+        "<div style='height: 20px'></div>".repeat(13)
+            + "<div style='--id: last; height: 20px'></div>",
+        format!(
+            "<div style='border: 5px solid; padding: 5px'><table style='border-spacing: 0'>{}{row}</table></div>",
+            "<tr><td style='padding: 0; height: 20px'></td></tr>".repeat(12)
+        ),
+    ] {
+        let pages = pages(&widget(&content));
+        assert_eq!(pages.len(), 2, "{content}");
+        assert_eq!(bottom_of(&pages[0], "a"), PAGE.height, "{content}");
+        assert!(y_of(&pages[1], "last") < 20.0, "{content}");
+        assert_eq!(find(&pages[1], "a").border.bottom, 10.0, "{content}");
+    }
+}
+
+#[test]
+fn a_box_that_continues_breaks_before_its_end_rather_than_inside_a_child() {
+    // On a page the box continues on, browsers move only lines and boxes of its own along
+    // with its end: the rows of a table inside it stay.
+    let pages = pages(&widget(&table_rows(11)));
+    assert_eq!(pages.len(), 3);
+    // Five rows on the first page, and six fill the second.
+    assert_eq!(bottom_of(&pages[1], "a"), PAGE.height);
+    let end = find(&pages[2], "a");
+    assert_eq!((end.rect.height, end.border.bottom), (20.0, 10.0));
+}
+
+#[test]
+fn a_box_below_others_moves_whole_when_only_its_end_does_not_fit() {
+    let pages = pages(&format!(
+        "<div style='height: 100px'></div>{}",
+        widget("<div style='height: 170px'></div>")
+    ));
+    assert_eq!(pages.len(), 2);
+    assert_eq!(y_of(&pages[1], "a"), 0.0);
+    assert_eq!(find(&pages[1], "a").rect.height, 210.0);
+}
+
+#[test]
+fn the_corners_and_shadows_of_a_sliced_box_stop_where_pages_break_it() {
+    let (document, styles) = styled(
+        "<div style='height: 500px; border-radius: 20px; background: rgb(0, 0, 255); \
+         box-shadow: 0 0 0 5px rgb(0, 255, 0); margin: 0 20px'></div>",
+    );
+    let document = layout(&document, &styles, &options(), &Images::none());
+    assert_eq!(document.pages.len(), 2);
+    // The y of every point on a curve of the blue background, on each page.
+    let curves = |items: &[DisplayItem]| -> Vec<f32> {
+        items
+            .iter()
+            .filter_map(|item| match item {
+                DisplayItem::Path { path, color, .. } if (color.r, color.b) == (0, 255) => {
+                    Some(path.segments.iter().filter_map(|segment| match segment {
+                        rustyprint_layout::PathSegment::CubicTo(_, _, end) => Some(end.y),
+                        _ => None,
+                    }))
+                }
+                _ => None,
+            })
+            .flatten()
+            .collect()
+    };
+    let first = curves(&document.pages[0].items);
+    let second = curves(&document.pages[1].items);
+    assert!(
+        !first.is_empty() && first.iter().all(|&y| y <= 20.0),
+        "{first:?}"
+    );
+    assert!(
+        !second.is_empty() && second.iter().all(|&y| y >= 180.0),
+        "{second:?}"
+    );
+    // The shadow is cut off at the bottom of the first page.
+    let clipped = document.pages[0].items.iter().any(|item| {
+        matches!(item, DisplayItem::PushClip(rect) if rect.bottom() == PAGE.height && rect.y < 0.0)
+    });
+    assert!(clipped);
+}
