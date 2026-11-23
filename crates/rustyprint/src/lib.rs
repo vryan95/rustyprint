@@ -248,12 +248,13 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     let load_font = |url: &str| get(url);
     let load_file = |url: &str| get(url);
     let images = Images::new(&load_file).with_max_pixels(options.limits.max_image_pixels);
-    let lay_out = |stylesheet: Option<&str>| {
+    let lay_out = |zoom: f32| {
         let styles = rustyprint_layout::style(
             &document,
             &StyleOptions {
                 page_size: (area.width, area.height),
-                stylesheet,
+                zoom,
+                stylesheet: options.stylesheet.as_deref(),
                 load: &load,
                 font_metrics: Some(&rustyprint_layout::font_metrics),
                 load_font: Some(&load_font),
@@ -264,17 +265,14 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
         let laid_out = layout(&document, &styles, &page, &images);
         (styles, laid_out)
     };
-    let (mut styles, mut laid_out) = lay_out(options.stylesheet.as_deref());
+    let (mut styles, mut laid_out) = lay_out(1.0);
     if options.shrink_to_fit
-        && let Some(scale) = shrink_to_fit_scale(&laid_out, &page)
+        && let Some(scale) = shrink_to_fit_scale(&laid_out)
     {
-        // Laid out again at the scale that fits, as a browser's print does: a zoom on the
-        // root scales every length, so lines and tables reflow to the narrower width.
-        let zoomed = format!(
-            "{}\nhtml {{ zoom: {scale} }}",
-            options.stylesheet.as_deref().unwrap_or("")
-        );
-        (styles, laid_out) = lay_out(Some(&zoomed));
+        // Laid out again at the scale that fits, as a browser's print does: the root starts
+        // from that zoom, which the document's own `zoom` multiplies, so every length scales
+        // and lines and tables reflow to the narrower width.
+        (styles, laid_out) = lay_out(scale);
     }
     let mut warnings: Vec<String> = styles
         .warnings
@@ -290,25 +288,21 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     Ok(Output { pdf, warnings })
 }
 
-/// The scale that makes what the pages paint fit between the page's left and right margins,
-/// or `None` when it already fits (within a pixel, so rounding does not rescale).
-fn shrink_to_fit_scale(
-    laid_out: &rustyprint_layout::display::Document,
-    page: &PageOptions,
-) -> Option<f32> {
-    let printable = page.size.width - page.margin.left - page.margin.right;
-    let right = laid_out
+/// The scale that makes the document's content fit across the page area of every page, as
+/// each page's `@page` rules size it, or `None` when it already fits within a pixel, so
+/// rounding does not rescale. What clips hide, and the pages' own backgrounds and margin
+/// boxes, do not count.
+fn shrink_to_fit_scale(laid_out: &rustyprint_layout::display::Document) -> Option<f32> {
+    let scale = laid_out
         .pages
         .iter()
-        .filter_map(|p| p.content_bounds())
-        .map(|bounds| bounds.right())
-        .fold(f32::MIN, f32::max);
-    let content = right - page.margin.left;
-    if printable <= 0.0 || content <= printable + 1.0 {
-        return None;
-    }
-    let scale = (printable / content).max(MIN_SHRINK_TO_FIT);
-    (scale < 0.99).then_some(scale)
+        .filter_map(|page| {
+            let content = page.content?.right() - page.area.x;
+            (page.area.width > 0.0 && content > page.area.width + 1.0)
+                .then(|| page.area.width / content)
+        })
+        .reduce(f32::min)?;
+    Some(scale.max(MIN_SHRINK_TO_FIT))
 }
 
 #[cfg(test)]
@@ -367,6 +361,94 @@ mod tests {
             render(&html, &options).unwrap().pdf
         };
         assert_eq!(pages(false), pages(true));
+    }
+
+    /// The pages `html` takes on A4 with 2cm margins, with or without `shrink_to_fit`.
+    fn pages_shrunk(html: &str, shrink_to_fit: bool) -> usize {
+        let options = RenderOptions {
+            shrink_to_fit,
+            ..RenderOptions::default()
+        };
+        parse(&render(html, &options).unwrap().pdf)
+            .get_pages()
+            .len()
+    }
+
+    /// The width and height of A4's page area with 2cm margins.
+    fn printable() -> (f32, f32) {
+        (
+            Size::A4.width - 4.0 * options::CM,
+            Size::A4.height - 4.0 * options::CM,
+        )
+    }
+
+    #[test]
+    fn shrink_to_fit_multiplies_the_documents_own_zoom() {
+        // Four printable widths at the document's zoom of 0.5 paint two: shrunk by 0.5 more,
+        // the block is a quarter of its size and its 3000px fit on one page. Neither a rule
+        // nor an inline style for the root replaces the shrink.
+        let (width, _) = printable();
+        for zoom in [
+            "<style>html { zoom: 0.5 }</style><html>",
+            "<html style='zoom: 0.5'>",
+        ] {
+            let html = format!(
+                "{zoom}<style>body {{ margin: 0 }}</style><div style='width: {}px; height: 3000px; background: #eee'></div>",
+                width * 4.0
+            );
+            assert_eq!(pages_shrunk(&html, false), 2, "{zoom}");
+            assert_eq!(pages_shrunk(&html, true), 1, "{zoom}");
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_measures_the_page_area_page_rules_set() {
+        // 500px is wider than the 360px area of a 400px page with 20px margins, though not
+        // than A4's: shrunk to fit, the 1000px block fits in that area's 760px height.
+        let html = "<style>@page { size: 400px 800px; margin: 20px } body { margin: 0 }</style>\
+            <div style='width: 500px; height: 1000px; background: #eee'></div>";
+        assert_eq!(pages_shrunk(html, false), 2);
+        assert_eq!(pages_shrunk(html, true), 1);
+    }
+
+    #[test]
+    fn shrink_to_fit_ignores_page_backgrounds_and_margin_boxes() {
+        // The content fits across the page, so it is not shrunk onto one page though the
+        // page's background and margin boxes reach the sheet's edge.
+        let (_, height) = printable();
+        let html = format!(
+            "<style>@page {{ background: white; @top-right {{ content: 'x'; width: 100% }} }} body {{ margin: 0 }}</style>\
+            <div style='width: 100px; height: {}px; background: #eee'></div>",
+            height + 20.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 2);
+    }
+
+    #[test]
+    fn shrink_to_fit_ignores_what_overflow_clips() {
+        let (_, height) = printable();
+        let html = format!(
+            "<style>body {{ margin: 0 }}</style><div style='width: 100px; overflow: hidden'>\
+            <div style='width: 2000px; height: {}px; background: #eee'></div></div>",
+            height + 20.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 2);
+    }
+
+    #[test]
+    fn shrink_to_fit_fits_content_a_few_pixels_too_wide() {
+        // 5px too wide shrinks by about 0.8%, which takes the 3px too tall block onto one
+        // page.
+        let (width, height) = printable();
+        let html = format!(
+            "<style>body {{ margin: 0 }}</style><div style='width: {}px; height: {}px; background: #eee'></div>",
+            width + 5.0,
+            height + 3.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 1);
     }
 
     #[test]

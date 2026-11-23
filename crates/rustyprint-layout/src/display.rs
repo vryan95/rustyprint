@@ -124,15 +124,15 @@ pub struct Page {
     pub rotate: i32,
     /// Link areas, in document order.
     pub links: Vec<Link>,
+    /// The page area, which the document's content is laid out in, in page coordinates.
+    pub area: Rect,
+    /// The bounds of the document's content where its clips let it show, in page
+    /// coordinates: not the page's own background, borders or margin boxes. `None` when
+    /// the page shows none.
+    pub content: Option<Rect>,
 }
 
 impl Page {
-    /// The bounds of everything the page paints, with transforms applied and clips ignored,
-    /// in page coordinates.
-    pub fn content_bounds(&self) -> Option<Rect> {
-        crate::raster::bounds(&self.items)
-    }
-
     /// A page of `size` without bleed, marks or rotation.
     pub fn new(size: Size, items: Vec<DisplayItem>) -> Self {
         Self {
@@ -142,6 +142,8 @@ impl Page {
             marks: PrintMarks::default(),
             rotate: 0,
             links: Vec::new(),
+            area: Rect::new(0.0, 0.0, size.width, size.height),
+            content: None,
         }
     }
 }

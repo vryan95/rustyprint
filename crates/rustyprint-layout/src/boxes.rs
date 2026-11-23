@@ -1460,6 +1460,7 @@ impl Builder<'_> {
             &document,
             &StyleOptions {
                 page_size: viewport,
+                zoom: 1.0,
                 stylesheet: None,
                 load: &load,
                 font_metrics: Some(&crate::font_metrics),
@@ -2424,6 +2425,7 @@ mod tests {
             &document,
             &StyleOptions {
                 page_size: (800.0, 1000.0),
+                zoom: 1.0,
                 stylesheet: None,
                 load: &load,
                 font_metrics: None,

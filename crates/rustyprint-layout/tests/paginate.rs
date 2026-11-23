@@ -13,6 +13,7 @@ fn styled(body: &str) -> (Document, rustyprint_css::Styles) {
         &document,
         &StyleOptions {
             page_size: (PAGE.width, PAGE.height),
+            zoom: 1.0,
             stylesheet: None,
             load: &load,
             font_metrics: None,

@@ -55,6 +55,9 @@ pub enum Origin {
 pub struct StyleOptions<'a> {
     /// The page area in CSS pixels, for media queries and viewport units.
     pub page_size: (f32, f32),
+    /// The zoom the root element starts from, which the document's own `zoom` multiplies,
+    /// as when a print is scaled. Page contexts and their margin boxes do not take it.
+    pub zoom: f32,
     /// An extra author stylesheet applied after the document's own.
     pub stylesheet: Option<&'a str>,
     /// Loads `<link>` and `@import` stylesheets by URL.
@@ -193,6 +196,9 @@ pub fn compute_styles_in(
         ..Default::default()
     };
     let mut root_parent = ComputedValues::initial();
+    // Lengths the root inherits are zoomed already, as the root's own lengths will be.
+    root_parent.effective_zoom = options.zoom;
+    root_parent.font_size *= options.zoom;
     root_parent.font_rules = rules.font_rules.clone();
     // Registered custom properties start at their initial values.
     if !rules.registered.is_empty() {
@@ -1745,7 +1751,16 @@ impl Engine<'_> {
             .document
             .document_element()
             .unwrap_or(self.document.root());
-        let style = Arc::new(self.compute(element, root, applicable, (1, 1)));
+        // The zoom of a scaled print is for the document, not for the page: the lengths of
+        // the page context and what it inherits from the root are as written.
+        let mut unscaled = root.clone();
+        let zoom = self.options.zoom;
+        unscaled.effective_zoom /= zoom;
+        unscaled.font_size /= zoom;
+        if let LineHeight::Length(px) = &mut unscaled.line_height {
+            *px /= zoom;
+        }
+        let style = Arc::new(self.compute(element, &unscaled, applicable, (1, 1)));
 
         descriptors.sort_by_key(|(key, _)| *key);
         let mut out = default_page_style();

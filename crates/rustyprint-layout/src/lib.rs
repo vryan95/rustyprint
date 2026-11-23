@@ -256,15 +256,17 @@ pub fn layout(
             let style = &laid.style;
             let bleed = style.used_bleed();
             let mut items = paint::paint_page(laid, images, bleed);
+            let area = laid.area;
+            let mut content = None;
             if let Some(root) = &laid.root {
-                let area = laid.area;
                 let viewport = Rect::new(0.0, 0.0, area.width, area.height);
-                items.extend(
-                    paint::paint(root, images, viewport)
-                        .items
-                        .iter()
-                        .map(|item| item.translated(area.x, area.y)),
-                );
+                let painted: Vec<DisplayItem> = paint::paint(root, images, viewport)
+                    .items
+                    .iter()
+                    .map(|item| item.translated(area.x, area.y))
+                    .collect();
+                content = raster::visible_bounds(&painted);
+                items.extend(painted);
             }
             let sheet = Rect::new(0.0, 0.0, laid.size.width, laid.size.height);
             for margin_box in &laid.margin_boxes {
@@ -284,6 +286,8 @@ pub fn layout(
                     PageOrientation::RotateRight => 90,
                 },
                 links: std::mem::take(links),
+                area,
+                content,
             }
         })
         .collect();

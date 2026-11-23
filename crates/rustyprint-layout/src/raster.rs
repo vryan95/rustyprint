@@ -120,23 +120,52 @@ pub(crate) fn draw(items: &[DisplayItem], raster: &mut Raster) {
 
 /// The bounds of what `items` paint, with transforms applied and clips ignored.
 pub(crate) fn bounds(items: &[DisplayItem]) -> Option<Rect> {
-    let mut matrices: Vec<Matrix> = vec![crate::display::IDENTITY];
+    bounds_within(items, false)
+}
+
+/// The bounds of what `items` paint inside their rectangular and path clips, with
+/// transforms applied. Clips to glyphs are not narrowed to the glyphs.
+pub(crate) fn visible_bounds(items: &[DisplayItem]) -> Option<Rect> {
+    bounds_within(items, true)
+}
+
+fn bounds_within(items: &[DisplayItem], clipped: bool) -> Option<Rect> {
+    // For each open clip or transform: the transform, and the clip in the items' outer
+    // coordinates, empty when nothing shows.
+    let mut levels: Vec<(Matrix, Option<Rect>)> = vec![(crate::display::IDENTITY, None)];
     let mut out: Option<Rect> = None;
     for item in items {
-        let current = *matrices.last().expect("never empty");
+        let (matrix, clip) = *levels.last().expect("never empty");
+        let narrow = |rect: Option<Rect>| match rect.filter(|_| clipped) {
+            Some(rect) => {
+                let rect = crate::display::transform_rect(matrix, rect);
+                Some(match clip {
+                    Some(clip) => intersection(clip, rect)
+                        .unwrap_or_else(|| Rect::new(clip.x, clip.y, 0.0, 0.0)),
+                    None => rect,
+                })
+            }
+            None => clip,
+        };
         match item {
-            DisplayItem::PushTransform(m) => matrices.push(multiply(current, *m)),
-            DisplayItem::PushClip(_)
-            | DisplayItem::PushClipPath { .. }
-            | DisplayItem::PushClipText(_) => matrices.push(current),
+            DisplayItem::PushTransform(m) => levels.push((multiply(matrix, *m), clip)),
+            DisplayItem::PushClip(rect) => levels.push((matrix, narrow(Some(*rect)))),
+            DisplayItem::PushClipPath { path, .. } => levels.push((matrix, narrow(path.bounds()))),
+            DisplayItem::PushClipText(_) => levels.push((matrix, clip)),
             DisplayItem::PopClip => {
-                if matrices.len() > 1 {
-                    matrices.pop();
+                if levels.len() > 1 {
+                    levels.pop();
                 }
             }
             _ => {
-                if let Some(rect) = item.bounds() {
-                    let rect = crate::display::transform_rect(current, rect);
+                let rect = item
+                    .bounds()
+                    .map(|rect| crate::display::transform_rect(matrix, rect));
+                let rect = match clip {
+                    Some(clip) => rect.and_then(|rect| intersection(clip, rect)),
+                    None => rect,
+                };
+                if let Some(rect) = rect {
                     out = Some(match out {
                         Some(o) => union(o, rect),
                         None => rect,

@@ -222,6 +222,7 @@ fn run_fixture(path: &Path) -> Result<(), Failed> {
         &document,
         &StyleOptions {
             page_size: PAGE,
+            zoom: 1.0,
             stylesheet: None,
             load: &load,
             font_metrics: Some(&rustyprint_layout::font_metrics),
