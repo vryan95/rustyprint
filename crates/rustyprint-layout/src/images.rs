@@ -621,6 +621,18 @@ mod tests {
     }
 
     #[test]
+    fn svg_that_cannot_be_drawn_within_the_pixel_limit_is_not_drawn() {
+        // A whole pixel on each side is already more than the limit allows.
+        let thin = r#"<svg xmlns="http://www.w3.org/2000/svg" width="1000000" height="1"/>"#;
+        for (svg, limit) in [(SHAPE, 0), (thin, 100)] {
+            let load = |_: &str| Some(svg.as_bytes().to_vec());
+            let images = Images::new(&load).with_max_pixels(limit);
+            assert!(images.get("big.svg").is_none(), "{limit}");
+            assert_eq!(images.warnings().len(), 1, "{:?}", images.warnings());
+        }
+    }
+
+    #[test]
     fn svg_keeps_its_shape_as_preserve_aspect_ratio_says() {
         let fit = |attributes: &str| {
             let svg = format!(

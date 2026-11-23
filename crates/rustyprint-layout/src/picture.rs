@@ -222,9 +222,21 @@ impl Picture {
         }
     }
 
-    /// Paints the image filling `rect`.
+    /// Paints the image filling `rect`. An SVG image keeps its shape in it as its
+    /// `preserveAspectRatio` says.
     pub fn paint(&self, style: &ComputedValues, rect: Rect, items: &mut Vec<DisplayItem>) {
-        self.paint_faded(style, rect, 1.0, items);
+        self.paint_faded(style, rect, 1.0, true, items);
+    }
+
+    /// Paints the image stretched to `rect` along each axis, an SVG image too: for a rect
+    /// that already places the image, such as one a slice of it is cut from.
+    pub fn paint_stretched(
+        &self,
+        style: &ComputedValues,
+        rect: Rect,
+        items: &mut Vec<DisplayItem>,
+    ) {
+        self.paint_faded(style, rect, 1.0, false, items);
     }
 
     fn paint_faded(
@@ -232,6 +244,7 @@ impl Picture {
         style: &ComputedValues,
         rect: Rect,
         opacity: f32,
+        fit: bool,
         items: &mut Vec<DisplayItem>,
     ) {
         if rect.width <= 0.0 || rect.height <= 0.0 || opacity <= 0.0 {
@@ -258,7 +271,7 @@ impl Picture {
                         let full = Rect::new(rect.x - x * sx, rect.y - y * sy, iw * sx, ih * sy);
                         (full, true)
                     }
-                    None => match (image.fit, image.natural) {
+                    None => match (image.fit.filter(|_| fit), image.natural) {
                         // An SVG image keeps its shape in a box of another shape.
                         (Some(fit), Some(size)) if size.0 > 0.0 && size.1 > 0.0 => {
                             (fit.place(size, rect), fit.slice)
@@ -334,7 +347,7 @@ impl Picture {
                     } else {
                         1.0
                     };
-                    picture.paint_faded(style, rect, opacity * layer_opacity, items);
+                    picture.paint_faded(style, rect, opacity * layer_opacity, fit, items);
                 }
             }
         }

@@ -56,6 +56,12 @@ pub(crate) fn rasterize(bytes: &[u8], max_pixels: u64) -> Result<Image, String> 
     // Rounded down, so that rounding never passes the limit.
     let size = |length: f32| ((length * scale).floor() as u32).max(1);
     let (pixel_width, pixel_height) = (size(width), size(height));
+    // At least one pixel on each side may still be more than the limit.
+    if u64::from(pixel_width) * u64::from(pixel_height) > max_pixels {
+        return Err(format!(
+            "an SVG image of {width}×{height} cannot be drawn within {max_pixels} pixels"
+        ));
+    }
     let mut pixmap = tiny_skia::Pixmap::new(pixel_width, pixel_height)
         .ok_or_else(|| format!("an SVG image of {width}×{height} cannot be drawn"))?;
     let transform =
