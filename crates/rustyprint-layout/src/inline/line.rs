@@ -782,6 +782,7 @@ impl LineContext<'_> {
     }
 
     /// Builds line items from pieces in visual order, nesting inline box fragments.
+    /// `atomics` holds the baseline of each atomic inline, by its index in `pieces`.
     /// `baseline` converts baselines relative to the root baseline into line coordinates.
     fn build(
         &self,
@@ -804,7 +805,7 @@ impl LineContext<'_> {
                     j += 1;
                 }
                 let group = &pieces[i..j];
-                let children = self.build(group, depth + 1, boxes, atomics, root_y);
+                let children = self.build(group, depth + 1, boxes, &atomics[i..j], root_y);
                 let mut inline = self.inline_fragment(b, group, children, boxes, root_y);
                 let (dx, dy) = self.relative_offset(&inline.style);
                 if dx != 0.0 || dy != 0.0 {
