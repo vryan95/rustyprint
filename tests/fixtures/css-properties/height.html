@@ -4,12 +4,63 @@
 <title>height</title>
 <style>
 #t { height: 50px }
+.k { display: inline-block; width: 10px; height: 10px; vertical-align: top }
+.t { display: table; line-height: 20px }
+table { border-spacing: 2px; line-height: 20px }
+td, th { padding: 0 }
 </style>
 <script type="text/x-rustyprint-expect">
 #t { height: 50px; layout-height: 50px }
+#a { layout-height: 55px }
+#b { layout-height: 80px }
+#b1 { layout-height: 76px }
+#c { layout-height: 50px }
+#d { layout-height: 100px }
+#d1 { layout-height: 96px }
+#e { layout-height: 100px }
+#e1 { layout-height: 10px }
+#f { layout-height: 90px }
+#f1 { layout-height: 20px }
+#f2 { layout-height: 64px }
+#g { layout-height: 90px }
+#g1 { layout-height: 20px }
+#g2 { layout-height: 64px }
+#h { layout-height: 100px }
+#h1 { layout-height: 20px }
+#h2 { layout-height: 74px }
+#i { layout-height: 100px }
+#i1 { layout-height: 23.5px }
+#i2 { layout-height: 70.5px }
+#j { layout-height: 200px }
+#j1 { layout-height: 30px }
+#j2 { layout-height: 101.667px }
+#j3 { layout-height: 28.333px }
+#l { layout-height: 100px }
+#m { layout-height: 20px }
+#n { layout-height: 50px }
+#o { layout-height: 70px }
+#o1 { layout-height: 66px }
+#p { layout-height: 20px }
+#q { layout-height: 34px }
 </script>
 </head>
 <body>
 <div id=t></div>
+<div id=a class=t style="height: 55px"><b class=k></b></div>
+<table id=b style="height: 80px"><tr id=b1><td><b class=k></b></td></tr></table>
+<div id=c class=t style="height: 50px"></div>
+<table id=d style="height: 100px"><thead><tr id=d1><th><div style="height: 10px"></div></th></tr></thead></table>
+<table id=e style="height: 100px"><thead><tr id=e1><th><div style="height: 10px"></div></th></tr></thead><tbody></tbody></table>
+<table id=f style="height: 90px"><tr id=f1 style="height: 20px"><td><b class=k></b></td></tr><tr id=f2><td><b class=k></b></td></tr></table>
+<table id=g style="height: 90px"><tr id=g1><td style="height: 20px"><b class=k></b></td></tr><tr id=g2><td><b class=k></b></td></tr></table>
+<table id=h style="height: 100px"><tr id=h1 style="height: 20px"><td><div style="height: 5px"></div></td></tr><tr id=h2><td></td></tr></table>
+<table id=i style="height: 100px"><thead><tr id=i1><th><div style="height: 10px"></div></th></tr></thead><tfoot><tr id=i2><td><div style="height: 30px"></div></td></tr></tfoot></table>
+<table id=j style="height: 200px; border-spacing: 10px"><tbody><tr id=j1 style="height: 30px"><td><div style="height: 10px"></div></td></tr><tr id=j2><td><div style="height: 10px"></div></td></tr></tbody><tbody><tr id=j3><td><div style="height: 10px"></div></td></tr></tbody></table>
+<div style="height: 200px"><div id=l class=t style="height: 50%"><b class=k></b></div></div>
+<div><div id=m class=t style="height: 50%"><b class=k></b></div></div>
+<div id=n class=t style="height: 100px; max-height: 50px"><b class=k></b></div>
+<div style="display: flex; height: 70px"><table id=o><tr id=o1><td><b class=k></b></td></tr></table></div>
+<div style="position: relative; height: 70px"><div id=p class=t style="position: absolute; top: 0; bottom: 0"><b class=k></b></div></div>
+<table id=q style="height: 10px"><tr><td><div style="height: 30px"></div></td></tr></table>
 </body>
 </html>

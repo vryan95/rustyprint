@@ -145,7 +145,7 @@ fn resolve(value: &LengthPercentage, basis: f32) -> f32 {
 }
 
 /// A length that needs a definite basis when it has a percentage.
-fn resolve_definite(value: &LengthPercentage, basis: Option<f32>) -> Option<f32> {
+pub(crate) fn resolve_definite(value: &LengthPercentage, basis: Option<f32>) -> Option<f32> {
     match (value, basis) {
         (LengthPercentage::Length(px), _) => Some(*px),
         (other, Some(basis)) => Some(other.resolve(basis)),
