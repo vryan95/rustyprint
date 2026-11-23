@@ -198,3 +198,33 @@ fn a_float_inside_a_paragraph_counts_towards_its_table_cells_width() {
     let float = find(&pages[0], "f").rect.width;
     assert!(float >= 300.0, "the float is {float} wide");
 }
+
+#[test]
+fn a_floats_max_width_limits_what_it_asks_of_its_table_cell() {
+    let pages = pages(
+        "<table style='width: 100%; border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>&nbsp; \
+         <span style='float: left; width: 300px; max-width: 50px; height: 10px'></span></p></td>\
+         <td style='padding: 0'>A long title that would take the whole width of the table \
+         if it could, and more besides, so that the other column is squeezed</td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(cell < 150.0, "the float's cell is {cell} wide");
+}
+
+#[test]
+fn floats_that_clear_each_other_stack_instead_of_adding_up() {
+    let pages = pages(
+        "<table style='border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>x\
+         <span style='float: left; width: 150px; height: 10px'></span>\
+         <span style='float: left; clear: both; width: 150px; height: 10px'></span></p></td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(
+        (150.0..200.0).contains(&cell),
+        "the floats' cell is {cell} wide"
+    );
+}

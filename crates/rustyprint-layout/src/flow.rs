@@ -2007,5 +2007,21 @@ pub(crate) fn intrinsic_outer(block: &BlockBox) -> (f32, f32) {
         }
         _ => intrinsic_content(block),
     };
+    // Definite `min-width` and `max-width` hold the box's width whatever its content asks.
+    let limit = |size: &Size<LengthPercentage>| match size {
+        Size::Value(LengthPercentage::Length(px)) if style.box_sizing == BoxSizing::BorderBox => {
+            Some((px - padding.horizontal() - border.horizontal()).max(0.0))
+        }
+        Size::Value(LengthPercentage::Length(px)) => Some(*px),
+        _ => None,
+    };
+    let (min, max) = match limit(&style.max_width) {
+        Some(most) => (min.min(most), max.min(most)),
+        None => (min, max),
+    };
+    let (min, max) = match limit(&style.min_width) {
+        Some(least) => (min.max(least), max.max(least)),
+        None => (min, max),
+    };
     (min + extra, max + extra)
 }
