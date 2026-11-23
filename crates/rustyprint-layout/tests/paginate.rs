@@ -179,3 +179,25 @@ fn fixed_backgrounds_repeat_on_every_page() {
         assert_eq!((image.x, image.y), (390.0, 290.0));
     }
 }
+
+#[test]
+#[cfg(feature = "emoji")]
+fn emoji_set_upright_in_vertical_text_are_painted_in_color() {
+    // The color emoji font draws its glyphs from color layers, not from outlines, so text
+    // that only drew the glyph would leave it blank.
+    let layers = |style: &str| {
+        let (document, styles) = styled(&format!("<p style='{style}'>\u{1F381}</p>"));
+        let document = layout(&document, &styles, &options(), &Images::none());
+        document.pages[0]
+            .items
+            .iter()
+            .filter(|item| matches!(item, DisplayItem::PushClipPath { .. }))
+            .count()
+    };
+    let horizontal = layers("");
+    assert!(horizontal > 0);
+    assert_eq!(
+        layers("writing-mode: vertical-rl; text-orientation: upright"),
+        horizontal
+    );
+}
