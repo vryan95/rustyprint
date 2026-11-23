@@ -1699,8 +1699,19 @@ pub(crate) fn layout(
             if (i == start && partial.is_some())
                 || (!fits && placed == 0 && f.at_top && splittable(r))
             {
-                let space = (f.available - y - tail - vs).max(0.0);
-                let (fragments, height, tokens) = split_row(r, partial, space);
+                // A sliced last row that continues ends the page without the bottom edge,
+                // so it only needs room for the edge if it finishes here.
+                let space = |tail: f32| (f.available - y - tail - vs).max(0.0);
+                let open_tail = if last && !clone {
+                    tail - bottom_edge
+                } else {
+                    tail
+                };
+                let mut split = split_row(r, partial, space(open_tail));
+                if split.2.is_none() && y + split.1 + vs + tail > f.available + EPSILON {
+                    split = split_row(r, partial, space(tail));
+                }
+                let (fragments, height, tokens) = split;
                 let broke = tokens.is_some();
                 part = Some((fragments, height, tokens));
                 y += height + vs;
