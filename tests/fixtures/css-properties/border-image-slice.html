@@ -12,6 +12,7 @@ div { border-image-source: url(assets/frame.png) }
 #b { border-image-slice: 5; layout-image: "0 0 60 60" }
 #c { border-image-slice: 10 fill; layout-paint: "image*9" }
 #d { border-image-slice: 100% }
+#e { zoom: 0.5; layout-image: "0 0 15 15"; layout-paint: "image*8" }
 </script>
 </head>
 <body>
@@ -19,5 +20,6 @@ div { border-image-source: url(assets/frame.png) }
 <div id=b style="border-image-slice: 5"></div>
 <div id=c style="border-image-slice: fill 10"></div>
 <div id=d></div>
+<div id=e style="border-image-slice: 10; zoom: .5"></div>
 </body>
 </html>

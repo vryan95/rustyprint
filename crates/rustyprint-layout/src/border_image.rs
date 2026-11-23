@@ -48,10 +48,15 @@ pub(crate) fn paint(
     if area.width <= 0.0 || area.height <= 0.0 {
         return;
     }
-    // An image without a natural size is sized to the area.
+    // Slices are in the image's own pixels, which `zoom` does not change, so the source is
+    // measured in unzoomed pixels and only the widths drawn into the area scale. An image
+    // without a natural size is sized to the area.
+    let zoom = style.effective_zoom;
     let (iw, ih) = picture
         .natural_size(style)
-        .unwrap_or((area.width, area.height));
+        .map_or((area.width / zoom, area.height / zoom), |(w, h)| {
+            (w / zoom, h / zoom)
+        });
     if iw <= 0.0 || ih <= 0.0 {
         return;
     }
@@ -70,7 +75,7 @@ pub(crate) fn paint(
         *width = match &nine.width[i] {
             ImageSideWidth::Number(n) => n * borders[i],
             ImageSideWidth::Length(l) => l.resolve(basis),
-            ImageSideWidth::Auto => slice[i],
+            ImageSideWidth::Auto => slice[i] * zoom,
         }
         .max(0.0);
     }
