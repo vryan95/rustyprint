@@ -7,7 +7,7 @@ use rustyprint_css::ComputedValues;
 use rustyprint_css::properties::types::{
     AlignPosition, BoxDecorationBreak, BoxSizing, BreakBetween, CalcSizeBasis, ContentAlignment,
     ContentDistribution, Direction, Display, DisplayInside, LengthPercentage, MaybeAuto, Overflow,
-    PageSide, Size,
+    PageSide, Size, TableLayout,
 };
 use rustyprint_css::values::{CalcContext, CalcNode};
 
@@ -1987,41 +1987,183 @@ fn intrinsic_contents(block: &BlockBox) -> (f32, f32) {
         BlockContents::Blocks(segments) if crate::multicol::is_multicol(&block.style) => {
             crate::multicol::intrinsic(block, segments)
         }
-        BlockContents::Blocks(blocks) => blocks
-            .iter()
-            .map(intrinsic_outer)
-            .fold((0.0, 0.0), |(a, b), (c, d)| (a.max(c), b.max(d))),
+        BlockContents::Blocks(blocks) => {
+            intrinsic_blocks(blocks, block.style.direction == Direction::Rtl)
+        }
     }
 }
 
-/// The max-content width of a box's content box.
-pub(crate) fn intrinsic_content_width(block: &BlockBox) -> f32 {
-    intrinsic_content(block).1
+/// Minimum and maximum content widths of a container of block-level boxes (CSS Sizing 3
+/// § 5.1). At its narrowest every box has a line of its own. At its widest a run of floats
+/// sits side by side, with what follows it on the same line: a box with its own formatting
+/// context, or the first line of an anonymous block. Any other box in flow, and a float
+/// that clears the run, starts a new line. This is how Chromium counts them; CSS 2.1 leaves
+/// the widths of floats in a shrink-to-fit container open.
+fn intrinsic_blocks(blocks: &[BlockBox], rtl: bool) -> (f32, f32) {
+    let (mut min, mut max) = (0.0f32, 0.0f32);
+    // The margin-box widths of the floats on the current line, on each side.
+    let (mut left, mut right) = (0.0f32, 0.0f32);
+    for child in blocks {
+        // Out-of-flow boxes take no space, and do not end a line of floats.
+        if matches!(child.contents, BlockContents::OutOfFlow(_)) {
+            continue;
+        }
+        let style = &child.style;
+        let float = style.float.is_left(rtl);
+        let independent = float.is_none() && establishes_bfc(child, false, false);
+        if float.is_some() || independent {
+            let (clear_left, clear_right) = style.clear.sides(rtl);
+            if clear_left {
+                left = 0.0;
+            }
+            if clear_right {
+                right = 0.0;
+            }
+        }
+        // Inline content between blocks is in an anonymous block, which has the initial
+        // `display` and no box of its own. Its first line has the floats beside it.
+        let beside = left + right;
+        let (child_min, child_max) = match &child.contents {
+            BlockContents::Inline(items)
+                if beside > 0.0
+                    && float.is_none()
+                    && child.node.is_none()
+                    && style.display == Display::INLINE =>
+            {
+                inline::intrinsic_beside(items, style, beside)
+            }
+            _ => intrinsic_outer(child),
+        };
+        min = min.max(child_min);
+        match float {
+            // A float pushed out of the container by negative margins takes no room.
+            Some(true) => left += child_max.max(0.0),
+            Some(false) => right += child_max.max(0.0),
+            None => {}
+        }
+        max = max.max(if float.is_some() {
+            left + right
+        } else if independent && left + right > 0.0 {
+            // The box goes beside the floats, which may sit in its margins.
+            let inset = |floats: f32, margin: f32| {
+                if margin > 0.0 {
+                    floats.max(margin)
+                } else {
+                    floats + margin
+                }
+            };
+            let (margin_left, margin_right) = fixed_margins(style);
+            child_max - margin_left - margin_right
+                + inset(left, margin_left)
+                + inset(right, margin_right)
+        } else {
+            child_max
+        });
+        if float.is_none() {
+            (left, right) = (0.0, 0.0);
+        }
+    }
+    (min, max)
 }
 
-/// Minimum and maximum widths of a box's margin box, ignoring percentages.
-pub(crate) fn intrinsic_outer(block: &BlockBox) -> (f32, f32) {
-    let style = &block.style;
-    let (padding, border) = padding_and_border(style, 0.0);
+/// The left and right margins of a box while its containing block is sized from its
+/// content, when `auto` and percentages count as zero.
+fn fixed_margins(style: &ComputedValues) -> (f32, f32) {
     let fixed = |m: &MaybeAuto<LengthPercentage>| match m {
         MaybeAuto::Value(LengthPercentage::Length(px)) => *px,
         _ => 0.0,
     };
-    let extra = padding.horizontal()
-        + border.horizontal()
-        + fixed(&style.margin_left)
-        + fixed(&style.margin_right);
-    let (min, max) = match &style.width {
+    (fixed(&style.margin_left), fixed(&style.margin_right))
+}
+
+/// What a box's margin box adds to the width of its content box while its containing block
+/// is sized from its content: its horizontal padding, borders and margins, with percentages
+/// as zero (CSS Sizing 3 § 5.2.1).
+pub(crate) fn outer_extra(style: &ComputedValues) -> f32 {
+    let (padding, border) = padding_and_border(style, 0.0);
+    let (margin_left, margin_right) = fixed_margins(style);
+    padding.horizontal() + border.horizontal() + margin_left + margin_right
+}
+
+/// A `width`, `min-width` or `max-width` that is a length, as a content-box width. Any
+/// other value does not count while the containing block is sized from its content: a
+/// percentage has nothing to refer to yet.
+fn fixed_content_width(style: &ComputedValues, size: &Size<LengthPercentage>) -> Option<f32> {
+    let Size::Value(LengthPercentage::Length(px)) = size else {
+        return None;
+    };
+    Some(if style.box_sizing == BoxSizing::BorderBox {
+        let (padding, border) = padding_and_border(style, 0.0);
+        (px - padding.horizontal() - border.horizontal()).max(0.0)
+    } else {
+        *px
+    })
+}
+
+/// Whether the box is a table that its columns keep from being narrower than their
+/// content, whatever its `width` and `max-width` (CSS 2.1 § 17.5.2.2). A table in the fixed
+/// layout with a width is as wide as that width.
+fn columns_set_minimum(block: &BlockBox) -> bool {
+    let fixed = block.style.table_layout == TableLayout::Fixed
+        && matches!(block.style.width, Size::Value(_));
+    matches!(block.contents, BlockContents::Table(_)) && !fixed
+}
+
+/// Minimum and maximum widths of a box's margin box from its `width`, or from its content
+/// when that is not a length, before `min-width` and `max-width` apply.
+pub(crate) fn preferred_outer(block: &BlockBox) -> (f32, f32) {
+    let style = &block.style;
+    let (min, max) = match fixed_content_width(style, &style.width) {
         // A replaced element's `max-width` and `min-width` apply to its width too.
-        Size::Value(LengthPercentage::Length(px)) if block.replaced.is_none() => {
-            let content = if style.box_sizing == BoxSizing::BorderBox {
-                (px - padding.horizontal() - border.horizontal()).max(0.0)
+        Some(width) if block.replaced.is_none() => {
+            let width = if columns_set_minimum(block) {
+                width.max(intrinsic_content(block).0)
             } else {
-                *px
+                width
             };
-            (content, content)
+            (width, width)
         }
         _ => intrinsic_content(block),
     };
+    let extra = outer_extra(style);
     (min + extra, max + extra)
+}
+
+/// Margin-box widths of a box kept within its `min-width` and `max-width`, where those are
+/// lengths.
+pub(crate) fn bounded_outer(block: &BlockBox, (min, max): (f32, f32)) -> (f32, f32) {
+    let style = &block.style;
+    // A replaced element's content widths already follow them.
+    if block.replaced.is_some() {
+        return (min, max);
+    }
+    let most = fixed_content_width(style, &style.max_width);
+    let least = fixed_content_width(style, &style.min_width);
+    if most.is_none() && least.is_none() {
+        return (min, max);
+    }
+    let extra = outer_extra(style);
+    let most = most.unwrap_or(f32::INFINITY);
+    let mut least = least.unwrap_or(0.0);
+    if max - extra > most && columns_set_minimum(block) {
+        least = least.max(intrinsic_content(block).0);
+    }
+    // A width within the bounds stays as it is, to the last digit.
+    let bound = |width: f32| {
+        let content = width - extra;
+        if content > most || content < least {
+            content.min(most).max(least) + extra
+        } else {
+            width
+        }
+    };
+    (bound(min), bound(max))
+}
+
+/// Minimum and maximum widths of a box's margin box while its containing block is sized
+/// from its content. A percentage cannot be resolved then, so a percentage `width` or
+/// `max-width` counts as not set, and a percentage `min-width`, padding or margin as zero
+/// (CSS Sizing 3 § 5.2.1); once the containing block has its width they resolve against it.
+pub(crate) fn intrinsic_outer(block: &BlockBox) -> (f32, f32) {
+    bounded_outer(block, preferred_outer(block))
 }

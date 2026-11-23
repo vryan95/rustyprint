@@ -11,6 +11,13 @@ p { margin: 0 }
 #c { float: left }
 #d { float: inline-start }
 #t { margin: 0 }
+.k { display: inline-block; height: 10px; vertical-align: top }
+.fit { display: inline-block; vertical-align: top }
+.col { float: left; box-sizing: border-box; padding: 0 15px }
+.c3 { width: 25% }
+.c9 { width: 75% }
+.sf { float: left; height: 10px }
+.sr { float: right; height: 10px }
 </style>
 <script type="text/x-rustyprint-expect">
 #a { float: left; display: block; layout-x: 0px; layout-y: 0px }
@@ -25,6 +32,21 @@ p { margin: 0 }
 #h { layout-height: 60px }
 #w { layout-text: "a b c d|e f g h" }
 #pf { layout-page-y: 0px }
+#st { layout-width: 220px }
+#st3 { layout-width: 55px }
+#st9 { layout-width: 165px }
+#si { layout-width: 220px }
+#sd3 { layout-width: 50px }
+#sd9 { layout-width: 150px }
+#sk { layout-width: 110px; layout-height: 10px }
+#sc { layout-width: 60px; layout-height: 20px }
+#so { layout-width: 110px; layout-height: 10px }
+#sn { layout-width: 100px }
+#sb { layout-width: 150px }
+#sp { layout-width: 150px }
+#sm { layout-width: 80px }
+#sg { layout-width: 100px }
+#sx { layout-width: 150px }
 </script>
 </head>
 <body>
@@ -38,6 +60,20 @@ p { margin: 0 }
 <div class=box style="line-height: 20px"><span id=l>Line</span> <span id=f style="width: 20px; height: 20px"></span>after</div>
 <div id=h style="display: flow-root"><div style="float: left; width: 10px; height: 60px"></div></div>
 <div id=w style="width: 60px">a b c <span style="float: right; width: 10px; height: 10px"></span>d e f g h</div>
+<div style="clear: both; display: flow-root">
+<div id=st style="display: table; min-width: 130px"><div id=st3 class="col c3"><b class=k style="width: 40px"></b></div><div id=st9 class="col c9"><b class=k style="width: 120px"></b></div></div>
+<div style="display: flex; width: 400px"><div id=si><div style="min-width: 130px"><div id=si3 class="col c3"><b class=k style="width: 40px"></b></div><div id=si9 class="col c9"><b class=k style="width: 120px"></b></div></div></div></div>
+<div style="width: 200px; display: flow-root"><div id=sd3 class="col c3"><b class=k style="width: 40px"></b></div><div id=sd9 class="col c9"><b class=k style="width: 120px"></b></div></div>
+<div><div id=sk class=fit><div class=sf style="width: 50px"></div><div class=sf style="width: 60px"></div></div></div>
+<div><div id=sc class=fit><div class=sf style="width: 50px"></div><div class=sf style="width: 60px; clear: left"></div></div></div>
+<div><div id=so class=fit><div class=sf style="width: 50px"></div><div class=sr style="width: 60px"></div></div></div>
+<div><div id=sn class=fit><div class=sf style="width: 50px"></div><div><b class=k style="width: 100px"></b></div></div></div>
+<div><div id=sb class=fit><div class=sf style="width: 50px"></div><div style="overflow: hidden"><b class=k style="width: 100px"></b></div></div></div>
+<div><div id=sp class=fit><div class=sf style="width: 50px"></div><b class=k style="width: 100px"></b></div></div>
+<div><div id=sm class=fit><div class=sf style="width: 25%; min-width: 80px"><b class=k style="width: 30px"></b></div></div></div>
+<div><div id=sg class=fit><div class=sf style="width: 50px; margin: 0 5px"></div><div class=sf style="width: 60px; margin-left: -20px"></div></div></div>
+<table cellpadding=0><tr><td id=sx><div class=sf style="width: 50px"></div><b class=k style="width: 100px"></b></td></tr></table>
+</div>
 <div style="break-before: page; height: 1100px"></div><div id=pf style="float: left; width: 50px; height: 50px"></div>
 </body>
 </html>

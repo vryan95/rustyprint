@@ -223,9 +223,9 @@ pub(crate) fn intrinsic(block: &BlockBox, items: &[BlockBox]) -> (f32, f32) {
         _ => 0.0,
     };
     let contributions = in_flow.iter().map(|item| {
-        let (min, max) = flow::intrinsic_outer(item);
+        let (min, max) = flow::preferred_outer(item);
         // A fixed basis is the item's preferred width in a row.
-        match &item.style.flex_basis {
+        let preferred = match &item.style.flex_basis {
             FlexBasis::Size(Size::Value(LengthPercentage::Length(px))) if !axes.column => {
                 let (padding, border) = flow::padding_and_border(&item.style, 0.0);
                 let pb = padding.horizontal() + border.horizontal();
@@ -245,7 +245,8 @@ pub(crate) fn intrinsic(block: &BlockBox, items: &[BlockBox]) -> (f32, f32) {
                 (if shrinks { min.min(basis) } else { basis }, basis)
             }
             _ => (min, max),
-        }
+        };
+        flow::bounded_outer(item, preferred)
     });
     let (mut min, mut max, mut count) = (0.0f32, 0.0f32, 0usize);
     let mut min_sum = 0.0f32;
