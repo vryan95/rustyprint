@@ -21,9 +21,9 @@ use crate::page::{
 };
 use crate::presentational::presentational_hints;
 use crate::properties::types::{
-    AnimationComposition, AnimationTimeline, BorderStyle, Direction, Display, DisplayInside,
-    DisplayOutside, Easing, Float, LineHeight, OutlineStyle, Overflow, PageSide, Position,
-    TryFallback, WritingMode,
+    AnimationComposition, AnimationTimeline, BorderStyle, BorderWidth, Direction, Display,
+    DisplayInside, DisplayOutside, Easing, Float, LineHeight, OutlineStyle, Overflow, PageSide,
+    Position, TryFallback, WritingMode,
 };
 use crate::properties::{
     ComputeContext, ComputedValues, CssWideKeyword, CustomValue, EARLY, LonghandId,
@@ -201,10 +201,6 @@ pub fn compute_styles_in(
         ..Default::default()
     };
     let mut root_parent = ComputedValues::initial();
-    // Lengths the root inherits are zoomed already, as the root's own lengths will be.
-    root_parent.effective_zoom = options.zoom;
-    root_parent.print_scale = options.zoom;
-    root_parent.font_size *= options.zoom;
     root_parent.font_rules = rules.font_rules.clone();
     // Registered custom properties start at their initial values.
     if !rules.registered.is_empty() {
@@ -216,6 +212,11 @@ pub fn compute_styles_in(
         }
         root_parent.custom = Arc::new(custom);
     }
+    // Lengths the root inherits are zoomed already, as the root's own lengths will be.
+    let mut zoomed_parent = root_parent.clone();
+    zoomed_parent.effective_zoom = options.zoom;
+    zoomed_parent.print_scale = options.zoom;
+    zoomed_parent.font_size *= options.zoom;
     let mut engine = Engine {
         document,
         rules: &rules,
@@ -235,8 +236,8 @@ pub fn compute_styles_in(
     };
     styles.color_profiles = rules.color_profiles.clone();
     crate::color_profile::with_profiles(&rules.color_profiles, || {
-        engine.style_tree(document.root(), &Arc::new(root_parent), &mut styles);
-        engine.style_pages(&mut styles);
+        engine.style_tree(document.root(), &Arc::new(zoomed_parent), &mut styles);
+        engine.style_pages(&mut styles, &root_parent);
     });
     styles
 }
@@ -1675,7 +1676,7 @@ impl Engine<'_> {
 
     /// Computes the style of every kind of page: each page name the document uses (and no
     /// name), first or not, left or right, blank or not.
-    fn style_pages(&self, styles: &mut Styles) {
+    fn style_pages(&mut self, styles: &mut Styles, root_parent: &ComputedValues) {
         let mut names: Vec<Option<Arc<str>>> = vec![None];
         for style in styles.elements.values() {
             if style.page.is_some() && !names.contains(&style.page) {
@@ -1683,6 +1684,12 @@ impl Engine<'_> {
             }
         }
         names.sort();
+        // The scale of a print is for the document, not for the page: the page context
+        // inherits from the root as written, and `rem` and `rlh` in it are the root's as
+        // written.
+        if self.options.zoom != 1.0 {
+            self.root = self.unscaled_root(root_parent);
+        }
         let root = self
             .root
             .clone()
@@ -1703,6 +1710,18 @@ impl Engine<'_> {
                 }
             }
         }
+    }
+
+    /// The root element's style as it is without the zoom of a scaled print.
+    fn unscaled_root(&mut self, root_parent: &ComputedValues) -> Option<Arc<ComputedValues>> {
+        let element = self.document.document_element()?;
+        let hints = self.hints(element);
+        let attribute = self.style_attribute(element, &mut Styles::default());
+        let matched = self.matching_rules(element);
+        self.root = None;
+        let (style, _, _) =
+            self.compute_element(element, root_parent, (1, 1), &hints, &attribute, matched);
+        Some(Arc::new(style))
     }
 
     /// Cascades the `@page` rules that match a page (CSS Paged Media 3 § 3.4). The page
@@ -1758,17 +1777,7 @@ impl Engine<'_> {
             .document
             .document_element()
             .unwrap_or(self.document.root());
-        // The scale of a print is for the document, not for the page: the lengths of the
-        // page context and what it inherits from the root are as written.
-        let mut unscaled = root.clone();
-        let zoom = self.options.zoom;
-        unscaled.effective_zoom /= zoom;
-        unscaled.print_scale = 1.0;
-        unscaled.font_size /= zoom;
-        if let LineHeight::Length(px) = &mut unscaled.line_height {
-            *px /= zoom;
-        }
-        let style = Arc::new(self.compute(element, &unscaled, applicable, (1, 1)));
+        let style = Arc::new(self.compute(element, root, applicable, (1, 1)));
 
         descriptors.sort_by_key(|(key, _)| *key);
         let mut out = default_page_style();
@@ -2619,6 +2628,10 @@ impl Engine<'_> {
                 _ => {}
             }
         }
+        // The style starts from the initial values, whose lengths take the element's zoom.
+        for id in INITIAL_LENGTHS {
+            set_initial(&mut style, id, initial);
+        }
         // Registered custom properties compute by their syntax, now that the element's font
         // and color are known. A value that does not match behaves as `unset`.
         if !registered.is_empty() {
@@ -2713,7 +2726,7 @@ impl Engine<'_> {
         match declaration {
             PropertyDeclaration::Value(value) => style.set(value, ctx),
             PropertyDeclaration::CssWide(_, keyword) => match keyword {
-                CssWideKeyword::Initial => style.copy(id, initial),
+                CssWideKeyword::Initial => set_initial(style, id, initial),
                 CssWideKeyword::Inherit => style.copy(id, ctx.parent),
                 // `revert` and `revert-layer` were resolved by `cascade_winner`; reaching here
                 // means nothing was left to revert to.
@@ -2843,7 +2856,43 @@ fn default_value(
     if id.inherited() {
         style.copy(id, parent);
     } else {
-        style.copy(id, initial);
+        set_initial(style, id, initial);
+    }
+}
+
+/// The properties whose initial values are lengths other than zero, which other than
+/// `font-size` are not inherited.
+const INITIAL_LENGTHS: [LonghandId; 6] = [
+    LonghandId::BorderTopWidth,
+    LonghandId::BorderRightWidth,
+    LonghandId::BorderBottomWidth,
+    LonghandId::BorderLeftWidth,
+    LonghandId::OutlineWidth,
+    LonghandId::ColumnRuleWidth,
+];
+
+/// Sets `id` to its initial value, which a length takes the element's zoom on as a length
+/// written in the style sheet does.
+fn set_initial(style: &mut ComputedValues, id: LonghandId, initial: &ComputedValues) {
+    style.copy(id, initial);
+    let (zoom, scale) = (style.effective_zoom, style.print_scale);
+    if zoom == 1.0 {
+        return;
+    }
+    let border = |px: f32| BorderWidth::snap(px * zoom, scale);
+    match id {
+        LonghandId::FontSize => style.font_size = initial.font_size * zoom,
+        LonghandId::BorderTopWidth => style.border_top_width = border(initial.border_top_width),
+        LonghandId::BorderRightWidth => {
+            style.border_right_width = border(initial.border_right_width);
+        }
+        LonghandId::BorderBottomWidth => {
+            style.border_bottom_width = border(initial.border_bottom_width);
+        }
+        LonghandId::BorderLeftWidth => style.border_left_width = border(initial.border_left_width),
+        LonghandId::OutlineWidth => style.outline_width = border(initial.outline_width),
+        LonghandId::ColumnRuleWidth => style.column_rule_width = border(initial.column_rule_width),
+        _ => {}
     }
 }
 

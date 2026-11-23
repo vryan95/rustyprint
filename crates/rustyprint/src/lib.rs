@@ -372,13 +372,18 @@ fn lay_out(
         (styles, pages)
     };
     let (mut styles, mut pages) = lay_out_at(scale);
+    let overflows = |pages: &[rustyprint_layout::LaidPage]| {
+        let overflow = rustyprint_layout::overflow(pages);
+        ((overflow - 1.0) * area.width > SHRINK_TO_FIT_TOLERANCE).then_some(overflow)
+    };
     let mut clip = false;
-    if options.shrink_to_fit {
-        let overflow = rustyprint_layout::overflow(&pages);
-        if (overflow - 1.0) * area.width > SHRINK_TO_FIT_TOLERANCE {
-            clip = overflow > MAX_SHRINK_TO_FIT;
-            (styles, pages) = lay_out_at(scale / overflow.min(MAX_SHRINK_TO_FIT));
-        }
+    if options.shrink_to_fit
+        && let Some(overflow) = overflows(&pages)
+    {
+        (styles, pages) = lay_out_at(scale / overflow.min(MAX_SHRINK_TO_FIT));
+        // What is still too wide once laid out again, whether because it was wider than
+        // the most the document shrinks or because it grows with the page area, is cut off.
+        clip = overflows(&pages).is_some();
     }
     let mut laid_out = rustyprint_layout::paint_pages(&document, &styles, &pages, &images, clip);
     let mut warnings: Vec<String> = styles
@@ -824,6 +829,179 @@ mod tests {
             render(&html, &options).unwrap().pdf
         };
         assert_eq!(pages(false), pages(true));
+    }
+
+    fn at_scale(scale: f32) -> RenderOptions {
+        RenderOptions {
+            scale,
+            ..narrow_margins()
+        }
+    }
+
+    /// The heights of the boxes the first page paints.
+    fn painted_heights(html: &str, options: &RenderOptions) -> Vec<f32> {
+        let (document, _) = lay_out(html, options).unwrap();
+        document.pages[0]
+            .items
+            .iter()
+            .filter_map(|item| item.bounds())
+            .map(|bounds| bounds.height)
+            .collect()
+    }
+
+    #[test]
+    fn scale_leaves_root_relative_and_inherited_lengths_of_the_page_alone() {
+        // `rem` in `@page` is the root's font size as written, and the margin box inherits
+        // the root's letter spacing as written.
+        let html = "<style>html { font: 20px sans-serif; letter-spacing: 3px }\
+             @page { margin: 2rem; @bottom-left { content: 'FOOT' } }\
+             body { margin: 0 }</style><div>BODY</div>";
+        let at = |scale: f32| {
+            let options = RenderOptions {
+                scale,
+                ..RenderOptions::default()
+            };
+            let painted = painted(html, &options);
+            (find(&painted, "FOOT"), find(&painted, "BODY"))
+        };
+        let ((foot, body), (half_foot, half_body)) = (at(1.0), at(0.5));
+        assert_eq!(foot, half_foot);
+        assert_eq!(body.left, 40.0);
+        assert_eq!(half_body.left, 40.0);
+    }
+
+    #[test]
+    fn scale_scales_initial_lengths() {
+        // A border without a width is `medium`, 3px; `font-size: initial` is 16px.
+        let html = "<div style='border-top-style: solid; margin-top: 50px'></div>";
+        assert_eq!(painted_heights(html, &at_scale(0.5)), [1.5]);
+        let html =
+            "<div style='border-top: solid; border-top-width: initial; margin-top: 50px'></div>";
+        assert_eq!(painted_heights(html, &at_scale(0.5)), [1.5]);
+        let html = format!("{PLAIN}<p style='font-size: initial'>INITIAL</p>");
+        assert_eq!(find(&painted(&html, &at_scale(0.5)), "INITIAL").size, 8.0);
+    }
+
+    #[test]
+    fn scale_snaps_borders_that_are_whole_pixels_as_written() {
+        let html = "<div style='border-top: 3px solid; margin-top: 50px'></div>";
+        let heights = painted_heights(html, &at_scale(0.9));
+        assert_eq!(heights.len(), 1, "{heights:?}");
+        assert!((heights[0] - 2.7).abs() < 0.001, "{heights:?}");
+    }
+
+    #[test]
+    fn scale_scales_what_a_frame_shows() {
+        // The frame is 400px to the document: its media queries see 400px, and its text is
+        // half the size too.
+        let frame = "<style>body { margin: 0; font: 16px sans-serif } .w { display: none }\
+             @media (min-width: 400px) { .w { display: block } }</style>\
+             <div>FRAME</div><div class=w>WIDE</div>";
+        let html = format!(
+            "{PLAIN}<iframe style='width: 400px; height: 200px; border: 0' srcdoc='{frame}'></iframe>"
+        );
+        let painted = painted(&html, &at_scale(0.5));
+        assert_eq!(find(&painted, "FRAME").size, 8.0, "{painted:?}");
+        assert_eq!(find(&painted, "WIDE").size, 8.0, "{painted:?}");
+    }
+
+    #[test]
+    fn scale_scales_the_default_size_of_videos_and_frames() {
+        // A video without a poster and a frame without a size are 300px wide.
+        for element in [
+            "<video></video>",
+            "<iframe style='border: 0' srcdoc=''></iframe>",
+        ] {
+            let html = format!("{PLAIN}{element}<span>AFTER</span>");
+            let after = find(&painted(&html, &at_scale(0.5)), "AFTER");
+            assert!(
+                (after.left - (20.0 + 150.0)).abs() < 0.01,
+                "{element}: {after:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_counts_spaces_that_do_not_hang() {
+        // Preserved spaces and no-break spaces take room at the end of a line.
+        for wide in [
+            format!("<p style='white-space: pre'>x{}</p>", " ".repeat(300)),
+            format!("<p>x{}</p>", "&nbsp;".repeat(300)),
+        ] {
+            let scale = scale_of(&format!("{PLAIN}{wide}{RULER}"), &shrunk());
+            assert!(scale < 1.0, "{scale} for {wide}");
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_cuts_off_what_is_still_too_wide_when_laid_out_again() {
+        // 100px wider than any page area: shrinking does not make it fit.
+        let html = format!(
+            "{PLAIN}<div style='width: calc(100% + 100px); height: 10px; background: red'></div>"
+        );
+        let (document, _) = lay_out(&html, &shrunk()).unwrap();
+        let clipped = document.pages[0].items.iter().any(|item| {
+            matches!(item, rustyprint_layout::display::DisplayItem::PushClip(clip) if (clip.right() - (20.0 + AREA)).abs() < 0.01)
+        });
+        assert!(clipped, "{:?}", document.pages[0].items);
+    }
+
+    #[test]
+    fn shrink_to_fit_counts_boxes_where_their_transforms_take_them() {
+        let html = format!(
+            "{PLAIN}<div style='width: 100px; height: 10px; transform: translateX(900px)'></div>{RULER}"
+        );
+        let scale = scale_of(&html, &shrunk());
+        assert!((scale - AREA / 1000.0).abs() < 0.001, "{scale}");
+    }
+
+    #[test]
+    fn shrink_to_fit_cuts_off_transformed_text_on_the_page() {
+        let words: String = (0..300).map(|i| format!("w{i:03} ")).collect();
+        let html = format!(
+            "{PLAIN}<p style='white-space: nowrap; margin: 0; transform: translateX(10px)'>{words}</p>"
+        );
+        let line = find_line(&painted(&html, &shrunk()));
+        assert!(line.text.starts_with("w000 "), "{line:?}");
+        assert!(!line.text.contains("w299"), "{line:?}");
+        // The run is moved 10px by the transform: it ends past the edge by less than a glyph.
+        let edge = 20.0 + AREA - 10.0 * AREA / 1500.0;
+        assert!(line.right > edge && line.right < edge + 16.0, "{line:?}");
+    }
+
+    #[test]
+    fn shrink_to_fit_cuts_off_links_at_the_page_area() {
+        let words: String = (0..300).map(|i| format!("w{i:03} ")).collect();
+        let html = format!(
+            "{PLAIN}<p style='white-space: nowrap; margin: 0'><a href='https://a.example/'>{words}</a></p>\
+             <div style='margin-left: 2000px; width: 50px'><a href='https://b.example/'>B</a></div>"
+        );
+        let (document, _) = lay_out(&html, &shrunk()).unwrap();
+        let links = &document.pages[0].links;
+        assert_eq!(links.len(), 1, "{links:?}");
+        assert!(
+            (links[0].rect.right() - (20.0 + AREA)).abs() < 0.01,
+            "{links:?}"
+        );
+    }
+
+    #[test]
+    fn shrink_to_fit_counts_the_nodes_of_a_frame_once() {
+        // Laying the document out again does not parse the frame again.
+        let frame = "<p>x</p>".repeat(50);
+        let html = format!(
+            "{PLAIN}<iframe srcdoc='{frame}'></iframe><div style='width: 1000px; height: 10px'></div>"
+        );
+        let nodes = Document::parse(&html).node_count() + Document::parse(&frame).node_count();
+        let options = RenderOptions {
+            limits: Limits {
+                max_nodes: nodes,
+                ..Limits::default()
+            },
+            ..shrunk()
+        };
+        let rendered = render(&html, &options);
+        assert!(rendered.is_ok(), "{:?}", rendered.err());
     }
 
     #[test]

@@ -214,7 +214,7 @@ pub fn links_and_bookmarks(
     document: &Document,
     pages: &[LaidPage],
 ) -> (Vec<Vec<Link>>, Vec<Bookmark>) {
-    links::collect(document, pages)
+    links::collect(document, pages, false)
 }
 
 /// The display items a box and its descendants paint, relative to the box's parent. Fixed
@@ -261,37 +261,45 @@ pub fn overflow(pages: &[LaidPage]) -> f32 {
 }
 
 /// Leaves out the items, and the glyphs at the end of a text run, that start at or past
-/// `edge`: a clip there hides them, and text that is not on the page should not be in the
-/// document either. What is inside a transform is kept.
+/// `edge` on the page, where their transforms take them: a clip there hides them, and text
+/// that is not on the page should not be in the document either.
 fn cut_right(items: impl Iterator<Item = DisplayItem>, edge: f32) -> Vec<DisplayItem> {
-    // Whether each open clip or transform is a transform.
-    let mut open: Vec<bool> = Vec::new();
+    // The transformation onto the page inside each open clip or transform.
+    let mut open: Vec<display::Matrix> = Vec::new();
     let mut out = Vec::new();
     for mut item in items {
+        let m = open.last().copied().unwrap_or(display::IDENTITY);
         match &mut item {
-            DisplayItem::PushTransform(_) => open.push(true),
+            DisplayItem::PushTransform(transform) => open.push(display::multiply(m, *transform)),
             DisplayItem::PushClip(_)
             | DisplayItem::PushClipPath { .. }
-            | DisplayItem::PushClipText(_) => open.push(false),
+            | DisplayItem::PushClipText(_) => open.push(m),
             DisplayItem::PopClip => {
                 open.pop();
             }
-            _ if open.contains(&true) => {}
             DisplayItem::Text(run) => {
-                let mut x = run.origin.x;
-                let visible = run.glyphs.iter().take_while(|glyph| {
-                    let starts = x;
+                // The glyphs up to the last that starts left of the edge: in a transform,
+                // the ones before it need not be.
+                let (y, mut x) = (run.origin.y, run.origin.x);
+                let mut visible = 0;
+                for (index, glyph) in run.glyphs.iter().enumerate() {
+                    let start = display::apply(m, Point::new(x, y)).x;
                     x += glyph.x_advance;
-                    starts < edge
-                });
-                let visible = visible.count();
+                    let end = display::apply(m, Point::new(x, y)).x;
+                    if start.min(end) < edge {
+                        visible = index + 1;
+                    }
+                }
                 if visible == 0 {
                     continue;
                 }
                 run.glyphs.truncate(visible);
             }
             other => {
-                if other.bounds().is_some_and(|bounds| bounds.x >= edge) {
+                let bounds = other
+                    .bounds()
+                    .map(|bounds| display::transform_rect(m, bounds));
+                if bounds.is_some_and(|bounds| bounds.x >= edge) {
                     continue;
                 }
             }
@@ -312,7 +320,7 @@ pub fn paint_pages(
     clip: bool,
 ) -> display::Document {
     let title = document_title(document);
-    let (mut links, bookmarks) = links_and_bookmarks(document, laid_pages);
+    let (mut links, bookmarks) = links::collect(document, laid_pages, clip);
     picture::register_elements(document, laid_pages, images);
     let pages = laid_pages
         .iter()

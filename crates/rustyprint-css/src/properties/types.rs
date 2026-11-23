@@ -531,10 +531,20 @@ impl Property for BorderWidth {
     }
 
     fn compute(specified: &Self::Specified, ctx: &ComputeContext) -> f32 {
-        // Widths between 0 and 1px round up to 1px; others floor to whole pixels. The scale
-        // of a print comes after: a 1px border of a document printed at 0.9 is 0.9px.
-        let scale = ctx.parent.print_scale;
-        let px = specified.compute(ctx, true).as_length().unwrap_or(0.0) / scale;
+        let px = specified.compute(ctx, true).as_length().unwrap_or(0.0);
+        BorderWidth::snap(px, ctx.parent.print_scale)
+    }
+}
+
+impl BorderWidth {
+    /// Snaps a border width in CSS pixels, of an element whose lengths take the scale of a
+    /// print `scale`: widths between 0 and 1px round up to 1px, others floor to whole pixels.
+    /// The scale comes after, so a 1px border of a document printed at 0.9 is 0.9px; a width
+    /// that is a whole pixel but for the rounding of scaling it is that pixel.
+    pub fn snap(px: f32, scale: f32) -> f32 {
+        let px = px / scale;
+        let whole = px.round();
+        let px = if (px - whole).abs() < 1e-3 { whole } else { px };
         if px > 0.0 && px < 1.0 {
             scale
         } else {
