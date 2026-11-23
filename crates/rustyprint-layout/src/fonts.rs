@@ -273,15 +273,18 @@ pub fn select(style: &ComputedValues) -> FontChoice {
                 let font = script_face(index);
                 fonts.push(instance(style, &font, None, SCRIPT_FONTS[index].name));
             }
-            FamilyName::Generic(generic)
-                if generic_keyword(*generic)
-                    .is_some_and(|keyword| style.font_rules.defines(keyword)) =>
-            {
-                let keyword = generic_keyword(*generic).expect("matched above");
-                fonts.extend(web_fonts(style, keyword));
-            }
             other => {
-                if let Some(index) = family_index(other) {
+                // A rule standing in for a generic family that loads no font leaves it alone.
+                let replaced = match other {
+                    FamilyName::Generic(generic) => generic_keyword(*generic)
+                        .filter(|keyword| style.font_rules.defines(keyword))
+                        .map(|keyword| web_fonts(style, keyword))
+                        .unwrap_or_default(),
+                    FamilyName::Named(_) => Vec::new(),
+                };
+                if !replaced.is_empty() {
+                    fonts.extend(replaced);
+                } else if let Some(index) = family_index(other) {
                     let font = bundled_face(index, style.font_weight, style.font_style);
                     fonts.push(instance(style, &font, None, family_name(other)));
                 }

@@ -577,6 +577,20 @@ mod tests {
     }
 
     #[test]
+    fn a_generic_family_keeps_its_bundled_font_when_its_font_face_has_no_usable_source() {
+        let face = "<style>@font-face { font-family: 'monospace'; \
+                    src: local('Missing Font') }</style>";
+        let mono = embedded_fonts(
+            &format!("{face}<p style='font-family: monospace'>A</p>"),
+            &RenderOptions::default(),
+        );
+        assert!(
+            !mono.is_empty() && mono.iter().all(|f| f.contains("NotoSansMono")),
+            "{mono:?}"
+        );
+    }
+
+    #[test]
     fn web_fonts_are_embedded_per_instance() {
         let assets = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/fixtures/css-at-rules/assets");
