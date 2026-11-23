@@ -119,6 +119,10 @@ pub(crate) fn pages(root: &BlockBox, styles: &Styles, defaults: &PageOptions) ->
         if let Some(fragment) = &mut page.root {
             let area =
                 crate::writing::page_area(root, Size::new(page.area.width, page.area.height));
+            // Fixed boxes in the boxes placed only now go in the page area, as the root's
+            // others did.
+            let viewport = Rect::new(-fragment.rect.x, -fragment.rect.y, area.width, area.height);
+            crate::position::place_out_of_flow(fragment, viewport, crate::position::Takes::Fixed);
             crate::writing::root_to_page(fragment, area);
         }
     }
