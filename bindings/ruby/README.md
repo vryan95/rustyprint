@@ -31,6 +31,8 @@ output.warnings # => ["invoice.css:12: unsupported property `colr`"]
 | `page_size` | `"Letter"`, or `{ width: "100mm", height: "150mm" }` | `"A4"` |
 | `landscape` | `true` | `false` |
 | `margin` | `"15mm"`, `"10mm 20mm"` | `"2cm"` |
+| `scale` | `0.8`, from `0.1` to `2`, as the scale of a browser's print | `1` |
+| `shrink_to_fit` | `true`: shrinks a document wider than the page, as a browser's print does | `false` |
 | `title` | `"Invoice 42"` | the document's `<title>` |
 | `stylesheet` | `"body { font-family: sans-serif }"` | none |
 | `remote` | `{ allowed_hosts: ["cdn.example.com"] }` | nothing fetched |

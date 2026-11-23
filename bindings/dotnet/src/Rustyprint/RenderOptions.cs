@@ -31,6 +31,19 @@ public sealed class RenderOptions
     /// </summary>
     public string? Margin { get; set; }
 
+    /// <summary>
+    /// The scale of the document on the page, from 0.1 to 2, as the scale of a browser's print:
+    /// at 0.5 everything is half the size and the document is laid out on a page area twice as
+    /// wide. Page sizes, page margins and margin boxes are not scaled. Default: 1.
+    /// </summary>
+    public double? Scale { get; set; }
+
+    /// <summary>
+    /// Shrinks a document whose content is laid out wider than the page area, as a browser's
+    /// print does, by up to a third; what is wider still is cut off. Default: false.
+    /// </summary>
+    public bool? ShrinkToFit { get; set; }
+
     /// <summary>The PDF document title. Overrides the document's <c>&lt;title&gt;</c>.</summary>
     public string? Title { get; set; }
 
@@ -78,6 +91,8 @@ public sealed class RenderOptions
             }
             if (Landscape is { } landscape) json.WriteBoolean("landscape", landscape);
             if (Margin is not null) json.WriteString("margin", Margin);
+            if (Scale is { } scale) json.WriteNumber("scale", scale);
+            if (ShrinkToFit is { } shrinkToFit) json.WriteBoolean("shrink_to_fit", shrinkToFit);
             if (Title is not null) json.WriteString("title", Title);
             if (Stylesheet is not null) json.WriteString("stylesheet", Stylesheet);
             if (Remote is { } remote)

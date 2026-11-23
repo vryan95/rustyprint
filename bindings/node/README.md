@@ -31,7 +31,7 @@ warnings // => ["invoice.css:12: unsupported property `colr`"]
 
 `render` resolves to `pdf`, a Buffer, and `warnings`, problems found in the document's CSS and assets, as an array of strings. The HTML is a string, or UTF-8 bytes.
 
-**Options** are the JSON options every rustyprint front end shares ([schema/render-options.schema.json](../../schema/render-options.schema.json)), with camelCase names: `pageSize`, `landscape`, `margin`, `title`, `stylesheet`, `remote` and `limits`. Names in snake_case, as in the schema, work too. An option left out keeps its default.
+**Options** are the JSON options every rustyprint front end shares ([schema/render-options.schema.json](../../schema/render-options.schema.json)), with camelCase names: `pageSize`, `landscape`, `margin`, `scale`, `shrinkToFit`, `title`, `stylesheet`, `remote` and `limits`. Names in snake_case, as in the schema, work too. An option left out keeps its default.
 
 **Assets** are the files the document refers to by relative or root-relative URL, by the path it uses without a leading slash (`/css/app.css` is `css/app.css`): strings, Buffers, typed arrays or ArrayBuffers, in an object or a Map. Nothing else is read, and nothing is fetched from the network unless `remote.allowedHosts` allows the host.
 

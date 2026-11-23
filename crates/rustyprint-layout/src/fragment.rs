@@ -389,8 +389,26 @@ impl BoxFragment {
 
     /// How far right the box and what it lays out reach, relative to the parent's border
     /// box: the right edge of its border box and, unless the box clips them, of the boxes
-    /// and text inside it. Transforms are not applied.
+    /// and text inside it, where their transforms take them.
     pub fn overflow_right(&self) -> f32 {
+        let right = self.untransformed_overflow_right();
+        if !crate::transform::has_transform(&self.style) {
+            return right;
+        }
+        // The box's overflow to the right, as tall as the box, where its transform takes
+        // it. Its containing block, for a motion path, is taken to be the box itself.
+        let reach = Rect::new(
+            self.rect.x,
+            self.rect.y,
+            right - self.rect.x,
+            self.rect.height,
+        );
+        let m = crate::transform::box_matrix(self, self.rect, self.rect);
+        crate::transform::flatten(&m, self.rect)
+            .map_or(right, |m| crate::display::transform_rect(m, reach).right())
+    }
+
+    fn untransformed_overflow_right(&self) -> f32 {
         let own = self.rect.right();
         if self.style.overflow_x != Overflow::Visible || self.style.used_contain().paint {
             return own;
@@ -433,25 +451,11 @@ impl BoxFragment {
     }
 }
 
-/// How far right line items reach, relative to their line. Spaces at the end of a line
-/// hang: they take no room.
+/// How far right line items reach, relative to their line. The spaces that hang at the end
+/// of a line are not among them: the line breaker leaves them out of its runs.
 fn items_right(items: &[LineItem]) -> f32 {
     let right = |item: &LineItem| match item {
-        LineItem::Text(text) => {
-            let run = &text.run;
-            let hanging: f32 = run
-                .glyphs
-                .iter()
-                .rev()
-                .take_while(|glyph| {
-                    run.text[glyph.text.clone()]
-                        .chars()
-                        .all(char::is_whitespace)
-                })
-                .map(|glyph| glyph.x_advance)
-                .sum();
-            run.origin.x + run.width() - hanging
-        }
+        LineItem::Text(text) => text.run.origin.x + text.run.width(),
         LineItem::Box(atomic) => atomic.overflow_right(),
         LineItem::Inline(inline) => inline.rect.right().max(items_right(&inline.children)),
     };
