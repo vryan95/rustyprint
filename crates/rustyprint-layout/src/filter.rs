@@ -287,6 +287,9 @@ fn map_image(image: &Image, f: &dyn Fn(Color) -> Color) -> Image {
         },
         orientation: image.orientation,
         resolution: image.resolution,
+        natural: image.natural,
+        shape_only: image.shape_only,
+        fit: image.fit,
     }
 }
 

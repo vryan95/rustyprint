@@ -33,6 +33,7 @@ mod rounded;
 mod ruby;
 mod shadow;
 mod shapes;
+mod svg;
 pub mod table;
 mod text;
 mod transform;

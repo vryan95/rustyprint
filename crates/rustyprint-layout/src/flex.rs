@@ -1071,6 +1071,13 @@ fn new_item<'a>(
     let pb_h = padding.vertical() + border.vertical();
     let width_of = |size: &Size<LengthPercentage>| width_value(block, size, cb, pb_w);
     let height_of = |size: &Size<LengthPercentage>| height_value(style, size, cb.height, pb_h);
+    // An image with a shape and no size of its own, such as an SVG with only a `viewBox`.
+    let shape = block
+        .replaced
+        .as_ref()
+        .filter(|r| r.size.is_none())
+        .and_then(|r| r.picture.as_ref())
+        .and_then(|picture| picture.shape());
     let ratio = style.aspect_ratio.value().or_else(|| {
         block
             .replaced
@@ -1078,6 +1085,7 @@ fn new_item<'a>(
             .and_then(|r| r.size)
             .filter(|&(w, h)| w > 0.0 && h > 0.0)
             .map(|(w, h)| w / h)
+            .or(shape)
     });
 
     if axes.column {
@@ -1130,7 +1138,9 @@ fn new_item<'a>(
         let from_ratio = ratio
             .zip(height_of(&style.height))
             .map(|(ratio, height)| height * ratio);
-        item.base = preferred.or(from_ratio).unwrap_or(max_content);
+        // An image with a shape and no size is as wide as the room it has.
+        let room = shape.map(|_| (cb.width - item.main_margins() - pb_w).max(0.0));
+        item.base = preferred.or(from_ratio).or(room).unwrap_or(max_content);
         if matches!(style.min_width, Size::Auto) && content_minimum(style) {
             let specified = width_of(&style.width);
             let suggestion = from_ratio.unwrap_or(min_content).min(item.max_main);
