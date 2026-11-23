@@ -219,3 +219,28 @@ fn a_column_gets_the_width_its_cell_asks_for_before_other_columns_grow() {
     let width = |id| find(&pages[0], id).rect.width;
     assert_eq!((width("a"), width("b")), (200.0, 200.0));
 }
+
+#[test]
+fn a_col_width_is_still_a_minimum_when_the_table_is_narrower() {
+    // Unlike a cell's width, a column's width counts towards its minimum (CSS Tables 3
+    // § 3.9.1), so a 300px column keeps its width in a table styled 100px wide.
+    let pages = pages(
+        "<table style='width: 100px; border-collapse: collapse'>\
+         <col style='width: 300px'><tr><td style='--id: a; padding: 0'>A</td></tr></table>",
+    );
+    assert_eq!(find(&pages[0], "a").rect.width, 300.0);
+}
+
+#[test]
+fn a_cell_min_width_is_a_minimum_when_the_table_is_narrower() {
+    // The cell's width may be squeezed, but not below its own min-width, which counts in
+    // its border box under box-sizing: border-box.
+    let pages = pages(
+        "<table style='width: 100px; border-collapse: collapse'><tr>\
+         <td style='--id: a; width: 200px; min-width: 200px; padding: 0'></td>\
+         <td style='--id: b; width: 200px; min-width: 150px; padding: 0 5px; \
+         box-sizing: border-box'></td></tr></table>",
+    );
+    assert_eq!(find(&pages[0], "a").rect.width, 200.0);
+    assert_eq!(find(&pages[0], "b").rect.width, 150.0);
+}
