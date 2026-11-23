@@ -1065,6 +1065,94 @@ mod tests {
         assert!(rendered.is_ok(), "{:?}", rendered.err());
     }
 
+    /// The pages `html` takes on A4 with 2cm margins, with or without `shrink_to_fit`.
+    fn pages_shrunk(html: &str, shrink_to_fit: bool) -> usize {
+        let options = RenderOptions {
+            shrink_to_fit,
+            ..RenderOptions::default()
+        };
+        parse(&render(html, &options).unwrap().pdf)
+            .get_pages()
+            .len()
+    }
+
+    /// The width and height of A4's page area with 2cm margins.
+    fn printable() -> (f32, f32) {
+        (
+            Size::A4.width - 4.0 * options::CM,
+            Size::A4.height - 4.0 * options::CM,
+        )
+    }
+
+    #[test]
+    fn shrink_to_fit_multiplies_the_documents_own_zoom() {
+        // 2.8 printable widths at the document's zoom of 0.5 paint 1.4: shrunk by that much
+        // more, within the most the document shrinks, its 2400px fit on one page. Neither a
+        // rule nor an inline style for the root replaces the shrink.
+        let (width, _) = printable();
+        for zoom in [
+            "<style>html { zoom: 0.5 }</style><html>",
+            "<html style='zoom: 0.5'>",
+        ] {
+            let html = format!(
+                "{zoom}<style>body {{ margin: 0 }}</style><div style='width: {}px; height: 2400px; background: #eee'></div>",
+                width * 2.8
+            );
+            assert_eq!(pages_shrunk(&html, false), 2, "{zoom}");
+            assert_eq!(pages_shrunk(&html, true), 1, "{zoom}");
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_measures_the_page_area_page_rules_set() {
+        // 500px is wider than the 360px area of a 400px page with 20px margins, though not
+        // than A4's: shrunk to fit, the 1000px block fits in that area's 760px height.
+        let html = "<style>@page { size: 400px 800px; margin: 20px } body { margin: 0 }</style>\
+            <div style='width: 500px; height: 1000px; background: #eee'></div>";
+        assert_eq!(pages_shrunk(html, false), 2);
+        assert_eq!(pages_shrunk(html, true), 1);
+    }
+
+    #[test]
+    fn shrink_to_fit_ignores_page_backgrounds_and_margin_boxes() {
+        // The content fits across the page, so it is not shrunk onto one page though the
+        // page's background and margin boxes reach the sheet's edge.
+        let (_, height) = printable();
+        let html = format!(
+            "<style>@page {{ background: white; @top-right {{ content: 'x'; width: 100% }} }} body {{ margin: 0 }}</style>\
+            <div style='width: 100px; height: {}px; background: #eee'></div>",
+            height + 20.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 2);
+    }
+
+    #[test]
+    fn shrink_to_fit_ignores_what_overflow_clips() {
+        let (_, height) = printable();
+        let html = format!(
+            "<style>body {{ margin: 0 }}</style><div style='width: 100px; overflow: hidden'>\
+            <div style='width: 2000px; height: {}px; background: #eee'></div></div>",
+            height + 20.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 2);
+    }
+
+    #[test]
+    fn shrink_to_fit_fits_content_a_few_pixels_too_wide() {
+        // 5px too wide shrinks by about 0.8%, which takes the 3px too tall block onto one
+        // page.
+        let (width, height) = printable();
+        let html = format!(
+            "<style>body {{ margin: 0 }}</style><div style='width: {}px; height: {}px; background: #eee'></div>",
+            width + 5.0,
+            height + 3.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 1);
+    }
+
     #[test]
     fn long_documents_get_more_pages() {
         let html = "<p>Line of text.</p>".repeat(200);
