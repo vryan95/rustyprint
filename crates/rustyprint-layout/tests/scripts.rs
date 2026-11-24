@@ -256,3 +256,82 @@ fn a_flag_is_shaded_only_inside_its_outline() {
     // Emoji without such shading were already painted inside their outlines only.
     assert_eq!(fills_outside_every_outline(&painted("<p>\u{1F381}</p>")), 0);
 }
+
+/// How many fills among `items` do not cover the outline they are in: its bounds, as the
+/// transforms between the outline and the fill move them.
+#[cfg(feature = "emoji")]
+fn fills_short_of_their_outline(items: &[DisplayItem]) -> usize {
+    use rustyprint_layout::display::{IDENTITY, Matrix, Rect, apply, invert, multiply};
+    enum Open {
+        /// An outline's bounds, in the coordinates it was pushed in, and the transform then.
+        Outline(Rect, Matrix),
+        Transform(Matrix),
+        Other,
+    }
+    let mut open: Vec<Open> = Vec::new();
+    let mut short = 0;
+    for item in items {
+        let matrix = open.iter().fold(IDENTITY, |matrix, open| match open {
+            Open::Transform(t) => multiply(matrix, *t),
+            _ => matrix,
+        });
+        match item {
+            DisplayItem::PushTransform(t) => open.push(Open::Transform(*t)),
+            DisplayItem::PushClipPath { path, .. } => match path.bounds() {
+                Some(bounds) => open.push(Open::Outline(bounds, matrix)),
+                None => open.push(Open::Other),
+            },
+            DisplayItem::PushClip(_) | DisplayItem::PushClipText(_) => open.push(Open::Other),
+            DisplayItem::PopClip => {
+                open.pop();
+            }
+            DisplayItem::Rect { rect, .. } | DisplayItem::Gradient { rect, .. } => {
+                let outline = open.iter().rev().find_map(|open| match open {
+                    Open::Outline(bounds, at) => Some((*bounds, *at)),
+                    _ => None,
+                });
+                let (Some((bounds, at)), Some(back)) = (outline, invert(matrix)) else {
+                    continue;
+                };
+                // The outline's corners, seen from where the fill is drawn.
+                let to_fill = multiply(back, at);
+                let corners = [
+                    (bounds.x, bounds.y),
+                    (bounds.right(), bounds.y),
+                    (bounds.right(), bounds.bottom()),
+                    (bounds.x, bounds.bottom()),
+                ];
+                let covered = corners.iter().all(|&(x, y)| {
+                    let p = apply(to_fill, rustyprint_layout::Point::new(x, y));
+                    p.x >= rect.x - 0.5
+                        && p.x <= rect.right() + 0.5
+                        && p.y >= rect.y - 0.5
+                        && p.y <= rect.bottom() + 0.5
+                });
+                if !covered {
+                    short += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+    short
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn a_gradient_transformed_inside_its_outline_fills_all_of_it() {
+    // Fire, the globe and the bat fill outlines with gradients that are transformed inside
+    // the outline. A fill that keeps the outline's bounds from outside the transform is
+    // moved away with it, and leaves the outline empty or half filled.
+    for emoji in [
+        "\u{1F525}",
+        "\u{1F30E}",
+        "\u{1F987}",
+        "\u{1F923}",
+        "\u{1F381}",
+    ] {
+        let items = painted(&format!("<p>{emoji}</p>"));
+        assert_eq!(fills_short_of_their_outline(&items), 0, "{emoji}");
+    }
+}

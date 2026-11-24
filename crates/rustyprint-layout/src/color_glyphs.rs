@@ -15,7 +15,7 @@ use skrifa::{FontRef, GlyphId, MetadataProvider};
 
 use crate::display::{
     BlendMode, Color, DisplayItem, FillRule, Group, IDENTITY, Matrix, Path, PathSegment, Point,
-    Rect, Shading, ShadingKind, TextRun, multiply,
+    Rect, Shading, ShadingKind, TextRun, apply, invert, multiply,
 };
 use crate::images::Image;
 
@@ -194,10 +194,21 @@ impl Painter<'_> {
 
 impl ColorPainter for Painter<'_> {
     fn push_transform(&mut self, t: Transform) {
-        self.items.push(DisplayItem::PushTransform([
-            t.xx, t.yx, t.xy, t.yy, t.dx, t.dy,
-        ]));
-        self.clips.push(self.area());
+        let matrix = [t.xx, t.yx, t.xy, t.yy, t.dx, t.dy];
+        self.items.push(DisplayItem::PushTransform(matrix));
+        // What a fill covers is the clip around the transform, which the transform moves
+        // with everything else: seen from inside it, the clip is where the inverse puts it.
+        let area = self.area();
+        let inside = invert(matrix).and_then(|inverse| {
+            let corners = [
+                Point::new(area.x, area.y),
+                Point::new(area.right(), area.y),
+                Point::new(area.right(), area.bottom()),
+                Point::new(area.x, area.bottom()),
+            ];
+            Rect::enclosing(corners.into_iter().map(|corner| apply(inverse, corner)))
+        });
+        self.clips.push(inside.unwrap_or(area));
     }
 
     fn pop_transform(&mut self) {
@@ -675,6 +686,35 @@ mod tests {
             painter.pop_transform();
         });
         assert_eq!(filled_shapes(&items), square(100.0, 0.0, 20.0));
+    }
+
+    #[test]
+    fn a_fill_inside_a_transform_still_covers_the_clip_around_it() {
+        // A gradient is often transformed inside the outline it fills. The fill has to cover
+        // the outline as the transform moves it: here the clip, 10 units square, is the
+        // square from (-50, 0) to (-45, 5) seen from inside the transform.
+        let items = painted(|painter| {
+            painter.push_clip_box(clip_box(0.0, 0.0, 10.0, 10.0));
+            painter.push_transform(Transform {
+                xx: 2.0,
+                yx: 0.0,
+                xy: 0.0,
+                yy: 2.0,
+                dx: 100.0,
+                dy: 0.0,
+            });
+            painter.fill(SOLID);
+            painter.pop_transform();
+            painter.pop_clip();
+        });
+        let fills: Vec<Rect> = items
+            .iter()
+            .filter_map(|item| match item {
+                DisplayItem::Rect { rect, .. } => Some(*rect),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(fills, [Rect::new(-50.0, 0.0, 5.0, 5.0)]);
     }
 
     #[test]
