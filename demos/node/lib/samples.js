@@ -67,6 +67,10 @@ export const CATALOG = [
     ['Chinese text in the bundled Noto Sans SC, without @font-face',
       "Chairman's letter set top to bottom with writing-mode: vertical-rl",
       'Page numbers as 第 1 页，共 7 页 and list numbers as 一、二、', 'Bar chart drawn with CSS']),
+  new Sample('emoji', 'A fourteen-page chart of every emoji in Unicode 18.0, drawn in color.',
+    ['Emoji drawn in color from the bundled Noto Color Emoji, without @font-face',
+      'Flags, skin tones and joined sequences such as families and professions',
+      '3,963 emoji in a grid of inline blocks, group by group', 'Table of contents with page numbers and leaders']),
   new Sample('letter', 'A one-page letter signed in a handwriting web font.',
     ['Web font loaded with @font-face (Caveat)'])
 ]

@@ -179,3 +179,232 @@ fn runs_with_face(src: &str, text: &str) -> Vec<TextRun> {
          <p style='font-family: f, monospace'>{text}</p>"
     ))
 }
+
+/// Everything `body` paints on an 800 × 1000 page area.
+#[cfg(feature = "emoji")]
+fn painted(body: &str) -> Vec<DisplayItem> {
+    let html = format!("<!DOCTYPE html><style>body {{ margin: 0 }}</style><body>{body}");
+    let document = Document::parse(&html);
+    let load = |_: &str| None;
+    let styles = compute_styles(
+        &document,
+        &StyleOptions {
+            page_size: (800.0, 1000.0),
+            stylesheet: None,
+            load: &load,
+            font_metrics: None,
+            load_font: None,
+        },
+    );
+    let page = PageOptions {
+        size: Size::new(800.0, 1000.0),
+        margin: Sides::default(),
+    };
+    let root = layout_tree(&document, &styles, &page, &Images::none()).unwrap();
+    paint_fragment(&root, &Images::none())
+}
+
+/// How many fills among `items` are not inside the outline of any shape: they cover the
+/// whole box of their glyph.
+#[cfg(feature = "emoji")]
+fn fills_outside_every_outline(items: &[DisplayItem]) -> usize {
+    // Whether each open clip or transform is the outline of a shape.
+    let mut open: Vec<bool> = Vec::new();
+    let mut outside = 0;
+    for item in items {
+        match item {
+            DisplayItem::PushClipPath { .. } => open.push(true),
+            DisplayItem::PushClip(_)
+            | DisplayItem::PushClipText(_)
+            | DisplayItem::PushTransform(_) => open.push(false),
+            DisplayItem::PopClip => {
+                open.pop();
+            }
+            DisplayItem::Rect { .. } | DisplayItem::Gradient { .. } if !open.contains(&true) => {
+                outside += 1;
+            }
+            _ => {}
+        }
+    }
+    outside
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn a_flag_is_shaded_only_inside_its_outline() {
+    // A flag's shading is a gradient kept only where the flag is (`COLR` source-in
+    // compositing). Drawn over the whole box of the glyph, it shows as a grey square
+    // behind the flag.
+    for flag in [
+        "\u{1F1E7}\u{1F1EA}",
+        "\u{1F1FA}\u{1F1F8}",
+        "\u{1F1EF}\u{1F1F5}",
+    ] {
+        let items = painted(&format!("<p>{flag}</p>"));
+        let fills = items
+            .iter()
+            .filter(|item| {
+                matches!(
+                    item,
+                    DisplayItem::Rect { .. } | DisplayItem::Gradient { .. }
+                )
+            })
+            .count();
+        assert!(fills > 0, "{flag}: nothing is painted");
+        assert_eq!(fills_outside_every_outline(&items), 0, "{flag}");
+    }
+    // Emoji without such shading were already painted inside their outlines only.
+    assert_eq!(fills_outside_every_outline(&painted("<p>\u{1F381}</p>")), 0);
+}
+
+/// How many fills among `items` do not cover the outline they are in: its bounds, as the
+/// transforms between the outline and the fill move them.
+#[cfg(feature = "emoji")]
+fn fills_short_of_their_outline(items: &[DisplayItem]) -> usize {
+    use rustyprint_layout::display::{IDENTITY, Matrix, Rect, apply, invert, multiply};
+    enum Open {
+        /// An outline's bounds, in the coordinates it was pushed in, and the transform then.
+        Outline(Rect, Matrix),
+        Transform(Matrix),
+        Other,
+    }
+    let mut open: Vec<Open> = Vec::new();
+    let mut short = 0;
+    for item in items {
+        let matrix = open.iter().fold(IDENTITY, |matrix, open| match open {
+            Open::Transform(t) => multiply(matrix, *t),
+            _ => matrix,
+        });
+        match item {
+            DisplayItem::PushTransform(t) => open.push(Open::Transform(*t)),
+            DisplayItem::PushClipPath { path, .. } => match path.bounds() {
+                Some(bounds) => open.push(Open::Outline(bounds, matrix)),
+                None => open.push(Open::Other),
+            },
+            DisplayItem::PushClip(_) | DisplayItem::PushClipText(_) => open.push(Open::Other),
+            DisplayItem::PopClip => {
+                open.pop();
+            }
+            DisplayItem::Rect { rect, .. } | DisplayItem::Gradient { rect, .. } => {
+                let outline = open.iter().rev().find_map(|open| match open {
+                    Open::Outline(bounds, at) => Some((*bounds, *at)),
+                    _ => None,
+                });
+                let (Some((bounds, at)), Some(back)) = (outline, invert(matrix)) else {
+                    continue;
+                };
+                // The outline's corners, seen from where the fill is drawn.
+                let to_fill = multiply(back, at);
+                let corners = [
+                    (bounds.x, bounds.y),
+                    (bounds.right(), bounds.y),
+                    (bounds.right(), bounds.bottom()),
+                    (bounds.x, bounds.bottom()),
+                ];
+                let covered = corners.iter().all(|&(x, y)| {
+                    let p = apply(to_fill, rustyprint_layout::Point::new(x, y));
+                    p.x >= rect.x - 0.5
+                        && p.x <= rect.right() + 0.5
+                        && p.y >= rect.y - 0.5
+                        && p.y <= rect.bottom() + 0.5
+                });
+                if !covered {
+                    short += 1;
+                }
+            }
+            _ => {}
+        }
+    }
+    short
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn a_gradient_transformed_inside_its_outline_fills_all_of_it() {
+    // Fire, the globe and the bat fill outlines with gradients that are transformed inside
+    // the outline. A fill that keeps the outline's bounds from outside the transform is
+    // moved away with it, and leaves the outline empty or half filled.
+    for emoji in [
+        "\u{1F525}",
+        "\u{1F30E}",
+        "\u{1F987}",
+        "\u{1F923}",
+        "\u{1F381}",
+    ] {
+        let items = painted(&format!("<p>{emoji}</p>"));
+        assert_eq!(fills_short_of_their_outline(&items), 0, "{emoji}");
+    }
+}
+
+/// Whether `text` is drawn with the emoji font, and with how many glyphs.
+#[cfg(feature = "emoji")]
+fn emoji_glyphs(body: &str) -> Option<usize> {
+    let runs = runs(body);
+    let emoji: Vec<&TextRun> = runs
+        .iter()
+        .filter(|run| run.font.postscript_name().contains("Emoji"))
+        .collect();
+    (!emoji.is_empty()).then(|| emoji.iter().map(|run| run.glyphs.len()).sum())
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn a_variation_selector_asks_for_the_emoji_of_a_character_text_fonts_have() {
+    // The copyright sign, arrows and squares are in the text fonts. Followed by U+FE0F they
+    // are emoji, as in browsers; alone, or followed by U+FE0E, they stay text.
+    for emoji in [
+        "\u{A9}\u{FE0F}",
+        "\u{2194}\u{FE0F}",
+        "\u{25B6}\u{FE0F}",
+        "\u{203C}\u{FE0F}",
+    ] {
+        assert_eq!(emoji_glyphs(&format!("<p>{emoji}</p>")), Some(1), "{emoji}");
+    }
+    for text in ["\u{A9}", "\u{2194}", "\u{25B6}\u{FE0E}", "1", "#"] {
+        assert_eq!(emoji_glyphs(&format!("<p>{text}</p>")), None, "{text}");
+    }
+    // Without a selector, a character that is an emoji by default is one, even where a text
+    // font has it too.
+    assert_eq!(emoji_glyphs("<p>\u{25FE}</p>"), Some(1));
+    assert_eq!(emoji_glyphs("<p>\u{25FE}\u{FE0E}</p>"), None);
+    // `font-variant-emoji: text` still asks for text.
+    assert_eq!(
+        emoji_glyphs("<p style='font-variant-emoji: text'>\u{A9}\u{FE0F}</p>"),
+        None
+    );
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn keycaps_are_one_emoji() {
+    // A digit, U+FE0F and the enclosing keycap are one emoji, drawn by the emoji font.
+    for keycap in [
+        "1\u{FE0F}\u{20E3}",
+        "#\u{FE0F}\u{20E3}",
+        "*\u{FE0F}\u{20E3}",
+    ] {
+        assert_eq!(
+            emoji_glyphs(&format!("<p>{keycap}</p>")),
+            Some(1),
+            "{keycap}"
+        );
+    }
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn emoji_that_another_bundled_font_has_as_text_are_drawn_as_emoji() {
+    // The Japanese buttons are emoji by default; the Chinese font has them as plain glyphs.
+    // Arrows and marks no text font has are emoji when they ask for it.
+    for emoji in [
+        "\u{1F201}",
+        "\u{1F21A}",
+        "\u{3297}\u{FE0F}",
+        "\u{2197}\u{FE0F}",
+        "\u{2934}\u{FE0F}",
+        "\u{3030}\u{FE0F}",
+        "\u{24C2}\u{FE0F}",
+    ] {
+        assert_eq!(emoji_glyphs(&format!("<p>{emoji}</p>")), Some(1), "{emoji}");
+    }
+}
