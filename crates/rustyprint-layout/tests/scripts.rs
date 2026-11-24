@@ -335,3 +335,76 @@ fn a_gradient_transformed_inside_its_outline_fills_all_of_it() {
         assert_eq!(fills_short_of_their_outline(&items), 0, "{emoji}");
     }
 }
+
+/// Whether `text` is drawn with the emoji font, and with how many glyphs.
+#[cfg(feature = "emoji")]
+fn emoji_glyphs(body: &str) -> Option<usize> {
+    let runs = runs(body);
+    let emoji: Vec<&TextRun> = runs
+        .iter()
+        .filter(|run| run.font.postscript_name().contains("Emoji"))
+        .collect();
+    (!emoji.is_empty()).then(|| emoji.iter().map(|run| run.glyphs.len()).sum())
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn a_variation_selector_asks_for_the_emoji_of_a_character_text_fonts_have() {
+    // The copyright sign, arrows and squares are in the text fonts. Followed by U+FE0F they
+    // are emoji, as in browsers; alone, or followed by U+FE0E, they stay text.
+    for emoji in [
+        "\u{A9}\u{FE0F}",
+        "\u{2194}\u{FE0F}",
+        "\u{25B6}\u{FE0F}",
+        "\u{203C}\u{FE0F}",
+    ] {
+        assert_eq!(emoji_glyphs(&format!("<p>{emoji}</p>")), Some(1), "{emoji}");
+    }
+    for text in ["\u{A9}", "\u{2194}", "\u{25B6}\u{FE0E}", "1", "#"] {
+        assert_eq!(emoji_glyphs(&format!("<p>{text}</p>")), None, "{text}");
+    }
+    // Without a selector, a character that is an emoji by default is one, even where a text
+    // font has it too.
+    assert_eq!(emoji_glyphs("<p>\u{25FE}</p>"), Some(1));
+    assert_eq!(emoji_glyphs("<p>\u{25FE}\u{FE0E}</p>"), None);
+    // `font-variant-emoji: text` still asks for text.
+    assert_eq!(
+        emoji_glyphs("<p style='font-variant-emoji: text'>\u{A9}\u{FE0F}</p>"),
+        None
+    );
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn keycaps_are_one_emoji() {
+    // A digit, U+FE0F and the enclosing keycap are one emoji, drawn by the emoji font.
+    for keycap in [
+        "1\u{FE0F}\u{20E3}",
+        "#\u{FE0F}\u{20E3}",
+        "*\u{FE0F}\u{20E3}",
+    ] {
+        assert_eq!(
+            emoji_glyphs(&format!("<p>{keycap}</p>")),
+            Some(1),
+            "{keycap}"
+        );
+    }
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn emoji_that_another_bundled_font_has_as_text_are_drawn_as_emoji() {
+    // The Japanese buttons are emoji by default; the Chinese font has them as plain glyphs.
+    // Arrows and marks no text font has are emoji when they ask for it.
+    for emoji in [
+        "\u{1F201}",
+        "\u{1F21A}",
+        "\u{3297}\u{FE0F}",
+        "\u{2197}\u{FE0F}",
+        "\u{2934}\u{FE0F}",
+        "\u{3030}\u{FE0F}",
+        "\u{24C2}\u{FE0F}",
+    ] {
+        assert_eq!(emoji_glyphs(&format!("<p>{emoji}</p>")), Some(1), "{emoji}");
+    }
+}

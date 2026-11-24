@@ -1295,7 +1295,17 @@ fn emoji_presentation(
         return None;
     }
     match variant {
-        Emoji::Normal => None,
+        // A variation selector decides. Without one, a character that is an emoji by
+        // default is drawn as one, and the others by the first font that has them.
+        Emoji::Normal => {
+            if grapheme.contains('\u{FE0F}') {
+                Some(true)
+            } else if grapheme.contains('\u{FE0E}') {
+                Some(false)
+            } else {
+                emoji_by_default(first).then_some(true)
+            }
+        }
         Emoji::Text => Some(false),
         Emoji::Emoji => Some(true),
         // Variation selectors decide, and otherwise the character's default presentation.
@@ -1312,7 +1322,7 @@ fn emoji_presentation(
 /// Whether a character may have an emoji presentation: pictographs and symbols.
 fn could_be_emoji(c: char) -> bool {
     matches!(u32::from(c),
-        0x203C | 0x2049 | 0x2122 | 0x2139 | 0x2194..=0x21AA | 0x231A..=0x23FF
+        0xA9 | 0xAE | 0x203C | 0x2049 | 0x2122 | 0x2139 | 0x2194..=0x21AA | 0x231A..=0x23FF
         | 0x24C2 | 0x25AA..=0x25FE | 0x2600..=0x27BF | 0x2934 | 0x2935 | 0x2B05..=0x2B55
         | 0x3030 | 0x303D | 0x3297 | 0x3299 | 0x1F000..=0x1FAFF)
 }
@@ -1358,12 +1368,17 @@ fn itemize(p: &Paragraph, span: &Span, choice: &FontChoice) -> Vec<Piece> {
     let combined = combined_bytes(style, text);
     // Bundled script fonts already chosen in this span, as the style asks for them.
     let mut script_fonts: Vec<Font> = Vec::new();
-    let mut script_fallback = |c: char| {
-        if let Some(font) = script_fonts.iter().find(|f| f.covers(c)) {
+    // `color` asks for a font that draws the character in color, or as text, first.
+    let mut script_fallback = |c: char, color: Option<bool>| {
+        if color.is_none()
+            && let Some(font) = script_fonts.iter().find(|f| f.covers(c))
+        {
             return Some(font.clone());
         }
-        let font = fonts::script_fallback(style, c)?;
-        script_fonts.push(font.clone());
+        let font = fonts::script_fallback(style, c, color)?;
+        if !script_fonts.contains(&font) {
+            script_fonts.push(font.clone());
+        }
         Some(font)
     };
     let mut pieces: Vec<Piece> = Vec::new();
@@ -1386,25 +1401,49 @@ fn itemize(p: &Paragraph, span: &Span, choice: &FontChoice) -> Vec<Piece> {
         {
             primary.clone()
         } else {
-            let mut covering = std::iter::once(primary)
+            let covering: Vec<&Font> = std::iter::once(primary)
                 .chain(fallback_fonts)
-                .filter(|f| f.covers(first));
+                .filter(|f| f.covers(first))
+                .collect();
+            // A keycap is its base, U+FE0F and the enclosing keycap: an emoji whose base
+            // is a digit or a sign of the text fonts.
+            let keycap = grapheme.contains('\u{FE0F}') && grapheme.ends_with('\u{20E3}');
             // Emoji presentation prefers a font that draws the character in color, text
             // presentation one that does not (CSS Fonts 4 § 6.10).
-            let font = match emoji_presentation(style.font_variant_emoji, grapheme) {
-                Some(color) => {
-                    let covering: Vec<&Font> = covering.collect();
-                    covering
-                        .iter()
-                        .find(|f| draws_in_color(f, first) == color)
-                        .or(covering.first())
-                        .copied()
-                }
-                None => covering.next(),
+            let presentation = if keycap {
+                Some(true)
+            } else {
+                emoji_presentation(style.font_variant_emoji, grapheme)
             };
-            match font {
-                Some(font) => font.clone(),
-                None => script_fallback(first).unwrap_or_else(|| primary.clone()),
+            let asked = match presentation {
+                Some(color) => covering
+                    .iter()
+                    .find(|f| draws_in_color(f, first) == color)
+                    .copied()
+                    .cloned(),
+                None => covering.first().copied().cloned(),
+            };
+            // Asked for in color, a character that the style's fonts have only as text is
+            // drawn by a bundled font that has it in color. A keycap's base is not in
+            // color itself: the font that has it draws the whole keycap.
+            let bundled = if asked.is_none() && presentation == Some(true) {
+                script_fallback(first, Some(true))
+                    .filter(|font| keycap || draws_in_color(font, first))
+            } else {
+                None
+            };
+            match asked
+                .or(bundled)
+                .or_else(|| covering.first().copied().cloned())
+            {
+                Some(font) => font,
+                // A character no font of the style has goes to a bundled font: for one
+                // that is an emoji by default, the font that draws it in color.
+                None => {
+                    let by_default = could_be_emoji(first).then(|| emoji_by_default(first));
+                    script_fallback(first, presentation.or(by_default))
+                        .unwrap_or_else(|| primary.clone())
+                }
             }
         };
         let small_caps = synth_caps && (first.is_lowercase() || (all_caps && first.is_uppercase()));

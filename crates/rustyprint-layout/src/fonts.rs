@@ -93,9 +93,27 @@ const CJK: &[(u32, u32)] = &[
 
 #[cfg(feature = "emoji")]
 const EMOJI: &[(u32, u32)] = &[
+    // The bases of keycaps, and symbols of the text fonts that are emoji when asked for.
+    (0x23, 0x23),
+    (0x2A, 0x2A),
+    (0x30, 0x39),
+    (0xA9, 0xA9),
+    (0xAE, 0xAE),
+    (0x203C, 0x203C),
+    (0x2049, 0x2049),
+    (0x2122, 0x2122),
+    (0x2139, 0x2139),
+    (0x2194, 0x21AA),
     (0x2300, 0x23FF),
+    (0x24C2, 0x24C2),
+    (0x25AA, 0x25FE),
     (0x2600, 0x27BF),
+    (0x2934, 0x2935),
     (0x2B00, 0x2BFF),
+    (0x3030, 0x3030),
+    (0x303D, 0x303D),
+    (0x3297, 0x3297),
+    (0x3299, 0x3299),
     (0x1F000, 0x1FAFF),
 ];
 
@@ -161,7 +179,9 @@ fn script_font_named(name: &str) -> Option<usize> {
 
 /// The bundled script font for a character none of a style's fonts cover, used as the style
 /// asks: the one matching the style's generic family, serif or sans-serif, comes first.
-pub fn script_fallback(style: &ComputedValues, c: char) -> Option<Font> {
+/// With `color`, a font that draws the character in color (`true`) or as text (`false`)
+/// comes before the others.
+pub fn script_fallback(style: &ComputedValues, c: char, color: Option<bool>) -> Option<Font> {
     let code = u32::from(c);
     let sans = style
         .font_family
@@ -177,10 +197,21 @@ pub fn script_fallback(style: &ComputedValues, c: char) -> Option<Font> {
         })
         .collect();
     candidates.sort_by_key(|&i| SCRIPT_FONTS[i].sans != sans);
-    candidates
+    let mut covering: Vec<(usize, Font)> = candidates
         .into_iter()
         .map(|i| (i, script_face(i)))
-        .find(|(_, font)| font.covers(c))
+        .filter(|(_, font)| font.covers(c))
+        .collect();
+    if let Some(color) = color {
+        let in_color = |font: &Font| {
+            font.glyph(c)
+                .is_some_and(|glyph| font.is_color_glyph(glyph))
+        };
+        covering.sort_by_key(|(_, font)| in_color(font) != color);
+    }
+    covering
+        .into_iter()
+        .next()
         .map(|(i, font)| instance(style, &font, None, SCRIPT_FONTS[i].name))
 }
 
