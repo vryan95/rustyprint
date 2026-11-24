@@ -246,6 +246,93 @@ fn a_cell_min_width_is_a_minimum_when_the_table_is_narrower() {
 }
 
 #[test]
+fn a_forced_break_inside_a_table_cell_moves_the_rest_of_the_cell_to_the_next_page() {
+    // The row fits on the first page; the break inside its cell still ends the page, and
+    // what follows the break is kept, on the next page.
+    let pages = pages(
+        "<table><tr><td>\
+         <div style='--id: a; height: 10px'></div>\
+         <div style='break-after: page'></div>\
+         <div style='--id: b; height: 10px'></div>\
+         </td></tr></table>\
+         <div style='--id: c; height: 10px'></div>",
+    );
+    assert_eq!(pages.len(), 2);
+    find(&pages[0], "a");
+    find(&pages[1], "b");
+    find(&pages[1], "c");
+}
+
+#[test]
+fn a_forced_break_nested_in_a_box_that_avoids_breaks_still_breaks() {
+    // The box that avoids breaking inside starts below other content, so it gets no page to
+    // break across, but a forced break inside it, one box down, still ends the page.
+    let pages = pages(
+        "<div style='height: 50px'></div>\
+         <div style='break-inside: avoid'><div>\
+         <div style='--id: a; height: 10px'></div>\
+         <div style='--id: b; break-before: page; height: 10px'></div>\
+         </div></div>",
+    );
+    assert_eq!(pages.len(), 2);
+    find(&pages[0], "a");
+    assert_eq!(y_of(&pages[1], "b"), 0.0);
+}
+
+#[test]
+fn a_forced_break_inside_a_table_cell_resumes_on_the_side_it_asks_for() {
+    // The first page is a right page, so `break-after: right` leaves the second blank.
+    let (document, styles) = styled(
+        "<table><tr><td>\
+         <div style='--id: a; height: 10px'></div>\
+         <div style='break-after: right'></div>\
+         <div style='--id: b; height: 10px'></div>\
+         </td></tr></table>",
+    );
+    let pages = layout_pages(&document, &styles, &options(), &Images::none());
+    assert_eq!(pages.len(), 3);
+    find(pages[0].root.as_ref().unwrap(), "a");
+    assert!(pages[1].root.is_none());
+    find(pages[2].root.as_ref().unwrap(), "b");
+}
+
+#[test]
+fn a_forced_page_break_inside_a_table_cell_in_columns_ends_the_page() {
+    let pages = pages(
+        "<div style='columns: 2'><table><tr><td>\
+         <div style='--id: a; height: 10px'></div>\
+         <div style='break-after: page'></div>\
+         <div style='--id: b; height: 10px'></div>\
+         </td></tr></table></div>",
+    );
+    assert_eq!(pages.len(), 2);
+    find(&pages[0], "a");
+    find(&pages[1], "b");
+}
+
+#[test]
+fn a_forced_break_inside_a_later_row_breaks_that_row() {
+    // The break is in the second row: the first stays whole on the first page, and only the
+    // second row continues on the next.
+    let pages = pages(
+        "<table style='border-spacing: 0'>\
+         <tr><td style='--id: r1; padding: 0'><div style='height: 10px'></div></td></tr>\
+         <tr><td style='--id: r2; padding: 0'>\
+         <div style='--id: a; height: 10px'></div>\
+         <div style='break-after: page'></div>\
+         <div style='--id: b; height: 10px'></div>\
+         </td></tr>\
+         <tr><td style='--id: r3; padding: 0'><div style='height: 10px'></div></td></tr>\
+         </table>",
+    );
+    assert_eq!(pages.len(), 2);
+    assert_eq!(find(&pages[0], "r1").rect.height, 10.0);
+    assert_eq!(y_of(&pages[0], "a"), 10.0);
+    assert_eq!(y_of(&pages[1], "b"), 0.0);
+    assert_eq!(y_of(&pages[1], "r3"), 10.0);
+}
+
+#[test]
 fn a_page_holds_what_fits_its_height_rounded_up_to_a_whole_pixel() {
     // Browsers lay a page out in a whole number of pixels: 300px of boxes fit a page area
     // of 299.5px, and 301px of them do not.

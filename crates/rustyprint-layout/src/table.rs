@@ -1212,8 +1212,8 @@ impl std::fmt::Debug for LayoutCache {
     }
 }
 
-/// The part of a broken row on a page: its cells, its height, and where cells broke again.
-type RowPart = (Vec<BoxFragment>, f32, Option<Vec<Option<BreakToken>>>);
+/// The part of a broken row on a page: its grid row, its cells and its height there.
+type RowPart = (usize, Vec<BoxFragment>, f32);
 
 /// A row placed on this page.
 struct PlacedRow {
@@ -1726,7 +1726,12 @@ pub(crate) fn layout(
         }
         let broke = next.iter().any(Option::is_some);
         let tallest = fragments.iter().map(|f| f.rect.height).fold(0.0, f32::max);
-        let height = if broke { tallest.max(space) } else { tallest };
+        // A row broken on a page with an end fills the page.
+        let height = if broke && space.is_finite() {
+            tallest.max(space)
+        } else {
+            tallest
+        };
         (fragments, height, broke.then_some(next))
     };
     // Rows that a cell from above spans into, or with cells spanning rows, do not split.
@@ -1736,8 +1741,10 @@ pub(crate) fn layout(
             .all(|c| c.rowspan == 1)
             && !p.cells.iter().any(|c| c.row < r && c.row + c.rowspan > r)
     };
-    // The part of a broken row on this page: its cells, height, and where they broke.
-    let mut part: Option<RowPart> = None;
+    // The parts of broken rows on this page, and the body row that breaks again with where
+    // its cells broke.
+    let mut parts: Vec<RowPart> = Vec::new();
+    let mut part_tokens: Option<(usize, Vec<Option<BreakToken>>)> = None;
     let row_style = |r: usize| {
         let mut index = r;
         for group in &table.groups {
@@ -1753,7 +1760,7 @@ pub(crate) fn layout(
     } else {
         outer.break_inside.avoids_page()
     };
-    let fragmentainer = fragmentainer.filter(|f| f.at_top || !avoid);
+    let fragmentainer = fragmentainer.map(|f| f.avoiding(avoid));
     let grid_content_top = border.top + padding.top;
     let fixed_bottom = vs + padding.bottom + border.bottom;
     let mut end = body.len();
@@ -1784,16 +1791,25 @@ pub(crate) fn layout(
             let fits = y + heights[r] + vs + tail + bottom <= f.available + EPSILON;
             // The rest of a broken row, or a row too tall for a page of its own, breaks
             // inside its cells.
+            // A row with a forced break inside a cell breaks there, fitting or not.
+            let forces_inside = splittable(r)
+                && row_of_grid(table, r)
+                    .cells
+                    .iter()
+                    .any(|cell| flow::has_forced_break(&cell.block));
             if (i == start && partial.is_some())
+                || forces_inside
                 || (!fits && placed == 0 && f.at_top && splittable(r))
             {
                 let space = (f.available - y - tail - vs).max(0.0);
-                let (fragments, height, tokens) = split_row(r, partial, space);
-                let broke = tokens.is_some();
-                part = Some((fragments, height, tokens));
+                // Only the row the page resumes in continues from earlier cell breaks.
+                let resumed_cells = if i == start { partial } else { None };
+                let (fragments, height, tokens) = split_row(r, resumed_cells, space);
+                parts.push((r, fragments, height));
                 y += height + vs;
                 placed += 1;
-                if broke {
+                if let Some(tokens) = tokens {
+                    part_tokens = Some((i, tokens));
                     end = i + 1;
                     break;
                 }
@@ -1831,21 +1847,23 @@ pub(crate) fn layout(
         && let Some(tokens) = partial
         && start < body.len()
     {
-        part = Some(split_row(body[start], Some(tokens), f32::INFINITY));
+        let (fragments, height, _) = split_row(body[start], Some(tokens), f32::INFINITY);
+        parts.push((body[start], fragments, height));
     }
     if end == start && !forced && end < body.len() {
         end = start + 1;
     }
-    let part_tokens = part.as_mut().and_then(|(_, _, tokens)| tokens.take());
     let broke = end < body.len() || part_tokens.is_some();
-    // The broken row's height on this page replaces its own.
+    // A broken row's height on this page replaces its own.
     let mut page_heights;
-    let heights = if let Some((_, height, _)) = &part {
-        page_heights = heights.clone();
-        page_heights[body[start]] = *height;
-        &page_heights
-    } else {
+    let heights = if parts.is_empty() {
         heights
+    } else {
+        page_heights = heights.clone();
+        for (r, _, height) in &parts {
+            page_heights[*r] = *height;
+        }
+        &page_heights
     };
 
     // Positions of the rows on this page.
@@ -1868,9 +1886,7 @@ pub(crate) fn layout(
     for placed_row in &placed {
         let r = placed_row.row;
         let y = placed_row.y;
-        if let Some((fragments, _, _)) = &part
-            && r == body[start]
-        {
+        if let Some((_, fragments, _)) = parts.iter().find(|(row, _, _)| *row == r) {
             // A broken row's cells sit at its top.
             for (fragment, cell) in fragments.iter().zip(&p.cells[p.row_cells[r].clone()]) {
                 let mut fragment = fragment.clone();
@@ -2120,17 +2136,20 @@ pub(crate) fn layout(
         }
     };
 
+    // A forced break inside a cell is the table's, with the side it asks for.
+    let cell_break = part_tokens
+        .iter()
+        .flat_map(|(_, cells)| cells.iter().flatten())
+        .find(|token| token.forced)
+        .map(|token| token.side);
     let break_token = broke.then_some(BreakToken {
         consumed: 0.0,
+        forced: forced || cell_break.is_some(),
+        side: cell_break.flatten(),
         resume: match part_tokens {
-            Some(cells) => Resume::RowPart {
-                index: start,
-                cells,
-            },
+            Some((index, cells)) => Resume::RowPart { index, cells },
             None => Resume::Row { index: end },
         },
-        forced,
-        side: None,
     });
     Laid {
         fragment,
@@ -2150,6 +2169,24 @@ pub(crate) fn layout(
         break_token,
         deferred: false,
     }
+}
+
+/// Whether the cells of body row `index` broke at a forced page break, where `cells` resume
+/// them.
+pub(crate) fn breaks_page(table: &Table, index: usize, cells: &[Option<BreakToken>]) -> bool {
+    let row = table
+        .groups
+        .iter()
+        .filter(|group| group.kind == GroupKind::Body)
+        .flat_map(|group| &group.rows)
+        .nth(index);
+    row.is_some_and(|row| {
+        row.cells.iter().zip(cells).any(|(cell, token)| {
+            token
+                .as_ref()
+                .is_some_and(|token| token.forced && flow::breaks_page(&cell.block, token))
+        })
+    })
 }
 
 /// The row at grid row `r`.
