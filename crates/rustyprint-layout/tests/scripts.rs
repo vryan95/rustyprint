@@ -179,3 +179,80 @@ fn runs_with_face(src: &str, text: &str) -> Vec<TextRun> {
          <p style='font-family: f, monospace'>{text}</p>"
     ))
 }
+
+/// Everything `body` paints on an 800 × 1000 page area.
+#[cfg(feature = "emoji")]
+fn painted(body: &str) -> Vec<DisplayItem> {
+    let html = format!("<!DOCTYPE html><style>body {{ margin: 0 }}</style><body>{body}");
+    let document = Document::parse(&html);
+    let load = |_: &str| None;
+    let styles = compute_styles(
+        &document,
+        &StyleOptions {
+            page_size: (800.0, 1000.0),
+            stylesheet: None,
+            load: &load,
+            font_metrics: None,
+            load_font: None,
+        },
+    );
+    let page = PageOptions {
+        size: Size::new(800.0, 1000.0),
+        margin: Sides::default(),
+    };
+    let root = layout_tree(&document, &styles, &page, &Images::none()).unwrap();
+    paint_fragment(&root, &Images::none())
+}
+
+/// How many fills among `items` are not inside the outline of any shape: they cover the
+/// whole box of their glyph.
+#[cfg(feature = "emoji")]
+fn fills_outside_every_outline(items: &[DisplayItem]) -> usize {
+    // Whether each open clip or transform is the outline of a shape.
+    let mut open: Vec<bool> = Vec::new();
+    let mut outside = 0;
+    for item in items {
+        match item {
+            DisplayItem::PushClipPath { .. } => open.push(true),
+            DisplayItem::PushClip(_)
+            | DisplayItem::PushClipText(_)
+            | DisplayItem::PushTransform(_) => open.push(false),
+            DisplayItem::PopClip => {
+                open.pop();
+            }
+            DisplayItem::Rect { .. } | DisplayItem::Gradient { .. } if !open.contains(&true) => {
+                outside += 1;
+            }
+            _ => {}
+        }
+    }
+    outside
+}
+
+#[cfg(feature = "emoji")]
+#[test]
+fn a_flag_is_shaded_only_inside_its_outline() {
+    // A flag's shading is a gradient kept only where the flag is (`COLR` source-in
+    // compositing). Drawn over the whole box of the glyph, it shows as a grey square
+    // behind the flag.
+    for flag in [
+        "\u{1F1E7}\u{1F1EA}",
+        "\u{1F1FA}\u{1F1F8}",
+        "\u{1F1EF}\u{1F1F5}",
+    ] {
+        let items = painted(&format!("<p>{flag}</p>"));
+        let fills = items
+            .iter()
+            .filter(|item| {
+                matches!(
+                    item,
+                    DisplayItem::Rect { .. } | DisplayItem::Gradient { .. }
+                )
+            })
+            .count();
+        assert!(fills > 0, "{flag}: nothing is painted");
+        assert_eq!(fills_outside_every_outline(&items), 0, "{flag}");
+    }
+    // Emoji without such shading were already painted inside their outlines only.
+    assert_eq!(fills_outside_every_outline(&painted("<p>\u{1F381}</p>")), 0);
+}
