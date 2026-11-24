@@ -1,0 +1,112 @@
+/* The emoji sample: every emoji in a chart, group by group, with page headers and footers. */
+
+@page {
+  size: A4;
+  margin: 22mm 18mm 20mm;
+
+  @top-left {
+    content: "Emoji chart";
+    font: bold 8pt "Noto Sans", sans-serif;
+    color: #1f3a60;
+    border-bottom: 0.5pt solid #c9d1dc;
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+  }
+
+  @top-right {
+    content: "Unicode 18.0";
+    font: 8pt "Noto Sans", sans-serif;
+    color: #6e6e6e;
+    border-bottom: 0.5pt solid #c9d1dc;
+    vertical-align: bottom;
+    padding-bottom: 2mm;
+  }
+
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font: 8pt "Noto Sans", sans-serif;
+    color: #6e6e6e;
+  }
+}
+
+body {
+  font: 10pt/1.5 "Noto Sans", sans-serif;
+  color: #222;
+  margin: 0;
+}
+
+h1 {
+  font-size: 26pt;
+  line-height: 1.2;
+  margin: 0 0 3mm;
+  color: #1f3a60;
+}
+
+header p {
+  margin: 0 0 6mm;
+  color: #555;
+}
+
+.toc ol {
+  list-style: none;
+  margin: 0 0 8mm;
+  padding: 0;
+  columns: 2;
+  column-gap: 10mm;
+}
+
+.toc li {
+  border-bottom: 0.5pt solid #e3e7ec;
+  padding: 1.2mm 0;
+}
+
+.toc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.toc a::after {
+  content: leader(".") target-counter(attr(href), page);
+  color: #6e6e6e;
+}
+
+.toc .count {
+  color: #8a8a8a;
+  font-size: 8pt;
+}
+
+h2 {
+  font-size: 15pt;
+  margin: 8mm 0 2mm;
+  padding-bottom: 1.5mm;
+  border-bottom: 1.5pt solid #2a9d8f;
+  color: #1f3a60;
+  break-after: avoid;
+}
+
+h3 {
+  font-size: 8.5pt;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6e6e6e;
+  margin: 4mm 0 1mm;
+  break-after: avoid;
+}
+
+/* One cell for each emoji, so that every row lines up whatever the emoji is made of. */
+.emoji {
+  margin: 0;
+  font-size: 0;
+}
+
+.emoji span {
+  display: inline-block;
+  width: 8.7mm;
+  height: 8.7mm;
+  font-size: 17pt;
+  line-height: 8.7mm;
+  text-align: center;
+  vertical-align: top;
+  overflow: hidden;
+}
