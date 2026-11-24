@@ -5,13 +5,36 @@
 <style>
 #t, #r { width: 30px }
 #t { overflow-wrap: anywhere }
+.min { width: min-content }
+.any { overflow-wrap: anywhere }
+.nowrap { white-space: nowrap }
+table { width: 100px; border-collapse: collapse }
+td { padding: 0; overflow-wrap: anywhere }
+.label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 </style>
 <script type="text/x-rustyprint-expect">
 #t { overflow-wrap: anywhere; layout-lines: >1 }
 #r { layout-lines: 1 }
+#a { layout-width: #b }
+#b { layout-width: 79.68px }
+#c { layout-width: <20px }
+#d { layout-width: 52.976px }
+#e { layout-width: 82.24px }
+#f { layout-width: 33.333px }
+#g { layout-width: #e }
 </script>
 </head>
 <body>
 <div id=t>abcdefghij</div><div id=r>abcdefghij</div>
+<!-- Text that does not wrap keeps its whole width for min-content, whatever
+     `overflow-wrap: anywhere` allows; text that wraps may break at every letter. -->
+<div id=a class="min any nowrap">abcdefghij</div>
+<div id=b class="min nowrap">abcdefghij</div>
+<div id=c class="min any">abcdefghij</div>
+<div id=d class="min any">abc<span class="nowrap">defghij</span></div>
+<!-- Labels that cut off with an ellipsis keep a table's columns as wide as their text. -->
+<table><tr><td id=e><b class=label>2026-11-01</b></td><td><b class=label>2026-11-02</b></td><td><b class=label>2026-11-03</b></td></tr></table>
+<table style="table-layout: fixed"><tr><td id=f><b class=label>2026-11-01</b></td><td><b class=label>2026-11-02</b></td><td><b class=label>2026-11-03</b></td></tr></table>
+<table><tr><td id=g><b class=label style="display: inline-block">2026-11-01</b></td><td><b class=label style="display: inline-block">2026-11-02</b></td></tr></table>
 </body>
 </html>

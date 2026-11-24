@@ -523,12 +523,13 @@ impl<'a> Breaker<'a> {
         if len == 0 {
             return (0.0, 0.0);
         }
+        let opportunities = self.min_content_opportunities();
         let mut min = 0.0f32;
         let mut max = 0.0f32;
         let mut start = self.skip_start(0);
         let mut line_start = start;
         let mut first_line = true;
-        for o in &self.opportunities {
+        for o in opportunities.iter() {
             if o.pos <= start {
                 continue;
             }
@@ -541,20 +542,40 @@ impl<'a> Breaker<'a> {
                 first_line = false;
             }
         }
-        // `overflow-wrap: anywhere` lets every grapheme break for min-content.
-        let anywhere =
-            self.p.spans.iter().any(|s| {
-                s.kind == SpanKind::Text && s.style.overflow_wrap == OverflowWrap::Anywhere
-            });
-        if anywhere {
-            min = self
-                .p
-                .text
-                .grapheme_indices(true)
-                .map(|(i, g)| self.line_width(i, i + g.len(), 0.0, false))
-                .fold(0.0, f32::max);
-        }
         (min, max.max(min))
+    }
+
+    /// The line break opportunities, and for min-content also the grapheme boundaries of
+    /// text with `overflow-wrap: anywhere` that may wrap, its ends included (CSS Text 3
+    /// § 5.5): text that does not wrap keeps its whole width.
+    fn min_content_opportunities(&self) -> std::borrow::Cow<'_, [Opportunity]> {
+        let anywhere = |s: &&super::paragraph::Span| {
+            s.kind == SpanKind::Text
+                && wraps(&s.style)
+                && s.style.overflow_wrap == OverflowWrap::Anywhere
+        };
+        if !self.p.spans.iter().any(|s| anywhere(&s)) {
+            return std::borrow::Cow::Borrowed(&self.opportunities);
+        }
+        let mut all = self.opportunities.clone();
+        for span in self.p.spans.iter().filter(anywhere) {
+            let piece = &self.p.text[span.range.clone()];
+            all.extend(
+                piece
+                    .grapheme_indices(true)
+                    .map(|(offset, _)| span.range.start + offset)
+                    .chain(std::iter::once(span.range.end))
+                    .filter(|&pos| pos > 0 && pos < self.p.text.len())
+                    .map(|pos| Opportunity {
+                        pos,
+                        mandatory: false,
+                        hyphen: false,
+                    }),
+            );
+        }
+        // Mandatory breaks go after the others at the same place, to end the line there.
+        all.sort_by_key(|o| (o.pos, o.mandatory));
+        std::borrow::Cow::Owned(all)
     }
 }
 
