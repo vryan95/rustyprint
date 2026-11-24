@@ -12,6 +12,7 @@ p { margin: 0 }
 #e { clear: inline-start }
 .l { float: left; width: 50px }
 .r { float: right; width: 50px }
+.t { display: table; clear: both }
 </style>
 <script type="text/x-rustyprint-expect">
 #a { clear: left; layout-y: 50px }
@@ -21,6 +22,8 @@ p { margin: 0 }
 #e { clear: inline-start; layout-y: 450px }
 #f { clear: both; layout-y: 540px }
 #g { clear: top; layout-y: 600px }
+#h, #i { layout-y: 766px }
+#j, #k { layout-y: 867px }
 </script>
 </head>
 <body>
@@ -31,5 +34,9 @@ p { margin: 0 }
 <div class=box dir=rtl><div class=r style="height: 50px"></div><div class=l style="height: 80px"></div><div id=e>e</div></div>
 <div class=box><div class=l style="height: 40px"></div><div class=l id=f style="height: 10px">f</div></div>
 <div class=box><div class=l style="height: 10px"></div><p id=g style="clear: top">g</p></div>
+<!-- A margin that collapses through the cleared box's ancestors moves them, and the floats
+     are where they were: the box goes to the floats' bottom, not that margin lower. -->
+<div class=box style="padding-top: 1px"><div class=r style="height: 65px"></div><div><div style="margin-top: 8px">h<div id=h class=t></div></div></div><p id=i>i</p></div>
+<div class=box style="padding-top: 1px"><div class=r style="height: 65px"></div><div><div></div><div style="margin-top: 8px">j<div id=j class=t></div></div></div><p id=k>k</p></div>
 </body>
 </html>

@@ -5,9 +5,9 @@ use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
 use rustyprint_css::properties::types::{
-    AlignPosition, BoxDecorationBreak, BoxSizing, BreakBetween, CalcSizeBasis, ContentAlignment,
-    ContentDistribution, Direction, Display, DisplayInside, LengthPercentage, MaybeAuto, Overflow,
-    PageSide, Size,
+    AlignPosition, BoxDecorationBreak, BoxSizing, BreakBetween, CalcSizeBasis, Clear,
+    ContentAlignment, ContentDistribution, Direction, Display, DisplayInside, Float,
+    LengthPercentage, MaybeAuto, Overflow, PageSide, Size,
 };
 use rustyprint_css::values::{CalcContext, CalcNode};
 
@@ -194,6 +194,38 @@ fn establishes_bfc(block: &BlockBox, is_root: bool, atomic: bool) -> bool {
         || scrolls(style.overflow_y)
         || contain.layout
         || contain.paint
+}
+
+/// A box's top margin collapsed with those of its first in-flow descendants that adjoin it
+/// (CSS 2.1 § 8.3.1), as far as it is known before layout: it puts the box's content where
+/// it will be in the formatting context. Percentages resolve against `basis`.
+fn leading_margin(block: &BlockBox, basis: f32) -> CollapsibleMargin {
+    let mut collapsed =
+        CollapsibleMargin::of(margin(&block.style.margin_top, basis).unwrap_or(0.0));
+    let mut block = block;
+    loop {
+        let (padding, border) = padding_and_border(&block.style, basis);
+        if padding.top != 0.0 || border.top != 0.0 || establishes_bfc(block, false, false) {
+            return collapsed;
+        }
+        let BlockContents::Blocks(children) = &block.contents else {
+            return collapsed;
+        };
+        if crate::multicol::is_multicol(&block.style) {
+            return collapsed;
+        }
+        let first = children.iter().find(|child| {
+            child.style.float == Float::None
+                && !matches!(child.contents, BlockContents::OutOfFlow(_))
+        });
+        let Some(first) = first.filter(|first| first.style.clear == Clear::None) else {
+            return collapsed;
+        };
+        collapsed.adjoin(CollapsibleMargin::of(
+            margin(&first.style.margin_top, basis).unwrap_or(0.0),
+        ));
+        block = first;
+    }
 }
 
 /// The break value before a box, with its first child's propagated to it (CSS Fragmentation
@@ -874,14 +906,13 @@ fn layout_flow(
                     continue;
                 }
 
-                // Where the child's border box will roughly start.
-                let own_top =
-                    CollapsibleMargin::of(margin(&child.style.margin_top, width).unwrap_or(0.0));
+                // Where the child's border box will roughly start, with the margins of its
+                // descendants that collapse through its top.
                 let mut estimate = if top_open || (trim_start && !has_content) {
                     cursor
                 } else {
                     let mut margin = pending;
-                    margin.adjoin(own_top);
+                    margin.adjoin(leading_margin(child, width));
                     cursor + margin.value()
                 };
                 // Clearance moves the box below the floats it clears (CSS 2.1 § 9.5.2).
@@ -903,6 +934,7 @@ fn layout_flow(
                 // narrower beside them, or goes below them (CSS 2.1 § 9.5).
                 let independent = establishes_bfc(child, false, false);
                 let mut shift = 0.0;
+                let floats_before = (!independent).then(|| floats.len());
                 let mut laid = if independent && !floats.is_empty() {
                     let need = intrinsic_outer(child).0;
                     let mut height = 0.0;
@@ -993,6 +1025,33 @@ fn layout_flow(
                     Some(below) if !laid.through => y.max(below),
                     _ => y,
                 };
+                // Where the estimate missed (an empty first child, clearance inside), the
+                // child's content met the floats at the wrong height: lay it out again where
+                // it is.
+                if let Some(before) = floats_before
+                    && !laid.through
+                    && !floats.is_empty()
+                    && (y - estimate).abs() > EPSILON
+                {
+                    floats.truncate(before);
+                    let left = margin(&child.style.margin_left, width).unwrap_or(0.0);
+                    let child_origin = Point::new(content_left + left, content_top + y);
+                    laid = layout_flow(
+                        child,
+                        child_cb,
+                        BlockKind::InFlow,
+                        &own_decorators,
+                        child_fragmentainer.map(|f| Fragmentainer {
+                            available: f.available + estimate - y,
+                            ..f
+                        }),
+                        child_token,
+                        Some((&mut *floats, child_origin)),
+                    );
+                    if trim_start && !has_content {
+                        laid.collapsed_top = CollapsibleMargin::default();
+                    }
+                }
 
                 // A child that does not fit moves to the next page, with the children after
                 // the last break that is not avoided.
