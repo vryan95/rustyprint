@@ -24,6 +24,12 @@ p { margin: 0 }
 #g { clear: top; layout-y: 600px }
 #h, #i { layout-y: 766px }
 #j, #k { layout-y: 867px }
+#l { layout-y: 967px }
+#m { layout-y: 969px }
+#n { layout-y: 1067px }
+#o { layout-y: 1092px }
+#q { layout-y: 1167px }
+#r { layout-y: 1302px }
 </script>
 </head>
 <body>
@@ -38,5 +44,11 @@ p { margin: 0 }
      are where they were: the box goes to the floats' bottom, not that margin lower. -->
 <div class=box style="padding-top: 1px"><div class=r style="height: 65px"></div><div><div style="margin-top: 8px">h<div id=h class=t></div></div></div><p id=i>i</p></div>
 <div class=box style="padding-top: 1px"><div class=r style="height: 65px"></div><div><div></div><div style="margin-top: 8px">j<div id=j class=t></div></div></div><p id=k>k</p></div>
+<!-- An empty box with clearance sits at the floats' bottom, and its margins collapse with
+     what follows from its top margin edge. -->
+<div class=box><div class=l style="height: 65px"></div><div id=l style="clear: both; margin: 5px 0 7px"></div><p id=m>m</p></div>
+<div class=box><div class=l style="height: 65px"></div><div id=n style="clear: both; margin: 5px 0 30px"></div><p id=o style="margin-top: 12px">o</p></div>
+<div class=box><div class=l style="height: 65px"></div><div><div style="margin-top: 8px">p<div style="clear: both"></div></div></div><p id=q>q</p></div>
+<div class=box><div class=l style="height: 65px"></div><div style="clear: both; margin: 100px 0 7px"></div><p id=r>r</p></div>
 </body>
 </html>

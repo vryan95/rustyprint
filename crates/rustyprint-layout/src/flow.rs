@@ -1012,7 +1012,7 @@ fn layout_flow(
                     top_open = false;
                 }
                 let y = if laid.through {
-                    cursor
+                    forced.unwrap_or(cursor)
                 } else if top_open {
                     collapsed_top.adjoin(laid.collapsed_top);
                     cursor
@@ -1104,7 +1104,15 @@ fn layout_flow(
                 laid.fragment.rect.x = content_x + shift + laid.margin.left + dx;
                 laid.fragment.rect.y = content_y + y + dy;
                 if laid.through {
-                    if top_open {
+                    if forced.is_some() {
+                        // Clearance puts an empty box's border box below the floats, and its
+                        // margins collapse with what follows it, not with what came before
+                        // (CSS 2.1 § 8.3.1): they count from its top margin edge.
+                        top_open = false;
+                        cursor = y - laid.margin.top;
+                        pending = laid.collapsed_top;
+                        pending.adjoin(laid.collapsed_bottom);
+                    } else if top_open {
                         collapsed_top.adjoin(laid.collapsed_top);
                         collapsed_top.adjoin(laid.collapsed_bottom);
                     } else {
