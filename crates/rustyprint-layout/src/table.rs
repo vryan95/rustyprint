@@ -890,10 +890,9 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
             .chain(column.group.map(|g| &table.column_groups[g].style));
         for style in styles {
             match cell_width(style) {
-                // Unlike a cell's, a column's width is also its minimum (CSS Tables 3
-                // § 3.9.1).
+                // Like a cell's, a column's width is what it prefers, not a minimum: the
+                // table may still squeeze it down to its content, as browsers do.
                 CellWidth::Fixed(w) if !c.fixed[i] => {
-                    c.min[i] = c.min[i].max(w);
                     c.max[i] = c.max[i].max(w);
                     c.fixed[i] = true;
                 }
