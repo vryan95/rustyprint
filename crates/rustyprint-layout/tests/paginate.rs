@@ -181,6 +181,71 @@ fn fixed_backgrounds_repeat_on_every_page() {
 }
 
 #[test]
+fn a_cell_width_wider_than_the_table_allows_is_squeezed_to_fit_as_browsers_do() {
+    // The cells ask for 700px in a table capped at the 400px page. A cell's width is what its
+    // column prefers, not a minimum, so the columns shrink to fit instead of running off the page.
+    let pages = pages(
+        "<table style='--id: t; width: 100%; max-width: 100%; border-collapse: collapse'><tr>\
+         <td style='--id: a; width: 300px; padding: 0'>A</td>\
+         <td style='--id: b; width: 200px; padding: 0'>B</td>\
+         <td style='--id: c; width: 200px; padding: 0'>C</td>\
+         </tr></table>",
+    );
+    let table = find(&pages[0], "t");
+    assert!(
+        table.rect.width <= PAGE.width + 0.01,
+        "table is {} wide",
+        table.rect.width
+    );
+    let cells: f32 = ["a", "b", "c"]
+        .iter()
+        .map(|id| find(&pages[0], id).rect.width)
+        .sum();
+    assert!(cells <= PAGE.width + 0.01, "cells take {cells}");
+    // The space is still shared in proportion to what the cells asked for.
+    assert!(find(&pages[0], "a").rect.width > find(&pages[0], "b").rect.width);
+}
+
+#[test]
+fn a_column_gets_the_width_its_cell_asks_for_before_other_columns_grow() {
+    // The first cell asks for 200px of the 400px table. The text beside it would take far
+    // more than the rest, so it gets what is left once the first column has its width.
+    let pages = pages(&format!(
+        "<table style='width: 100%; border-collapse: collapse'><tr>\
+         <td style='--id: a; width: 200px; padding: 0'>A</td>\
+         <td style='--id: b; padding: 0'>{}</td></tr></table>",
+        "to be or not ".repeat(20)
+    ));
+    let width = |id| find(&pages[0], id).rect.width;
+    assert_eq!((width("a"), width("b")), (200.0, 200.0));
+}
+
+#[test]
+fn a_col_width_is_still_a_minimum_when_the_table_is_narrower() {
+    // Unlike a cell's width, a column's width counts towards its minimum (CSS Tables 3
+    // § 3.9.1), so a 300px column keeps its width in a table styled 100px wide.
+    let pages = pages(
+        "<table style='width: 100px; border-collapse: collapse'>\
+         <col style='width: 300px'><tr><td style='--id: a; padding: 0'>A</td></tr></table>",
+    );
+    assert_eq!(find(&pages[0], "a").rect.width, 300.0);
+}
+
+#[test]
+fn a_cell_min_width_is_a_minimum_when_the_table_is_narrower() {
+    // The cell's width may be squeezed, but not below its own min-width, which counts in
+    // its border box under box-sizing: border-box.
+    let pages = pages(
+        "<table style='width: 100px; border-collapse: collapse'><tr>\
+         <td style='--id: a; width: 200px; min-width: 200px; padding: 0'></td>\
+         <td style='--id: b; width: 200px; min-width: 150px; padding: 0 5px; \
+         box-sizing: border-box'></td></tr></table>",
+    );
+    assert_eq!(find(&pages[0], "a").rect.width, 200.0);
+    assert_eq!(find(&pages[0], "b").rect.width, 150.0);
+}
+
+#[test]
 fn a_forced_break_inside_a_table_cell_moves_the_rest_of_the_cell_to_the_next_page() {
     // The row fits on the first page; the break inside its cell still ends the page, and
     // what follows the break is kept, on the next page.

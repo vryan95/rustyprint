@@ -826,15 +826,26 @@ fn horizontal_extra(style: &ComputedValues) -> f32 {
         + style.border_right_width
 }
 
+/// A length given for a cell's width as a border-box width.
+fn border_box_width(style: &ComputedValues, px: f32) -> f32 {
+    if style.box_sizing == BoxSizing::BorderBox {
+        px
+    } else {
+        px + horizontal_extra(style)
+    }
+}
+
+/// A cell's border-box `min-width`, when it is a length.
+fn cell_min_width(style: &ComputedValues) -> f32 {
+    match &style.min_width {
+        Size::Value(LengthPercentage::Length(px)) => border_box_width(style, *px),
+        _ => 0.0,
+    }
+}
+
 fn cell_width(style: &ComputedValues) -> CellWidth {
     match &style.width {
-        Size::Value(LengthPercentage::Length(px)) => {
-            CellWidth::Fixed(if style.box_sizing == BoxSizing::BorderBox {
-                *px
-            } else {
-                px + horizontal_extra(style)
-            })
-        }
+        Size::Value(LengthPercentage::Length(px)) => CellWidth::Fixed(border_box_width(style, *px)),
         Size::Value(LengthPercentage::Percentage(p)) => CellWidth::Percent(*p),
         _ => CellWidth::Auto,
     }
@@ -879,6 +890,8 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
             .chain(column.group.map(|g| &table.column_groups[g].style));
         for style in styles {
             match cell_width(style) {
+                // Unlike a cell's, a column's width is also its minimum (CSS Tables 3
+                // § 3.9.1).
                 CellWidth::Fixed(w) if !c.fixed[i] => {
                     c.min[i] = c.min[i].max(w);
                     c.max[i] = c.max[i].max(w);
@@ -895,11 +908,13 @@ fn constraints(table: &Table, spacing: f32) -> Constraints {
         let style = &cell.block.style;
         let (content_min, content_max) = flow::intrinsic_content(&cell.block);
         let extra = horizontal_extra(style);
-        let (mut min, mut max) = (content_min + extra, content_max + extra);
+        // A cell's width is what its column prefers, not a minimum: the table may still
+        // squeeze it down to its content or its own min-width (CSS Tables 3 § 3.9.1).
+        let min = (content_min + extra).max(cell_min_width(style));
+        let mut max = (content_max + extra).max(min);
         let mut fixed = false;
         match cell_width(style) {
             CellWidth::Fixed(w) => {
-                min = min.max(w);
                 max = min.max(w);
                 fixed = true;
             }
@@ -1033,22 +1048,26 @@ fn distribute(c: &Constraints, width: f32) -> Vec<f32> {
         }
         return widths;
     }
-    let grow: f32 = flexible.iter().map(|&i| c.max[i] - c.min[i]).sum();
-    if left <= grow {
-        // Between the minimum and maximum: every column moves the same fraction of the way.
-        let t = if grow > 0.0 { left / grow } else { 0.0 };
-        for &i in &flexible {
-            widths[i] += (c.max[i] - c.min[i]) * t;
+    // Between the minimum and maximum, columns with a width come first: they move the same
+    // fraction of the way to it, and only once they have it do the auto columns grow, each
+    // the same fraction of the way to its maximum.
+    let (fixed, auto): (Vec<usize>, Vec<usize>) = flexible.iter().partition(|&&i| c.fixed[i]);
+    for columns in [&fixed, &auto] {
+        let grow: f32 = columns.iter().map(|&i| c.max[i] - c.min[i]).sum();
+        if left <= grow {
+            let t = if grow > 0.0 { left / grow } else { 0.0 };
+            for &i in columns {
+                widths[i] += (c.max[i] - c.min[i]) * t;
+            }
+            return widths;
         }
-        return widths;
+        for &i in columns {
+            widths[i] = c.max[i];
+        }
+        left -= grow;
     }
-    for &i in &flexible {
-        widths[i] = c.max[i];
-    }
-    left -= grow;
     // Wider than the maximum: auto columns grow in proportion to their widths, and fixed
     // ones only when there are no others.
-    let auto: Vec<usize> = flexible.iter().copied().filter(|&i| !c.fixed[i]).collect();
     let growing = if auto.is_empty() { &flexible } else { &auto };
     let total: f32 = growing.iter().map(|&i| c.max[i]).sum();
     for &i in growing {
