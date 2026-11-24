@@ -181,6 +181,28 @@ fn fixed_backgrounds_repeat_on_every_page() {
 }
 
 #[test]
+#[cfg(feature = "emoji")]
+fn emoji_set_upright_in_vertical_text_are_painted_in_color() {
+    // The color emoji font draws its glyphs from color layers, not from outlines, so text
+    // that only drew the glyph would leave it blank.
+    let layers = |style: &str| {
+        let (document, styles) = styled(&format!("<p style='{style}'>\u{1F381}</p>"));
+        let document = layout(&document, &styles, &options(), &Images::none());
+        document.pages[0]
+            .items
+            .iter()
+            .filter(|item| matches!(item, DisplayItem::PushClipPath { .. }))
+            .count()
+    };
+    let horizontal = layers("");
+    assert!(horizontal > 0);
+    assert_eq!(
+        layers("writing-mode: vertical-rl; text-orientation: upright"),
+        horizontal
+    );
+}
+
+#[test]
 fn a_cell_width_wider_than_the_table_allows_is_squeezed_to_fit_as_browsers_do() {
     // The cells ask for 700px in a table capped at the 400px page. A cell's width is what its
     // column prefers, not a minimum, so the columns shrink to fit instead of running off the page.
