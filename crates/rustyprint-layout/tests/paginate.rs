@@ -221,14 +221,28 @@ fn a_column_gets_the_width_its_cell_asks_for_before_other_columns_grow() {
 }
 
 #[test]
-fn a_col_width_is_still_a_minimum_when_the_table_is_narrower() {
-    // Unlike a cell's width, a column's width counts towards its minimum (CSS Tables 3
-    // § 3.9.1), so a 300px column keeps its width in a table styled 100px wide.
+fn a_col_width_wider_than_the_table_allows_is_squeezed_as_a_cell_width_is() {
+    // Checked in Chromium 155: a width on a `<col>` or a `<colgroup>` is what the column
+    // prefers, as a width on a cell is, so the columns shrink to fit the table.
+    for column in [
+        "<col style='width: 300px'>",
+        "<col width=300>",
+        "<colgroup style='width: 300px'><col></colgroup>",
+    ] {
+        let pages = pages(&format!(
+            "<table style='width: 100px; border-collapse: collapse'>{column}\
+             <tr><td style='--id: a; padding: 0'></td></tr></table>"
+        ));
+        assert_eq!(find(&pages[0], "a").rect.width, 100.0, "{column}");
+    }
+    // Two columns of 300px share a 400px table evenly.
     let pages = pages(
-        "<table style='width: 100px; border-collapse: collapse'>\
-         <col style='width: 300px'><tr><td style='--id: a; padding: 0'>A</td></tr></table>",
+        "<table style='width: 400px; border-collapse: collapse'>\
+         <col style='width: 300px'><col style='width: 300px'><tr>\
+         <td style='--id: a; padding: 0'></td><td style='--id: b; padding: 0'></td></tr></table>",
     );
-    assert_eq!(find(&pages[0], "a").rect.width, 300.0);
+    let width = |id| find(&pages[0], id).rect.width;
+    assert_eq!((width("a"), width("b")), (200.0, 200.0));
 }
 
 #[test]
