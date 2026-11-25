@@ -371,6 +371,12 @@ fn paint_contents<'f>(
                 &mut out.items,
             );
         }
+    } else if let Some(replaced) = &fragment.replaced
+        && matches!(&replaced.picture, Some(Picture::Svg(svg)) if svg.is_element())
+    {
+        // The drawing of a hidden `<svg>` element holds only what is made visible inside it.
+        let content = areas(&shape, fragment.border, fragment.padding).content;
+        paint_replaced(style, replaced, content.rect, out.images, &mut out.items);
     }
     if root {
         out.split = Some(out.items.len());
@@ -541,6 +547,7 @@ fn border_shape(style: &ComputedValues, areas: &BoxAreas) -> Option<(Path, Vec<D
                 width: style.border_top_width,
                 color: border_color,
                 style: LineStyle::Solid,
+                shape: None,
             });
         }
         outline
@@ -592,8 +599,14 @@ fn paint_replaced(
         }
         return;
     }
-    // Without a natural size, the image fills the content box.
-    let Some((natural_w, natural_h)) = replaced.size else {
+    // An image with a shape and no size of its own is fitted as the largest of its shape
+    // that fits the content box (CSS Images 3 § 5.3.1); without either, it fills the box.
+    let natural = replaced.size.or_else(|| {
+        picture
+            .shape()
+            .and_then(|_| picture.size_in(style, (content.width, content.height)))
+    });
+    let Some((natural_w, natural_h)) = natural else {
         picture.paint(style, content, items);
         return;
     };
@@ -1667,6 +1680,7 @@ fn paint_rounded_frame(frame: &Frame, outer: &RoundedRect, items: &mut Vec<Displ
                 width,
                 color,
                 style: line_style(border_style),
+                shape: None,
             }),
             BorderStyle::None | BorderStyle::Hidden => unreachable!("skipped above"),
         }

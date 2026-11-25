@@ -183,12 +183,15 @@ pub enum DisplayItem {
         color: Color,
         rule: FillRule,
     },
-    /// A stroked path, for dashed and dotted rounded borders.
+    /// A stroked path, for dashed and dotted rounded borders and for SVG shapes.
     StrokePath {
         path: Path,
         width: f32,
         color: Color,
         style: LineStyle,
+        /// The ends, corners and dashes of a stroke that states them, as an SVG shape's
+        /// does, in place of `style`.
+        shape: Option<Arc<StrokeShape>>,
     },
     /// An image scaled to fill `rect`.
     Image {
@@ -356,6 +359,16 @@ pub fn apply(m: Matrix, p: Point) -> Point {
     )
 }
 
+/// The largest coordinate that is drawn. A number past it, or one that is not a number at
+/// all, comes of an overflow, as in an SVG with a coordinate of `1e38` that is then scaled;
+/// a file holding one is not a valid PDF. Numbers within it can be multiplied together.
+pub const MAX_COORDINATE: f32 = 1.0e15;
+
+/// Whether every one of `values` is a number that can be drawn.
+pub fn drawable(values: &[f32]) -> bool {
+    values.iter().all(|value| value.abs() <= MAX_COORDINATE)
+}
+
 /// The smallest rectangle containing `rect` transformed by `m`.
 pub fn transform_rect(m: Matrix, rect: Rect) -> Rect {
     let corners = [
@@ -386,10 +399,12 @@ pub enum PathSegment {
     Close,
 }
 
-/// Contours of lines and cubic Bézier curves.
+/// Contours of lines and cubic Bézier curves. Its segments are shared: copying a path, as
+/// the fill and the stroke of one shape do and every painting of a picture does, copies
+/// none of them.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Path {
-    pub segments: Vec<PathSegment>,
+    pub segments: Arc<Vec<PathSegment>>,
 }
 
 impl Path {
@@ -397,21 +412,26 @@ impl Path {
     pub fn polygon(points: &[Point]) -> Path {
         let mut path = Path::default();
         for (i, &p) in points.iter().enumerate() {
-            path.segments.push(if i == 0 {
+            path.push(if i == 0 {
                 PathSegment::MoveTo(p)
             } else {
                 PathSegment::LineTo(p)
             });
         }
         if !points.is_empty() {
-            path.segments.push(PathSegment::Close);
+            path.push(PathSegment::Close);
         }
         path
     }
 
+    /// Adds a step to the path.
+    pub fn push(&mut self, segment: PathSegment) {
+        Arc::make_mut(&mut self.segments).push(segment);
+    }
+
     /// Adds the contours of `other`.
     pub fn extend(&mut self, other: Path) {
-        self.segments.extend(other.segments);
+        Arc::make_mut(&mut self.segments).extend(other.segments.iter().copied());
     }
 
     /// Every point of the path, control points included.
@@ -431,19 +451,18 @@ impl Path {
     /// The path transformed by `m`.
     pub fn transformed(&self, m: Matrix) -> Path {
         let point = |p: Point| apply(m, p);
+        let segments: Vec<PathSegment> = self
+            .segments
+            .iter()
+            .map(|segment| match *segment {
+                PathSegment::MoveTo(p) => PathSegment::MoveTo(point(p)),
+                PathSegment::LineTo(p) => PathSegment::LineTo(point(p)),
+                PathSegment::CubicTo(a, b, c) => PathSegment::CubicTo(point(a), point(b), point(c)),
+                PathSegment::Close => PathSegment::Close,
+            })
+            .collect();
         Path {
-            segments: self
-                .segments
-                .iter()
-                .map(|segment| match *segment {
-                    PathSegment::MoveTo(p) => PathSegment::MoveTo(point(p)),
-                    PathSegment::LineTo(p) => PathSegment::LineTo(point(p)),
-                    PathSegment::CubicTo(a, b, c) => {
-                        PathSegment::CubicTo(point(a), point(b), point(c))
-                    }
-                    PathSegment::Close => PathSegment::Close,
-                })
-                .collect(),
+            segments: Arc::new(segments),
         }
     }
 
@@ -453,7 +472,7 @@ impl Path {
         let mut length = 0.0;
         let mut start = Point::default();
         let mut pen = Point::default();
-        for segment in &self.segments {
+        for segment in self.segments.iter() {
             match *segment {
                 PathSegment::MoveTo(p) => {
                     start = p;
@@ -492,6 +511,45 @@ impl Path {
     pub fn bounds(&self) -> Option<Rect> {
         Rect::enclosing(self.points())
     }
+
+    /// Whether every coordinate of the path is a number that can be drawn.
+    pub fn is_drawable(&self) -> bool {
+        let point = |p: Point| drawable(&[p.x, p.y]);
+        self.segments.iter().all(|segment| match *segment {
+            PathSegment::MoveTo(p) | PathSegment::LineTo(p) => point(p),
+            PathSegment::CubicTo(a, b, c) => point(a) && point(b) && point(c),
+            PathSegment::Close => true,
+        })
+    }
+}
+
+/// The ends, corners and dashes of a stroke (SVG 2 § 13.5).
+#[derive(Debug, Clone, PartialEq)]
+pub struct StrokeShape {
+    pub cap: LineCap,
+    pub join: LineJoin,
+    /// How far a mitered corner may reach, in line widths, before it is beveled.
+    pub miter_limit: f32,
+    /// The lengths of dashes and gaps in turn, or none for a solid line.
+    pub dashes: Vec<f32>,
+    /// How far into the dashes the stroke starts.
+    pub dash_offset: f32,
+}
+
+/// The end of an open stroke.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LineCap {
+    Butt,
+    Round,
+    Square,
+}
+
+/// The corner where two segments of a stroke meet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LineJoin {
+    Miter,
+    Round,
+    Bevel,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -534,6 +592,44 @@ impl DisplayItem {
             | DisplayItem::PushGroup(_)
             | DisplayItem::PopGroup
             | DisplayItem::Backdrop(_) => None,
+        }
+    }
+
+    /// Whether every number that places the item can be drawn: see [`MAX_COORDINATE`].
+    pub fn is_drawable(&self) -> bool {
+        let point = |p: &Point| drawable(&[p.x, p.y]);
+        let rect = |r: &Rect| drawable(&[r.x, r.y, r.width, r.height]);
+        match self {
+            DisplayItem::Text(run) => run.is_drawable(),
+            DisplayItem::Rect { rect: r, .. }
+            | DisplayItem::Image { rect: r, .. }
+            | DisplayItem::Gradient { rect: r, .. }
+            | DisplayItem::PushClip(r) => rect(r),
+            DisplayItem::Polygon { points, .. } => points.iter().all(point),
+            DisplayItem::Polyline { points, width, .. } => {
+                drawable(&[*width]) && points.iter().all(point)
+            }
+            DisplayItem::Line {
+                from, to, width, ..
+            } => point(from) && point(to) && drawable(&[*width]),
+            DisplayItem::Path { path, .. } | DisplayItem::PushClipPath { path, .. } => {
+                path.is_drawable()
+            }
+            DisplayItem::StrokePath {
+                path, width, shape, ..
+            } => {
+                drawable(&[*width])
+                    && shape.as_ref().is_none_or(|shape| {
+                        drawable(&[shape.miter_limit, shape.dash_offset]) && drawable(&shape.dashes)
+                    })
+                    && path.is_drawable()
+            }
+            DisplayItem::PushClipText(runs) => runs.iter().all(TextRun::is_drawable),
+            DisplayItem::PushTransform(matrix) => drawable(matrix),
+            DisplayItem::PopClip
+            | DisplayItem::PushGroup(_)
+            | DisplayItem::PopGroup
+            | DisplayItem::Backdrop(_) => true,
         }
     }
 
@@ -588,11 +684,13 @@ impl DisplayItem {
                 width,
                 color,
                 style,
+                shape,
             } => DisplayItem::StrokePath {
                 path: path.translated(dx, dy),
                 width: *width,
                 color: *color,
                 style: *style,
+                shape: shape.clone(),
             },
             DisplayItem::Image {
                 image,
@@ -727,6 +825,22 @@ impl TextRun {
     /// Total advance width of the run.
     pub fn width(&self) -> f32 {
         self.glyphs.iter().map(|g| g.x_advance).sum()
+    }
+
+    /// Whether every number that places the run and its glyphs can be drawn.
+    pub fn is_drawable(&self) -> bool {
+        let stroke = self.stroke.map_or(0.0, |stroke| stroke.width);
+        drawable(&[
+            self.origin.x,
+            self.origin.y,
+            self.size,
+            self.embolden,
+            self.oblique,
+            stroke,
+        ]) && self
+            .glyphs
+            .iter()
+            .all(|glyph| drawable(&[glyph.x_advance, glyph.x_offset, glyph.y_offset]))
     }
 }
 

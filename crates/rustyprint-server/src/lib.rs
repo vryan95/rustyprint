@@ -331,6 +331,7 @@ fn limits_json(limits: &Limits) -> serde_json::Map<String, Value> {
         "max_depth": limits.max_depth,
         "max_pages": limits.max_pages,
         "max_image_pixels": limits.max_image_pixels,
+        "max_svg_pixels": limits.max_svg_pixels,
         "timeout_ms": limits.timeout.map(|t| t.as_millis() as u64),
     });
     match value {
@@ -351,6 +352,7 @@ fn lowest(request: &Limits, server: &Limits) -> Limits {
         max_depth: request.max_depth.min(server.max_depth),
         max_pages: request.max_pages.min(server.max_pages),
         max_image_pixels: request.max_image_pixels.min(server.max_image_pixels),
+        max_svg_pixels: request.max_svg_pixels.min(server.max_svg_pixels),
         timeout,
     }
 }

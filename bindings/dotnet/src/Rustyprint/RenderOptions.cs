@@ -101,6 +101,7 @@ public sealed class RenderOptions
                 if (limits.MaxDepth is { } maxDepth) json.WriteNumber("max_depth", maxDepth);
                 if (limits.MaxPages is { } maxPages) json.WriteNumber("max_pages", maxPages);
                 if (limits.MaxImagePixels is { } maxImagePixels) json.WriteNumber("max_image_pixels", maxImagePixels);
+                if (limits.MaxSvgPixels is { } maxSvgPixels) json.WriteNumber("max_svg_pixels", maxSvgPixels);
                 if (limits.Timeout is { } timeout) WriteMilliseconds(json, "timeout_ms", timeout);
                 json.WriteEndObject();
             }
@@ -227,6 +228,14 @@ public sealed class RenderLimits
     /// Default: 100000000.
     /// </summary>
     public long? MaxImagePixels { get; set; }
+
+    /// <summary>
+    /// Pixels drawn, in all, for the svg elements and SVG image files that cannot be drawn as
+    /// shapes, such as ones with gradients or filters, of a document. One that needs more
+    /// than are left is left blank with a warning. A pixel takes 4 bytes of memory until its page is written, and as much again
+    /// for each filter, mask or transparent group it is drawn through. Default: 64000000.
+    /// </summary>
+    public long? MaxSvgPixels { get; set; }
 
     /// <summary>
     /// How long the render may take, in whole milliseconds, or

@@ -10,6 +10,7 @@ div { border-image-source: url(assets/frame.png) }
 <script type="text/x-rustyprint-expect">
 #a { border-image-slice: 10; layout-image: "0 0 30 30"; layout-paint: "image*8" }
 #b { border-image-slice: 5; layout-image: "0 0 60 60" }
+#svg { layout-paint: "path*8 transform*8 !image" }
 #c { border-image-slice: 10 fill; layout-paint: "image*9" }
 #d { border-image-slice: 100% }
 </script>
@@ -17,6 +18,7 @@ div { border-image-source: url(assets/frame.png) }
 <body>
 <div id=a style="border-image-slice: 10"></div>
 <div id=b style="border-image-slice: 5"></div>
+<div id=svg style="border-image: url(assets/square.svg) 25%; border-width: 20px 10px"></div>
 <div id=c style="border-image-slice: fill 10"></div>
 <div id=d></div>
 </body>

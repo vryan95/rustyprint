@@ -57,6 +57,7 @@ use rustyprint_dom::NodeId;
 use rustyprint_dom::{Document, local_name, ns};
 use rustyprint_layout::display::{BlendMode, ShadingKind};
 use rustyprint_layout::fragment::ElementBox;
+use rustyprint_layout::picture::Picture;
 use rustyprint_layout::{
     Bookmark, Color, DisplayItem, ImageData, Images, LaidPage, Link, LinkTarget, PageOptions, Rect,
     Sides, Size, layout_pages, layout_tree, links_and_bookmarks, paint_fragment,
@@ -466,6 +467,21 @@ fn check_layout(
                 Err(format!("expected `{wanted}`, got `{actual}`"))
             };
         }
+        // An SVG file that is drawn as shapes is no image item: its drawing is clipped to
+        // the box and placed by a transform, which says where the whole drawing is.
+        let drawing = match block.replaced.as_ref().and_then(|r| r.picture.as_ref()) {
+            Some(Picture::Svg(svg)) => painted.windows(2).find_map(|pair| match pair {
+                [
+                    DisplayItem::PushClip(_),
+                    DisplayItem::PushTransform([sx, _, _, sy, x, y]),
+                ] => {
+                    let (width, height) = svg.size();
+                    Some((Rect::new(*x, *y, sx * width, sy * height), true, 1))
+                }
+                _ => None,
+            }),
+            _ => None,
+        };
         let image = painted.into_iter().find_map(|item| match item {
             DisplayItem::Image {
                 rect,
@@ -475,6 +491,7 @@ fn check_layout(
             } => Some((rect, smooth, orientation)),
             _ => None,
         });
+        let image = image.or(drawing);
         let actual = match (metric, image) {
             (_, None) => "none".to_owned(),
             ("image", Some((r, ..))) => format!(

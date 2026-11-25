@@ -402,6 +402,16 @@ longhands! {
         Stroke "stroke" stroke: Paint = Paint::None, inherited;
         StrokeColor "stroke-color" stroke_color: ColorValue = crate::values::Color::Absolute(AbsoluteColor::TRANSPARENT), inherited;
         TextRendering "text-rendering" text_rendering: TextRendering = TextRendering::Auto, inherited;
+        // SVG painting, which only the content of an `<svg>` element uses
+        Fill "fill" fill: Paint = Paint::Color(crate::values::Color::BLACK), inherited;
+        FillOpacity "fill-opacity" fill_opacity: Opacity = 1.0, inherited;
+        StrokeOpacity "stroke-opacity" stroke_opacity: Opacity = 1.0, inherited;
+        StrokeWidth "stroke-width" stroke_width: StrokeWidth = 1.0, inherited;
+        StrokeDasharray "stroke-dasharray" stroke_dasharray: StrokeDasharray = Arc::from([]), inherited;
+        StrokeLinecap "stroke-linecap" stroke_linecap: StrokeLinecap = StrokeLinecap::Butt, inherited;
+        StrokeLinejoin "stroke-linejoin" stroke_linejoin: StrokeLinejoin = StrokeLinejoin::Miter, inherited;
+        TextAnchor "text-anchor" text_anchor: TextAnchor = TextAnchor::Start, inherited;
+        ShapeRendering "shape-rendering" shape_rendering: ShapeRendering = ShapeRendering::Auto, inherited;
         // Display and box
         Display "display" display: Display = Display::INLINE, reset;
         Visibility "visibility" visibility: Visibility = Visibility::Visible, inherited;
@@ -1214,6 +1224,30 @@ mod tests {
                 .unwrap_err()
                 .contains("unsupported")
         );
+    }
+
+    #[test]
+    fn svg_painting_properties_parse() {
+        for (name, value) in [
+            ("fill", "none"),
+            ("fill", "url(#gradient) red"),
+            ("fill-opacity", "50%"),
+            ("stroke-opacity", "0.5"),
+            // A number is a length in user units.
+            ("stroke-width", "2"),
+            ("stroke-width", "0.5em"),
+            ("stroke-dasharray", "none"),
+            ("stroke-dasharray", "4 2, 1px"),
+            ("stroke-linecap", "round"),
+            ("stroke-linejoin", "bevel"),
+            ("text-anchor", "middle"),
+            ("shape-rendering", "crispEdges"),
+        ] {
+            assert!(parse_declaration(name, value).is_ok(), "{name}: {value}");
+        }
+        assert!(parse_declaration("stroke-width", "-1").is_err());
+        assert!(parse_declaration("stroke-dasharray", "4 dashed").is_err());
+        assert!(parse_declaration("text-anchor", "center").is_err());
     }
 
     #[test]

@@ -207,7 +207,9 @@ fn draw_slice(
                 size.1 * sy,
             );
             items.push(DisplayItem::PushClip(Rect::new(x, y, w, h)));
-            picture.paint(style, rect, items);
+            // The rect places the whole image, scaled to the slice: an SVG image is not
+            // fitted again.
+            picture.paint_stretched(style, rect, items);
             items.push(DisplayItem::PopClip);
         }
     }

@@ -88,7 +88,8 @@ pub(crate) fn paint_background(
             areas.visual_box(*nth(&style.background_origin, index)).rect
         };
         let size = nth(&style.background_size, index);
-        let (natural, size) = match picture.natural_size(style) {
+        let (natural, size) = match picture.size_in(style, (positioning.width, positioning.height))
+        {
             Some(natural) => (natural, size),
             None => (size_without_natural(size, positioning), &AUTO_SIZE),
         };

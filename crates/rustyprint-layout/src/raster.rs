@@ -8,8 +8,8 @@ use std::sync::{Arc, Weak};
 use tiny_skia as sk;
 
 use crate::display::{
-    BlendMode, Color, DisplayItem, FillRule, Group, LineStyle, Matrix, Path, PathSegment, Point,
-    Rect, Shading, ShadingKind, TextRun, multiply,
+    BlendMode, Color, DisplayItem, FillRule, Group, LineCap, LineJoin, LineStyle, Matrix, Path,
+    PathSegment, Point, Rect, Shading, ShadingKind, StrokeShape, TextRun, multiply,
 };
 use crate::images::{Image, ImageData};
 
@@ -71,6 +71,62 @@ impl Raster {
             },
             orientation: 1,
             resolution: None,
+            natural: None,
+            shape_only: false,
+            fit: None,
+        }
+    }
+
+    /// The raster as an image with straight alpha, made from its own pixels and not beside
+    /// them: a large drawing takes four bytes a pixel while it is made into an image, and
+    /// five if any pixel is not opaque, where a copy takes eight.
+    pub fn into_image(self) -> Image {
+        let (width, height) = (self.pixmap.width(), self.pixmap.height());
+        let pixels = (width as usize) * (height as usize);
+        let mut samples = self.pixmap.take();
+        // Made when the first pixel that is not opaque is met.
+        let mut alpha: Option<Vec<u8>> = None;
+        for index in 0..pixels {
+            let [r, g, b, a] = [0, 1, 2, 3].map(|channel| samples[index * 4 + channel]);
+            let color = tiny_skia::PremultipliedColorU8::from_rgba(r, g, b, a)
+                .unwrap_or(tiny_skia::PremultipliedColorU8::TRANSPARENT)
+                .demultiply();
+            // Three bytes are written where four were read, so none is written early.
+            samples[index * 3] = color.red();
+            samples[index * 3 + 1] = color.green();
+            samples[index * 3 + 2] = color.blue();
+            if a != 255 && alpha.is_none() {
+                let mut opaque = Vec::with_capacity(pixels);
+                opaque.resize(index, 255);
+                alpha = Some(opaque);
+            }
+            if let Some(alpha) = &mut alpha {
+                alpha.push(a);
+            }
+        }
+        samples.truncate(pixels * 3);
+        // The quarter that is no longer used is given back. Not every allocator gives back
+        // the end of a block, and a document may hold thousands of small drawings, so a
+        // small one is copied to a block of its own size: that copy is a few megabytes at
+        // the most, and only a large drawing is left to the allocator.
+        if pixels < LARGE_DRAWING {
+            samples = samples.as_slice().to_vec();
+        } else {
+            samples.shrink_to_fit();
+        }
+        Image {
+            width,
+            height,
+            data: ImageData::Pixels {
+                samples,
+                gray: false,
+                alpha,
+            },
+            orientation: 1,
+            resolution: None,
+            natural: None,
+            shape_only: false,
+            fit: None,
         }
     }
 
@@ -90,6 +146,9 @@ impl Raster {
         }
     }
 }
+
+/// The pixels from which a drawing is made into an image without a copy of its samples.
+const LARGE_DRAWING: usize = 1 << 20;
 
 /// Paints `items` into `raster`.
 pub(crate) fn draw(items: &[DisplayItem], raster: &mut Raster) {
@@ -297,10 +356,19 @@ pub(crate) fn blend_mode(mode: BlendMode) -> sk::BlendMode {
     }
 }
 
+/// Dashes and gaps as pairs: an odd number of lengths is the list twice (SVG 2 § 13.5.6).
+fn even_dashes(dashes: &[f32]) -> Vec<f32> {
+    if dashes.len() % 2 == 1 {
+        dashes.repeat(2)
+    } else {
+        dashes.to_vec()
+    }
+}
+
 /// A display path as a `tiny-skia` path.
 pub(crate) fn sk_path(path: &Path) -> Option<sk::Path> {
     let mut builder = sk::PathBuilder::new();
-    for segment in &path.segments {
+    for segment in path.segments.iter() {
         match *segment {
             PathSegment::MoveTo(p) => builder.move_to(p.x, p.y),
             PathSegment::LineTo(p) => builder.line_to(p.x, p.y),
@@ -386,8 +454,6 @@ impl Painter {
     }
 
     fn stroke(&mut self, path: Option<sk::Path>, c: Color, width: f32, style: LineStyle) {
-        let Some(path) = path else { return };
-        let paint = self.paint(c);
         let mut stroke = sk::Stroke {
             width,
             line_join: sk::LineJoin::Round,
@@ -401,10 +467,36 @@ impl Painter {
                 stroke.dash = sk::StrokeDash::new(vec![0.0, 2.0 * width], 0.0);
             }
         }
+        self.stroke_with(path, c, &stroke);
+    }
+
+    /// Strokes a path with the ends, corners and dashes of `shape`.
+    fn stroke_shaped(&mut self, path: Option<sk::Path>, c: Color, width: f32, shape: &StrokeShape) {
+        let stroke = sk::Stroke {
+            width,
+            miter_limit: shape.miter_limit,
+            line_cap: match shape.cap {
+                LineCap::Butt => sk::LineCap::Butt,
+                LineCap::Round => sk::LineCap::Round,
+                LineCap::Square => sk::LineCap::Square,
+            },
+            line_join: match shape.join {
+                LineJoin::Miter => sk::LineJoin::Miter,
+                LineJoin::Round => sk::LineJoin::Round,
+                LineJoin::Bevel => sk::LineJoin::Bevel,
+            },
+            dash: sk::StrokeDash::new(even_dashes(&shape.dashes), shape.dash_offset),
+        };
+        self.stroke_with(path, c, &stroke);
+    }
+
+    fn stroke_with(&mut self, path: Option<sk::Path>, c: Color, stroke: &sk::Stroke) {
+        let Some(path) = path else { return };
+        let paint = self.paint(c);
         let m = transform(self.state.matrix);
         let clip = self.state.clip.clone();
         self.pixmap()
-            .stroke_path(&path, &paint, &stroke, m, clip.as_deref());
+            .stroke_path(&path, &paint, stroke, m, clip.as_deref());
     }
 
     fn item(&mut self, item: &DisplayItem) {
@@ -437,7 +529,11 @@ impl Painter {
                 width,
                 color,
                 style,
-            } => self.stroke(sk_path(path), *color, *width, *style),
+                shape,
+            } => match shape {
+                Some(shape) => self.stroke_shaped(sk_path(path), *color, *width, shape),
+                None => self.stroke(sk_path(path), *color, *width, *style),
+            },
             DisplayItem::Image {
                 image,
                 rect,

@@ -30,7 +30,7 @@ use rustyprint_dom::{Document, Element, NodeData, NodeId, local_name, ns};
 
 mod controls;
 
-use crate::images::{Image, Images, natural_size};
+use crate::images::Images;
 use crate::picture::{Frame, Picture};
 use crate::table;
 use controls::Control;
@@ -96,7 +96,8 @@ pub struct Replaced {
     /// The image, or `None` for content that paints nothing, such as a video without a
     /// poster.
     pub picture: Option<Picture>,
-    /// The natural size in CSS pixels, if the content has one.
+    /// The natural size in CSS pixels, if the content has one. An image with a shape and no
+    /// size of its own, such as an SVG with only a `viewBox`, has none.
     pub size: Option<(f32, f32)>,
     /// A control drawn in the content box, such as a checkbox or a media control bar.
     pub widget: Option<Widget>,
@@ -995,8 +996,13 @@ impl Builder<'_> {
     ) {
         {
             {
+                let svg = element.name.ns == ns!(svg) && element.name.local == local_name!("svg");
                 if style.display == Display::Contents {
-                    self.children(contents, node, &style, false);
+                    // An `<svg>` element has no boxes to leave in its place: it is not
+                    // rendered (CSS Display 4 § 2.5).
+                    if !svg {
+                        self.children(contents, node, &style, false);
+                    }
                     return;
                 }
                 if self
@@ -1038,8 +1044,15 @@ impl Builder<'_> {
                     }
                     return;
                 }
-                if element.name.ns == ns!(html) {
-                    match self.embedding(element, &style) {
+                let embedding = if element.name.ns == ns!(html) {
+                    Some(self.embedding(element, &style))
+                } else if svg {
+                    Some(self.svg(node, &style))
+                } else {
+                    None
+                };
+                if let Some(embedding) = embedding {
+                    match embedding {
                         Embedding::Children => {}
                         Embedding::Nothing => return,
                         Embedding::Text(alt) => {
@@ -1335,11 +1348,18 @@ impl Builder<'_> {
     /// What an HTML element that can embed content renders as (HTML § 15.4).
     fn embedding(&self, element: &Element, style: &ComputedValues) -> Embedding {
         let attr = |name: &str| element.attr(name).map(str::trim).filter(|v| !v.is_empty());
-        let image = |url: Option<&str>| url.and_then(|url| self.images.get(url));
-        let replaced = |image: Arc<Image>| {
+        let image = |url: Option<&str>| url.and_then(|url| Picture::file(url, self.images));
+        // The size of an image file at `density` image pixels for each CSS pixel.
+        let size = |picture: &Picture, density: f32| {
+            let natural = picture
+                .natural_size(style)
+                .filter(|_| !picture.shape_only());
+            natural.map(|(w, h)| (w / density, h / density))
+        };
+        let replaced = |picture: Picture| {
             Embedding::Replaced(Replaced {
-                size: Some(natural_size(&image, style)),
-                picture: Some(Picture::raster(image)),
+                size: size(&picture, 1.0),
+                picture: Some(picture),
                 widget: None,
             })
         };
@@ -1356,11 +1376,10 @@ impl Builder<'_> {
                         .and_then(first_srcset)
                         .map_or((None, 1.0), |(url, density)| (Some(url), density)),
                 };
-                if let Some(image) = image(src) {
-                    let (w, h) = natural_size(&image, style);
+                if let Some(picture) = image(src) {
                     return Embedding::Replaced(Replaced {
-                        size: Some((w / density, h / density)),
-                        picture: Some(Picture::raster(image)),
+                        size: size(&picture, density),
+                        picture: Some(picture),
                         widget: None,
                     });
                 }
@@ -1419,6 +1438,23 @@ impl Builder<'_> {
             }
             _ => Embedding::Children,
         }
+    }
+
+    /// What an `<svg>` element renders as: a picture drawn from the element and its
+    /// descendants, which have no boxes of their own. One that cannot be drawn is an empty
+    /// box.
+    fn svg(&self, node: NodeId, style: &Arc<ComputedValues>) -> Embedding {
+        let picture =
+            crate::svg_element::picture(self.document, self.styles, self.images, node, style);
+        Embedding::Replaced(Replaced {
+            size: match &picture {
+                Some(picture) if picture.shape_only() => None,
+                Some(picture) => Some(picture.size()),
+                None => Some((300.0, 150.0)),
+            },
+            picture: picture.map(Picture::Svg),
+            widget: None,
+        })
     }
 
     /// The document an `iframe` shows: its `srcdoc`, or else the file at `src`, styled with

@@ -137,6 +137,7 @@ Every render runs within limits, so a hostile or broken document cannot run fore
 | Element nesting depth | 512 | `max_depth` |
 | Pages | 2,000 | `max_pages` |
 | Image size (larger images are skipped with a warning) | 100 megapixels | `max_image_pixels` |
+| Pixels drawn for `<svg>` elements and SVG image files that cannot be drawn as shapes, in all, for a document (one that needs more is left blank with a warning) | 64 megapixels | `max_svg_pixels` |
 | Time | 60 seconds | `timeout_ms` (`null` for no limit) |
 
 ### Warnings and exit codes

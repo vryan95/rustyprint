@@ -15,17 +15,19 @@ use crate::boxes::BlockBox;
 use crate::display::{Color, DisplayItem, Rect, Shading};
 use crate::fragment::BoxFragment;
 use crate::fragment::ElementBox;
-use crate::images::{ElementImage, Image, Images, natural_size, orientation};
+use crate::images::{ElementImage, FilePicture, Image, Images, natural_size, orientation};
 use crate::paginate::LaidPage;
+use crate::svg::SvgPicture;
 
 /// The image types `image-set()` options may name and that can be decoded.
-const SUPPORTED_TYPES: [&str; 6] = [
+const SUPPORTED_TYPES: [&str; 7] = [
     "image/png",
     "image/jpeg",
     "image/gif",
     "image/webp",
     "image/bmp",
     "image/x-bmp",
+    "image/svg+xml",
 ];
 
 /// An image ready to paint.
@@ -46,6 +48,8 @@ pub enum Picture {
     Fade(Vec<(Picture, f32)>),
     /// `element()`: an element as painted.
     Element(ElementImage),
+    /// An `<svg>` element, or an SVG file.
+    Svg(Arc<SvgPicture>),
     /// The document of an `iframe`.
     Frame(Frame),
 }
@@ -73,15 +77,28 @@ impl Picture {
     /// The image `value` gives in an element with `style`, or `None` for `none` and for
     /// invalid images, which paint nothing.
     pub fn resolve(value: &ImageValue, images: &Images, style: &ComputedValues) -> Option<Self> {
+        Self::resolve_as(value, images, style, false)
+    }
+
+    /// The image `value` gives, as [`Picture::resolve`] does. With `pixels`, an SVG file
+    /// is the pixels it is drawn to once, which is what can be flipped and given a
+    /// resolution.
+    fn resolve_as(
+        value: &ImageValue,
+        images: &Images,
+        style: &ComputedValues,
+        pixels: bool,
+    ) -> Option<Self> {
         match value {
             ImageValue::None | ImageValue::SpecifiedGradient(_) => None,
-            ImageValue::Url(url) => url_picture(url, images),
+            ImageValue::Url(url) => url_picture(url, images, pixels),
             ImageValue::Gradient(gradient) => Some(Picture::Gradient(gradient.clone())),
             ImageValue::Image(function) => {
+                let pixels = pixels || function.rtl.is_some();
                 let loaded = function
                     .src
                     .as_ref()
-                    .and_then(|src| url_picture(src, images));
+                    .and_then(|src| url_picture(src, images, pixels));
                 match loaded {
                     Some(Picture::Raster {
                         image, dppx, crop, ..
@@ -118,7 +135,7 @@ impl Picture {
                     .collect();
                 options.sort_by(|a, b| b.resolution.total_cmp(&a.resolution));
                 options.into_iter().find_map(|option| {
-                    match Picture::resolve(&option.image, images, style)? {
+                    match Picture::resolve_as(&option.image, images, style, true)? {
                         Picture::Raster {
                             image, flip, crop, ..
                         } => Some(Picture::Raster {
@@ -138,7 +155,9 @@ impl Picture {
                     .zip(fractions)
                     .filter_map(|((source, _), fraction)| {
                         let picture = match source {
-                            FadeSource::Image(image) => Picture::resolve(image, images, style)?,
+                            FadeSource::Image(image) => {
+                                Picture::resolve_as(image, images, style, pixels)?
+                            }
                             FadeSource::Color(c) => Picture::Color(color(c, style)),
                         };
                         Some((picture, fraction))
@@ -148,6 +167,51 @@ impl Picture {
             }
             ImageValue::Element(id) => images.element(id).map(Picture::Element),
             ImageValue::Paint(_) => None,
+        }
+    }
+
+    /// The picture of the image file at `url`, or `None` if it cannot be shown.
+    pub(crate) fn file(url: &str, images: &Images) -> Option<Self> {
+        Some(match images.picture(url)? {
+            FilePicture::Image(image) => Picture::raster(image),
+            FilePicture::Svg(svg) => Picture::Svg(svg),
+        })
+    }
+
+    /// Whether the picture has a shape and no size of its own.
+    pub(crate) fn shape_only(&self) -> bool {
+        match self {
+            Picture::Raster { image, .. } => image.shape_only,
+            Picture::Svg(svg) => svg.shape_only(),
+            _ => false,
+        }
+    }
+
+    /// The width over the height of an image that has a shape and no size of its own, such
+    /// as an SVG image with only a `viewBox`.
+    pub fn shape(&self) -> Option<f32> {
+        match self {
+            Picture::Raster {
+                image, crop: None, ..
+            } if image.shape_only => image
+                .natural
+                .filter(|&(w, h)| w > 0.0 && h > 0.0)
+                .map(|(w, h)| w / h),
+            Picture::Svg(svg) if svg.shape_only() => {
+                let (w, h) = svg.size();
+                (w > 0.0 && h > 0.0).then(|| w / h)
+            }
+            _ => None,
+        }
+    }
+
+    /// The natural size in CSS pixels, where an image with a shape and no size of its own
+    /// is the largest of its shape that fits in `area` (CSS Images 3 § 5.3.1).
+    pub fn size_in(&self, style: &ComputedValues, area: (f32, f32)) -> Option<(f32, f32)> {
+        match self.shape() {
+            Some(ratio) if area.0 / ratio <= area.1 => Some((area.0, area.0 / ratio)),
+            Some(ratio) => Some((area.1 * ratio, area.1)),
+            None => self.natural_size(style),
         }
     }
 
@@ -176,6 +240,7 @@ impl Picture {
             }
             Picture::Gradient(_) | Picture::Color(_) | Picture::Frame(_) => None,
             Picture::Element(element) => Some(element.size),
+            Picture::Svg(svg) => Some(svg.size()),
             // The weighted average of the sizes of the images that have one (§ 2.6).
             Picture::Fade(layers) => {
                 let sized: Vec<((f32, f32), f32)> = layers
@@ -197,9 +262,21 @@ impl Picture {
         }
     }
 
-    /// Paints the image filling `rect`.
+    /// Paints the image filling `rect`. An SVG image keeps its shape in it as its
+    /// `preserveAspectRatio` says.
     pub fn paint(&self, style: &ComputedValues, rect: Rect, items: &mut Vec<DisplayItem>) {
-        self.paint_faded(style, rect, 1.0, items);
+        self.paint_faded(style, rect, 1.0, true, items);
+    }
+
+    /// Paints the image stretched to `rect` along each axis, an SVG image too: for a rect
+    /// that already places the image, such as one a slice of it is cut from.
+    pub fn paint_stretched(
+        &self,
+        style: &ComputedValues,
+        rect: Rect,
+        items: &mut Vec<DisplayItem>,
+    ) {
+        self.paint_faded(style, rect, 1.0, false, items);
     }
 
     fn paint_faded(
@@ -207,6 +284,7 @@ impl Picture {
         style: &ComputedValues,
         rect: Rect,
         opacity: f32,
+        fit: bool,
         items: &mut Vec<DisplayItem>,
     ) {
         if rect.width <= 0.0 || rect.height <= 0.0 || opacity <= 0.0 {
@@ -233,7 +311,13 @@ impl Picture {
                         let full = Rect::new(rect.x - x * sx, rect.y - y * sy, iw * sx, ih * sy);
                         (full, true)
                     }
-                    None => (rect, false),
+                    None => match (image.fit.filter(|_| fit), image.natural) {
+                        // An SVG image keeps its shape in a box of another shape.
+                        (Some(fit), Some(size)) if size.0 > 0.0 && size.1 > 0.0 => {
+                            (fit.place(size, rect), fit.slice)
+                        }
+                        _ => (rect, false),
+                    },
                 };
                 if clip {
                     items.push(DisplayItem::PushClip(rect));
@@ -291,6 +375,15 @@ impl Picture {
                 items.push(DisplayItem::PopClip);
                 items.push(DisplayItem::PopClip);
             }
+            Picture::Svg(svg) => {
+                let start = items.len();
+                svg.paint(rect, style.image_rendering.smooth(), items);
+                if opacity < 1.0 {
+                    for item in &mut items[start..] {
+                        fade(item, opacity);
+                    }
+                }
+            }
             Picture::Fade(layers) => {
                 // Each layer is drawn over the ones before, so its opacity is its fraction
                 // of what the layers above leave: exact for opaque images.
@@ -303,19 +396,24 @@ impl Picture {
                     } else {
                         1.0
                     };
-                    picture.paint_faded(style, rect, opacity * layer_opacity, items);
+                    picture.paint_faded(style, rect, opacity * layer_opacity, fit, items);
                 }
             }
         }
     }
 }
 
-/// The image at a URL, which may end in a `#xywh=` media fragment.
-fn url_picture(url: &str, images: &Images) -> Option<Picture> {
+/// The image at a URL, which may end in a `#xywh=` media fragment. A part of an image is
+/// cut from its pixels, so an SVG file with a fragment is drawn to pixels, as it is when
+/// `pixels` asks for them.
+fn url_picture(url: &str, images: &Images, pixels: bool) -> Option<Picture> {
     let (file, crop) = match url.split_once('#') {
         Some((file, fragment)) => (file, Some(fragment)),
         None => (url, None),
     };
+    if crop.is_none() && !pixels {
+        return Picture::file(file, images);
+    }
     let image = images.get(file)?;
     let crop = crop.and_then(|fragment| media_fragment(fragment, &image));
     Some(Picture::Raster {
@@ -351,7 +449,11 @@ fn media_fragment(fragment: &str, image: &Image) -> Option<[f32; 4]> {
             h * ih / 100.0,
         ]
     } else {
-        [x, y, w, h]
+        // An SVG image's pixels are CSS pixels of its own size, not the ones it is drawn with.
+        let (sx, sy) = image
+            .natural
+            .map_or((1.0, 1.0), |(nw, nh)| (iw / nw, ih / nh));
+        [x * sx, y * sy, w * sx, h * sy]
     };
     let (x, y) = (x.min(iw), y.min(ih));
     let (w, h) = (w.min(iw - x), h.min(ih - y));

@@ -70,7 +70,8 @@ impl RenderOptions {
 
 /// Bounds on the work a render may do. Exceeding one fails the render with
 /// [`Error::LimitExceeded`] or [`Error::Timeout`], except that images over `max_image_pixels`
-/// are skipped with a warning.
+/// are skipped with a warning, and so are `<svg>` elements and SVG image files past
+/// `max_svg_pixels`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Limits {
     /// Size of the HTML in bytes.
@@ -83,6 +84,16 @@ pub struct Limits {
     pub max_pages: usize,
     /// Width times height of an image.
     pub max_image_pixels: u64,
+    /// Pixels drawn, in all, for the `<svg>` elements and SVG image files that cannot be
+    /// drawn as shapes, such as ones with gradients or filters, of a document. One that
+    /// needs more than are left is left blank with a warning.
+    ///
+    /// A pixel takes four bytes while it is drawn, and as many again for each filter, mask
+    /// or transparent group it is drawn through; a fifth is added if the drawing is not
+    /// opaque. Drawn, it takes three bytes, or four if not opaque, until its page is
+    /// written, so the default of 64 megapixels is some 256 MB at the most for a
+    /// document.
+    pub max_svg_pixels: u64,
     /// How long a render may take; `None` for no deadline.
     pub timeout: Option<Duration>,
 }
@@ -95,6 +106,7 @@ impl Default for Limits {
             max_depth: 512,
             max_pages: 2_000,
             max_image_pixels: 100_000_000,
+            max_svg_pixels: 64_000_000,
             timeout: Some(Duration::from_secs(60)),
         }
     }
@@ -238,7 +250,9 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     let load = |url: &str| get(url).and_then(|bytes| String::from_utf8(bytes).ok());
     let load_font = |url: &str| get(url);
     let load_file = |url: &str| get(url);
-    let images = Images::new(&load_file).with_max_pixels(options.limits.max_image_pixels);
+    let images = Images::new(&load_file)
+        .with_max_pixels(options.limits.max_image_pixels)
+        .with_max_svg_pixels(options.limits.max_svg_pixels);
     let styles = rustyprint_layout::style(
         &document,
         &StyleOptions {
@@ -508,6 +522,115 @@ mod tests {
         .unwrap();
         assert_eq!(output.warnings.len(), 1);
         assert!(output.warnings[0].contains("missing.png"));
+    }
+
+    /// The width and height of each image of a PDF.
+    fn image_sizes(doc: &lopdf::Document) -> Vec<(i64, i64)> {
+        doc.objects
+            .values()
+            .filter_map(|object| object.as_stream().ok())
+            .filter(|stream| {
+                stream
+                    .dict
+                    .get(b"Subtype")
+                    .and_then(|s| s.as_name())
+                    .is_ok_and(|name| name == b"Image")
+            })
+            .map(|stream| {
+                let side = |key: &[u8]| stream.dict.get(key).and_then(|n| n.as_i64()).unwrap();
+                (side(b"Width"), side(b"Height"))
+            })
+            .collect()
+    }
+
+    #[test]
+    fn embeds_svg_images() {
+        // <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 10"><path fill="#1F4E9C" d="M0,0h40v10H0z"/></svg>
+        let svg = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0MCAxMCI+PHBhdGggZmlsbD0iIzFGNEU5QyIgZD0iTTAsMGg0MHYxMEgweiIvPjwvc3ZnPg==";
+        let output = render(
+            &format!("<img src='{svg}' width='80' height='20'>"),
+            &RenderOptions::default(),
+        )
+        .unwrap();
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+        let doc = parse(&output.pdf);
+        // The SVG is its shape, filled with its color, and no picture of it.
+        assert_eq!(image_sizes(&doc), []);
+        let page = *doc.get_pages().values().next().unwrap();
+        let content = lopdf::content::Content::decode(&doc.get_page_content(page)).unwrap();
+        let color = content.operations.iter().find(|o| o.operator == "rg");
+        let color: Vec<f32> = color
+            .expect("a fill color")
+            .operands
+            .iter()
+            .map(|operand| operand.as_float().unwrap())
+            .collect();
+        let expected = [0x1F, 0x4E, 0x9C].map(|channel| f32::from(channel as u8) / 255.0);
+        assert!(
+            color
+                .iter()
+                .zip(expected)
+                .all(|(c, e)| (c - e).abs() < 0.01),
+            "{color:?}"
+        );
+        assert_eq!(
+            content
+                .operations
+                .iter()
+                .filter(|o| o.operator == "f")
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn embeds_svg_images_that_are_not_shapes_as_pictures_of_the_size_shown() {
+        let svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10'>\
+                   <linearGradient id='g'><stop offset='0' stop-color='#1F4E9C'/>\
+                   <stop offset='1' stop-color='#000000'/></linearGradient>\
+                   <path fill='url(#g)' d='M0,0h40v10H0z'/></svg>";
+        let mut options = RenderOptions::default();
+        options
+            .assets
+            .files
+            .insert("fade.svg".into(), svg.as_bytes().to_vec());
+        let output = render("<img src='fade.svg' width='80' height='20'>", &options).unwrap();
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+        // Opaque, so there is no soft mask: the SVG alone, four pixels to a CSS pixel.
+        assert_eq!(image_sizes(&parse(&output.pdf)), [(320, 80)]);
+    }
+
+    #[test]
+    fn embeds_svg_elements() {
+        let output = render(
+            "<p>before</p><svg width='200' height='120' viewBox='0 0 200 120'>\
+             <rect width='200' height='120' fill='#ff0000'/>\
+             <text x='120' y='60' font-size='20'>12%</text></svg>\
+             <svg width='20' height='20'><rect \"x='1' width='9' height='9'/></svg><p>after</p>",
+            &RenderOptions::default(),
+        )
+        .unwrap();
+        // A name that HTML allows and SVG does not is left out, and nothing is said of it.
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+        let doc = parse(&output.pdf);
+        let images = doc
+            .objects
+            .values()
+            .filter_map(|object| object.as_stream().ok())
+            .filter(|stream| {
+                stream
+                    .dict
+                    .get(b"Subtype")
+                    .and_then(|s| s.as_name())
+                    .is_ok_and(|name| name == b"Image")
+            })
+            .count();
+        assert_eq!(images, 0, "the SVG is shapes, not a picture");
+        // Its label is text of the page.
+        let text = doc.extract_text(&[1]).unwrap();
+        assert!(text.contains("before"), "{text:?}");
+        assert!(text.contains("12%"), "{text:?}");
+        assert!(text.contains("after"), "{text:?}");
     }
 
     #[test]

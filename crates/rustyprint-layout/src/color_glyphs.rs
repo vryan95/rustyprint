@@ -318,12 +318,12 @@ struct Pen {
 impl OutlinePen for Pen {
     fn move_to(&mut self, x: f32, y: f32) {
         self.last = Point::new(x, y);
-        self.path.segments.push(PathSegment::MoveTo(self.last));
+        self.path.push(PathSegment::MoveTo(self.last));
     }
 
     fn line_to(&mut self, x: f32, y: f32) {
         self.last = Point::new(x, y);
-        self.path.segments.push(PathSegment::LineTo(self.last));
+        self.path.push(PathSegment::LineTo(self.last));
     }
 
     fn quad_to(&mut self, cx: f32, cy: f32, x: f32, y: f32) {
@@ -334,14 +334,12 @@ impl OutlinePen for Pen {
         );
         let c2 = Point::new(x + 2.0 / 3.0 * (cx - x), y + 2.0 / 3.0 * (cy - y));
         self.last = Point::new(x, y);
-        self.path
-            .segments
-            .push(PathSegment::CubicTo(c1, c2, self.last));
+        self.path.push(PathSegment::CubicTo(c1, c2, self.last));
     }
 
     fn curve_to(&mut self, cx0: f32, cy0: f32, cx1: f32, cy1: f32, x: f32, y: f32) {
         self.last = Point::new(x, y);
-        self.path.segments.push(PathSegment::CubicTo(
+        self.path.push(PathSegment::CubicTo(
             Point::new(cx0, cy0),
             Point::new(cx1, cy1),
             self.last,
@@ -349,6 +347,6 @@ impl OutlinePen for Pen {
     }
 
     fn close(&mut self) {
-        self.path.segments.push(PathSegment::Close);
+        self.path.push(PathSegment::Close);
     }
 }

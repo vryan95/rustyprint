@@ -12,12 +12,14 @@ use pdf_writer::types::{
     LineJoinStyle, MaskType, TextRenderingMode,
 };
 use pdf_writer::{Content, Filter, Finish, Name, Pdf, Rect, Ref, Str, TextStr};
+use rustyprint_layout::Rect as LayoutRect;
 use rustyprint_layout::display::Group;
-use rustyprint_layout::display::LineStyle;
 use rustyprint_layout::display::PrintMarks;
 use rustyprint_layout::display::{
     Bookmark, Destination, Document, LinkTarget, Page, Shading, ShadingKind,
 };
+use rustyprint_layout::display::{IDENTITY, Matrix, drawable, invert, multiply, transform_rect};
+use rustyprint_layout::display::{LineCap, LineJoin, LineStyle};
 use rustyprint_layout::{
     Color, DisplayItem, FillRule, Font, Image, ImageData, Path, PathSegment, Point, TextRun,
 };
@@ -220,7 +222,7 @@ impl Writer {
                 marks(&mut content, page.marks, width, height, bleed);
             }
             let mut used = Resources::default();
-            self.render(&mut content, &mut used, &page.items, height);
+            self.render(&mut content, &mut used, &page.items, height, IDENTITY);
             let content_id = self.refs.next();
             pending.push((content_id, content.finish().into_vec()));
 
@@ -328,16 +330,42 @@ impl Writer {
         res: &mut Resources,
         items: &[DisplayItem],
         height: f32,
+        outer: Matrix,
     ) {
+        // The transformation from the coordinates being written to the page's, and what
+        // it was before each open clip and transform.
+        let mut to_page = outer;
+        let mut before: Vec<Matrix> = Vec::new();
         let mut index = 0;
         while index < items.len() {
             let item = &items[index];
             index += 1;
             if let DisplayItem::PushGroup(group) = item {
                 let end = group_end(items, index);
-                self.group(content, res, group, &items[index..end], height);
+                self.group(content, res, group, &items[index..end], height, to_page);
                 index = (end + 1).min(items.len());
                 continue;
+            }
+            // A number that is not one, or that overflows when it is placed on the page,
+            // is never written: the item is left out, and so is what it would clip or move.
+            if !item.is_drawable() {
+                if opens(item) {
+                    before.push(to_page);
+                    content.save_state();
+                    content.rect(0.0, 0.0, 0.0, 0.0);
+                    content.clip_nonzero();
+                    content.end_path();
+                }
+                continue;
+            }
+            match item {
+                DisplayItem::PushTransform(matrix) => {
+                    before.push(to_page);
+                    to_page = multiply(to_page, pdf_matrix(*matrix, height));
+                }
+                DisplayItem::PopClip => to_page = before.pop().unwrap_or(to_page),
+                _ if opens(item) => before.push(to_page),
+                _ => {}
             }
             let alpha = item_alpha(item);
             if alpha < 255 {
@@ -452,6 +480,7 @@ impl Writer {
                     width,
                     color,
                     style,
+                    shape,
                 } => {
                     content.save_state();
                     set_stroke(content, *color, &self.palette);
@@ -460,13 +489,37 @@ impl Writer {
                     // Fit a whole number of dashes or dots around the path.
                     let length = path.length() * PX_TO_PT;
                     let period = |target: f32| length / (length / target).round().max(1.0);
-                    match style {
-                        LineStyle::Solid => {}
-                        LineStyle::Dashed => {
+                    match (shape, style) {
+                        // The stroke of an SVG shape, as it is stated.
+                        (Some(shape), _) => {
+                            content.set_line_cap(match shape.cap {
+                                LineCap::Butt => LineCapStyle::ButtCap,
+                                LineCap::Round => LineCapStyle::RoundCap,
+                                LineCap::Square => LineCapStyle::ProjectingSquareCap,
+                            });
+                            content.set_line_join(match shape.join {
+                                LineJoin::Miter => LineJoinStyle::MiterJoin,
+                                LineJoin::Round => LineJoinStyle::RoundJoin,
+                                LineJoin::Bevel => LineJoinStyle::BevelJoin,
+                            });
+                            content.set_miter_limit(shape.miter_limit.max(1.0));
+                            // Dashes too short to be seen are a solid line, which is
+                            // what a browser draws once there are too many to make. A
+                            // viewer would otherwise make millions of them.
+                            let period: f32 = shape.dashes.iter().sum();
+                            if period * PX_TO_PT * scale_of(to_page) >= MIN_DASH_PERIOD {
+                                content.set_dash_pattern(
+                                    shape.dashes.iter().map(|dash| dash * PX_TO_PT),
+                                    shape.dash_offset * PX_TO_PT,
+                                );
+                            }
+                        }
+                        (None, LineStyle::Solid) => {}
+                        (None, LineStyle::Dashed) => {
                             let dash = period(6.0 * w) / 2.0;
                             content.set_dash_pattern([dash, dash], 0.0);
                         }
-                        LineStyle::Dotted => {
+                        (None, LineStyle::Dotted) => {
                             content.set_line_cap(LineCapStyle::RoundCap);
                             content.set_dash_pattern([0.0, period(2.0 * w)], 0.0);
                         }
@@ -535,17 +588,9 @@ impl Writer {
                         }
                     }
                 }
-                DisplayItem::PushTransform([a, b, c, d, e, f]) => {
-                    // The matrix in PDF space, whose y axis points up from the bottom.
+                DisplayItem::PushTransform(matrix) => {
                     content.save_state();
-                    content.transform([
-                        *a,
-                        -b,
-                        -c,
-                        *d,
-                        c * height + e * PX_TO_PT,
-                        height * (1.0 - d) - f * PX_TO_PT,
-                    ]);
+                    content.transform(pdf_matrix(*matrix, height));
                 }
                 DisplayItem::PopClip => {
                     content.restore_state();
@@ -569,15 +614,17 @@ impl Writer {
         group: &Group,
         items: &[DisplayItem],
         height: f32,
+        to_page: Matrix,
     ) {
         let mut inner = Content::new();
         let mut used = Resources::default();
-        self.render(&mut inner, &mut used, items, height);
+        self.render(&mut inner, &mut used, items, height, to_page);
+        let bbox = group_box(to_page);
         let data = compress_to_vec_zlib(&inner.finish(), COMPRESSION_LEVEL);
         let form_id = self.refs.next();
         let mut form = self.pdf.form_xobject(form_id, &data);
         form.filter(Filter::FlateDecode);
-        form.bbox(Rect::new(-1.0e5, -1.0e5, 1.0e5, 1.0e5));
+        form.bbox(bbox);
         form.group()
             .transparency()
             .isolated(group.isolated)
@@ -614,7 +661,7 @@ impl Writer {
             let data = mask_content.finish();
             let mask_id = self.refs.next();
             let mut form = self.pdf.form_xobject(mask_id, &data);
-            form.bbox(Rect::new(-1.0e5, -1.0e5, 1.0e5, 1.0e5));
+            form.bbox(bbox);
             form.group().transparency().color_space().device_gray();
             form.resources()
                 .x_objects()
@@ -1059,6 +1106,61 @@ impl Writer {
     }
 }
 
+/// Whether `item` starts a clip or a transform, which a `PopClip` ends.
+fn opens(item: &DisplayItem) -> bool {
+    matches!(
+        item,
+        DisplayItem::PushClip(_)
+            | DisplayItem::PushClipPath { .. }
+            | DisplayItem::PushClipText(_)
+            | DisplayItem::PushTransform(_)
+    )
+}
+
+/// A transformation of the display list in PDF space, whose y axis points up from the
+/// bottom of a page `height` points high.
+fn pdf_matrix([a, b, c, d, e, f]: Matrix, height: f32) -> Matrix {
+    [
+        a,
+        -b,
+        -c,
+        d,
+        c * height + e * PX_TO_PT,
+        height * (1.0 - d) - f * PX_TO_PT,
+    ]
+}
+
+/// The shortest dash and gap, together, that are drawn as dashes, in points on the page:
+/// one dot of a 1200 dpi printer. A shorter pattern cannot be told from a solid line.
+const MIN_DASH_PERIOD: f32 = 72.0 / 1200.0;
+
+/// How many times larger a transformation draws, as the square root of what it does to
+/// an area.
+fn scale_of(matrix: Matrix) -> f32 {
+    (matrix[0] * matrix[3] - matrix[1] * matrix[2]).abs().sqrt()
+}
+
+/// How far from the page's corner a group may paint, in points: more than any page.
+const GROUP_REACH: f32 = 1.0e5;
+
+/// The bounding box of a transparency group written where `to_page` takes its coordinates
+/// to the page's. The box is in the group's own coordinates, so it is the page's reach
+/// seen from there: inside a drawing scaled down a thousand times, as an SVG with a large
+/// `viewBox` is, a box of the page's size would cut the drawing off.
+fn group_box(to_page: Matrix) -> Rect {
+    let reach = LayoutRect::new(
+        -GROUP_REACH,
+        -GROUP_REACH,
+        2.0 * GROUP_REACH,
+        2.0 * GROUP_REACH,
+    );
+    let seen = invert(to_page)
+        .map(|from_page| transform_rect(from_page, reach))
+        .filter(|seen| drawable(&[seen.x, seen.y, seen.right(), seen.bottom()]))
+        .unwrap_or(reach);
+    Rect::new(seen.x, seen.y, seen.right(), seen.bottom())
+}
+
 /// The index of the `PopGroup` that ends a group whose items start at `start`, or the end of
 /// the items if the group is not closed.
 fn group_end(items: &[DisplayItem], start: usize) -> usize {
@@ -1377,7 +1479,7 @@ fn marks(content: &mut Content, marks: PrintMarks, width: f32, height: f32, blee
 /// Adds the contours of `path` to the current path, in PDF coordinates.
 fn curves(content: &mut Content, path: &Path, page_height: f32) {
     let pt = |p: Point| (p.x * PX_TO_PT, page_height - p.y * PX_TO_PT);
-    for segment in &path.segments {
+    for segment in path.segments.iter() {
         match *segment {
             PathSegment::MoveTo(p) => {
                 let (x, y) = pt(p);
