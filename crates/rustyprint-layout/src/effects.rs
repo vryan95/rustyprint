@@ -15,7 +15,7 @@ use crate::display::{
     Backdrop, BlendMode, DisplayItem, FillRule, Group, IDENTITY, Matrix, Path, Rect, invert,
     multiply,
 };
-use crate::fragment::{BoxFragment, Sides};
+use crate::fragment::{BoxFragment, Cut, Sides};
 use crate::images::Images;
 use crate::rounded::RoundedRect;
 use crate::transform::{self, Mat4};
@@ -159,6 +159,8 @@ pub(crate) struct Geometry<'a> {
     pub rect: Rect,
     pub border: Sides,
     pub padding: Sides,
+    /// The edges a break cut.
+    pub cut: Cut,
 }
 
 impl Geometry<'_> {
@@ -168,11 +170,12 @@ impl Geometry<'_> {
             rect,
             border: fragment.border,
             padding: fragment.padding,
+            cut: fragment.cut,
         }
     }
 
     fn areas(&self) -> BoxAreas {
-        let border = RoundedRect::border_box(self.style, self.rect);
+        let border = RoundedRect::fragment_box(self.style, self.rect, self.cut);
         let (b, p) = (self.border, self.padding);
         let padding = border.deflate(b.top, b.right, b.bottom, b.left);
         let content = padding.deflate(p.top, p.right, p.bottom, p.left);

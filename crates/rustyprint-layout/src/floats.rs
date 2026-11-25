@@ -16,7 +16,7 @@ struct Placed {
 }
 
 /// The floats placed in a block formatting context so far.
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct Floats {
     placed: Vec<Placed>,
 }
@@ -31,6 +31,16 @@ pub(crate) struct Band {
 impl Floats {
     pub fn is_empty(&self) -> bool {
         self.placed.is_empty()
+    }
+
+    /// How many floats have been placed.
+    pub fn len(&self) -> usize {
+        self.placed.len()
+    }
+
+    /// Takes back the floats placed after the first `count`, for content laid out again.
+    pub fn truncate(&mut self, count: usize) {
+        self.placed.truncate(count);
     }
 
     /// How far the floats beside the band from `top` down `height` reach into the space

@@ -4,6 +4,7 @@ use rustyprint_css::ComputedValues;
 use rustyprint_css::properties::types::CornerRadius;
 
 use crate::display::{Path, PathSegment, Point, Rect};
+use crate::fragment::Cut;
 
 /// How far along the tangent the control points of a quarter ellipse sit, as a fraction of
 /// the radius.
@@ -35,6 +36,12 @@ impl RoundedRect {
     /// The border box `rect` with the corners `style` gives it: percentages resolve against
     /// the box's width and height, and radii that do not fit scale down together (§ 5.5).
     pub fn border_box(style: &ComputedValues, rect: Rect) -> Self {
+        Self::fragment_box(style, rect, Cut::default())
+    }
+
+    /// The border box of a fragment, as [`RoundedRect::border_box`], with square corners
+    /// on the edges a break `cut`.
+    pub fn fragment_box(style: &ComputedValues, rect: Rect, cut: Cut) -> Self {
         let resolve = |(h, v): &CornerRadius| {
             let (h, v) = (
                 h.resolve(rect.width).max(0.0),
@@ -64,6 +71,17 @@ impl RoundedRect {
             radii,
             shapes,
         };
+        let square = [
+            cut.top || cut.left,
+            cut.top || cut.right,
+            cut.bottom || cut.right,
+            cut.bottom || cut.left,
+        ];
+        for (radii, square) in rounded.radii.iter_mut().zip(square) {
+            if square {
+                *radii = (0.0, 0.0);
+            }
+        }
         rounded.fit();
         rounded
     }

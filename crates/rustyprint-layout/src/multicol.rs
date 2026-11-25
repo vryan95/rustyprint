@@ -19,7 +19,7 @@ use rustyprint_css::properties::types::{
 use crate::boxes::{BlockBox, BlockContents};
 use crate::display::Rect;
 use crate::flow::{self, BlockKind, BreakToken, ContainingBlock, EPSILON, Fragmentainer, Resume};
-use crate::fragment::{BoxFragment, Fragment, Sides};
+use crate::fragment::{BoxFragment, Cut, Fragment, Sides};
 use crate::units::{ContentLaid, ContentSpace};
 
 /// The most columns a row gets, overflow columns included.
@@ -319,6 +319,7 @@ pub(crate) fn layout(
                 },
                 forced: true,
                 side,
+                past_content: false,
             });
             break;
         }
@@ -327,6 +328,7 @@ pub(crate) fn layout(
                 consumed: 0.0,
                 forced: token.as_ref().is_some_and(|t| t.forced),
                 side: token.as_ref().and_then(|t| t.side),
+                past_content: false,
                 resume: Resume::Child {
                     index: s,
                     token: token.map(Box::new),
@@ -548,5 +550,6 @@ fn rule_fragment(style: &Arc<ComputedValues>, center: f32, top: f32, height: f32
         replaced: None,
         legend: None,
         out_of_flow: None,
+        cut: Cut::default(),
     }
 }

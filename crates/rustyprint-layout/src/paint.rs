@@ -16,7 +16,7 @@ use crate::boxes::{MeterLevel, Replaced, Widget};
 use crate::display::{Color, DisplayItem, FillRule, LineStyle, Path, Point, Rect, TextRun};
 use crate::effects::{self, Space};
 use crate::fragment::{
-    BoxFragment, Decoration, DecorationKind, Fragment, LineItem, Sides, TextFragment,
+    BoxFragment, Cut, Decoration, DecorationKind, Fragment, LineItem, Sides, TextFragment,
 };
 use crate::images::Images;
 use crate::paginate::LaidPage;
@@ -292,7 +292,7 @@ fn paint_contents<'f>(
         Some(gap) => Rect::new(rect.x, rect.y + gap.y, rect.width, rect.height - gap.y),
         None => rect,
     };
-    let shape = RoundedRect::border_box(style, decorated);
+    let shape = RoundedRect::fragment_box(style, decorated, fragment.cut);
     // Only a stacking context's root passes its 3D space on to its children.
     let inherited = if root { out.space } else { None };
     let space = std::mem::replace(&mut out.space, inherited);
@@ -310,7 +310,7 @@ fn paint_contents<'f>(
             box_runs(&fragment.children, rect.x, rect.y, &mut runs);
             runs
         };
-        crate::shadow::paint_outer(style, &shape, &mut out.items);
+        crate::shadow::paint_outer(style, &shape, fragment.cut, &mut out.items);
         let border_shape = border_shape(style, &areas);
         if let Some((inner, _)) = &border_shape {
             out.items.push(DisplayItem::PushClipPath {
@@ -938,7 +938,12 @@ fn paint_items<'f>(
                 let shape = RoundedRect::border_box(&inline.style, inline.rect.translated(x, y));
                 let start = out.items.len();
                 if visible {
-                    crate::shadow::paint_outer(&inline.style, &shape, &mut out.items);
+                    crate::shadow::paint_outer(
+                        &inline.style,
+                        &shape,
+                        Cut::default(),
+                        &mut out.items,
+                    );
                     let areas = areas(&shape, inline.border, inline.padding);
                     let text = || {
                         let mut runs = Vec::new();
@@ -974,6 +979,7 @@ fn paint_items<'f>(
                         rect: shape.rect,
                         border: inline.border,
                         padding: inline.padding,
+                        cut: Cut::default(),
                     };
                     out.items
                         .extend(effects::wrap(&geometry, items, None, out.images, false));
