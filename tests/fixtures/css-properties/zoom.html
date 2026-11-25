@@ -10,6 +10,9 @@
 #w p { width: 50px; height: 5px; margin: 0 }
 #w span { zoom: 0.5; display: block; width: 40px; height: 1em }
 #x { zoom: -1 }
+#y { zoom: 0.5 }
+#y img, #y video { display: block }
+#z { zoom: 2; width: 50px; height: 50px; background: url(assets/red.png) no-repeat }
 </style>
 <script type="text/x-rustyprint-expect">
 #t { zoom: 2; layout-width: 204px; layout-height: 24px }
@@ -17,11 +20,15 @@
 #v { zoom: 1 }
 #w p { layout-width: 100px; layout-height: 10px }
 #w span { layout-width: 40px; layout-height: 16px }
+#y img { layout-width: 20px; layout-height: 10px; layout-image: "0 0 20 10" }
+#y video { layout-width: 150px; layout-height: 75px }
+#z { layout-image: "0 0 40 20" }
 html { zoom: 1 }
 warning: invalid value for `zoom`
 </script>
 </head>
 <body>
 <div id=t></div><div id=u></div><div id=v></div><div id=w><p></p><span>x</span></div><div id=x></div>
+<div id=y><img src="assets/photo.png"><video></video></div><div id=z></div>
 </body>
 </html>
