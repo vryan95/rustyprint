@@ -33,6 +33,16 @@ impl Floats {
         self.placed.is_empty()
     }
 
+    /// How many floats are placed, to go back to with [`Floats::truncate`].
+    pub fn len(&self) -> usize {
+        self.placed.len()
+    }
+
+    /// Forgets the floats placed after the first `len`, to lay their boxes out again.
+    pub fn truncate(&mut self, len: usize) {
+        self.placed.truncate(len);
+    }
+
     /// How far the floats beside the band from `top` down `height` reach into the space
     /// between `left` and `right`. An empty band still meets the floats it starts in.
     pub fn band(&self, top: f32, height: f32, left: f32, right: f32) -> Band {
