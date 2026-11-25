@@ -36,6 +36,8 @@ File.WriteAllBytes("invoice.pdf", output.Pdf);
 | `PageSize` | `PageSize.Letter`, `PageSize.Named("a5")`, `new PageSize("100mm", "150mm")` | A4 |
 | `Landscape` | `true` | `false` |
 | `Margin` | `"15mm"`, `"10mm 20mm"` | `"2cm"` |
+| `Scale` | `0.8`, from `0.1` to `2`, as the scale of a browser's print | `1` |
+| `ShrinkToFit` | `true`: shrinks a document wider than the page, as a browser's print does | `false` |
 | `Title` | `"Invoice 42"` | the document's `<title>` |
 | `Stylesheet` | `"body { font-family: sans-serif }"` | none |
 | `Remote` | `new RemoteOptions("cdn.example.com") { AllowHttp = true }` | nothing fetched |

@@ -52,6 +52,16 @@ export interface RenderOptions {
   landscape?: boolean
   /** Page margins like the CSS margin shorthand, such as `15mm` or `10mm 20mm`. Default: 2cm. */
   margin?: string
+  /**
+   * The scale of the document on the page, from 0.1 to 2, as the scale of a browser's print.
+   * The document is laid out on a page area that much wider or narrower. Default: 1.
+   */
+  scale?: number
+  /**
+   * Shrinks a document laid out wider than the page area to fit it, as a browser's print does,
+   * by up to a third; what is wider still is cut off. Default: false.
+   */
+  shrinkToFit?: boolean
   /** The PDF's title. Default: the document's `<title>`. */
   title?: string
   /** A stylesheet applied after the document's own styles. */

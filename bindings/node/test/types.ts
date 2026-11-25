@@ -18,6 +18,8 @@ const options: RenderOptions = {
   pageSize: { width: '100mm', height: '150mm' },
   landscape: false,
   margin: '15mm 20mm',
+  scale: 0.8,
+  shrinkToFit: true,
   title: 'Invoice 42',
   stylesheet: 'h1 { color: teal }',
   remote: { allowedHosts: ['cdn.example.com'], allowHttp: false, timeoutMs: 5000 },

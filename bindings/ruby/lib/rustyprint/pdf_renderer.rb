@@ -28,7 +28,7 @@ module Rustyprint
   # render is instrumented as "render.rustyprint", with the asset paths and warnings.
   class PdfRenderer
     # The options of `render pdf:` that go to {Rustyprint.render}; the others go to the view.
-    PDF_OPTIONS = %i[page_size landscape margin title stylesheet remote limits].freeze
+    PDF_OPTIONS = %i[page_size landscape margin scale shrink_to_fit title stylesheet remote limits].freeze
 
     # @param controller [ActionController::Base] the controller whose view to render
     def initialize(controller)

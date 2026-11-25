@@ -1336,6 +1336,8 @@ impl Builder<'_> {
     fn embedding(&self, element: &Element, style: &ComputedValues) -> Embedding {
         let attr = |name: &str| element.attr(name).map(str::trim).filter(|v| !v.is_empty());
         let image = |url: Option<&str>| url.and_then(|url| self.images.get(url));
+        // Natural sizes in CSS pixels take the element's zoom, as lengths do.
+        let zoomed = |w: f32, h: f32| (w * style.effective_zoom, h * style.effective_zoom);
         let replaced = |image: Arc<Image>| {
             Embedding::Replaced(Replaced {
                 size: Some(natural_size(&image, style)),
@@ -1381,13 +1383,13 @@ impl Builder<'_> {
                 Some(poster) => replaced(poster),
                 None => Embedding::Replaced(Replaced {
                     picture: None,
-                    size: Some((300.0, 150.0)),
+                    size: Some(zoomed(300.0, 150.0)),
                     widget: None,
                 }),
             },
             local_name!("audio") if element.has_attr("controls") => Embedding::Replaced(Replaced {
                 picture: None,
-                size: Some((300.0, 54.0)),
+                size: Some(zoomed(300.0, 54.0)),
                 widget: Some(Widget::MediaControls),
             }),
             local_name!("audio") => Embedding::Nothing,
@@ -1427,39 +1429,31 @@ impl Builder<'_> {
         if self.images.frame_depth() >= MAX_FRAME_DEPTH {
             return None;
         }
-        let html = match element.attr("srcdoc") {
-            Some(srcdoc) => srcdoc.to_owned(),
-            None => {
-                let src = element
-                    .attr("src")
-                    .map(str::trim)
-                    .filter(|s| !s.is_empty())?;
-                if src.eq_ignore_ascii_case("about:blank") {
-                    String::new()
-                } else {
-                    let text = self.images.text(src);
-                    if text.is_none() {
-                        self.images.warn(format!("could not load frame `{src}`"));
-                    }
-                    text?
-                }
-            }
-        };
+        let document = self
+            .images
+            .frame_document(element, || self.load_frame(element))?;
         let fixed = |size: &rustyprint_css::properties::types::Size<_>, default: f32| match size {
             rustyprint_css::properties::types::Size::Value(
                 rustyprint_css::properties::types::LengthPercentage::Length(px),
             ) => *px,
             _ => default,
         };
-        let viewport = (fixed(&style.width, 300.0), fixed(&style.height, 150.0));
-        let document = Document::parse(&html);
-        rustyprint_dom::budget::check_document(&document);
+        let zoom = style.effective_zoom;
+        let viewport = (
+            fixed(&style.width, 300.0 * zoom),
+            fixed(&style.height, 150.0 * zoom),
+        );
+        // The frame's document takes the scale of a print, as the frame does: its lengths
+        // are scaled, and its media queries see the frame's size before the scale.
+        let scale = style.print_scale;
         let load = |url: &str| self.images.text(url);
         let load_font = |url: &str| self.images.bytes(url);
         let styles = compute_styles(
             &document,
             &StyleOptions {
                 page_size: viewport,
+                media_size: (viewport.0 / scale, viewport.1 / scale),
+                zoom: scale,
                 stylesheet: None,
                 load: &load,
                 font_metrics: Some(&crate::font_metrics),
@@ -1479,6 +1473,31 @@ impl Builder<'_> {
             root: Arc::new(root),
             laid: None,
         })
+    }
+
+    /// Loads and parses the document an `iframe` shows, counting it against the limits.
+    fn load_frame(&self, element: &Element) -> Option<Document> {
+        let html = match element.attr("srcdoc") {
+            Some(srcdoc) => srcdoc.to_owned(),
+            None => {
+                let src = element
+                    .attr("src")
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())?;
+                if src.eq_ignore_ascii_case("about:blank") {
+                    String::new()
+                } else {
+                    let text = self.images.text(src);
+                    if text.is_none() {
+                        self.images.warn(format!("could not load frame `{src}`"));
+                    }
+                    text?
+                }
+            }
+        };
+        let document = Document::parse(&html);
+        rustyprint_dom::budget::check_document(&document);
+        Some(document)
     }
 
     /// The positions to try for an absolutely positioned box that overflows, from its
@@ -2424,6 +2443,8 @@ mod tests {
             &document,
             &StyleOptions {
                 page_size: (800.0, 1000.0),
+                media_size: (800.0, 1000.0),
+                zoom: 1.0,
                 stylesheet: None,
                 load: &load,
                 font_metrics: None,
