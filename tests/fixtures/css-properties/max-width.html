@@ -5,14 +5,25 @@
 <style>
 #t { max-width: fit-content(100px) }
 #v { max-width: 200px }
+.k { display: inline-block; height: 10px; vertical-align: top }
+.fit { display: inline-block; vertical-align: top }
 </style>
 <script type="text/x-rustyprint-expect">
 #t { max-width: fit-content(100px) }
 #u { max-width: none }
 #v { layout-width: 200px }
+#a { layout-width: 50px }
+#b { layout-width: 100px }
+#bc { layout-width: 50px }
+#c { layout-width: 50px }
+#d { layout-width: 130px }
 </script>
 </head>
 <body>
 <div id=t></div><div id=u></div><div id=v></div>
+<div><div id=a class=fit><div style="max-width: 50px"><b class=k style="width: 100px"></b></div></div></div>
+<div><div id=b class=fit><div id=bc style="max-width: 50%"><b class=k style="width: 100px"></b></div></div></div>
+<div><div id=c class=fit><div style="width: 200px; max-width: 50px"><b class=k style="width: 10px"></b></div></div></div>
+<div><div id=d class=fit><div style="min-width: 130px; max-width: 50%"><b class=k style="width: 10px"></b></div></div></div>
 </body>
 </html>

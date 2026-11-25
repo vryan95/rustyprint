@@ -267,8 +267,7 @@ fn distribute(span: f32, sizes: [Option<f32>; 3]) -> [f32; 3] {
 fn outer_width(block: &BlockBox, span: f32) -> f32 {
     match &block.style.width {
         CssSize::Value(value) if value.as_length().is_none() => {
-            let extra = flow::intrinsic_outer(block).1 - flow::intrinsic_content_width(block);
-            value.resolve(span) + extra
+            value.resolve(span) + flow::outer_extra(&block.style)
         }
         _ => flow::intrinsic_outer(block).1,
     }

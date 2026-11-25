@@ -4,12 +4,25 @@
 <title>min-width</title>
 <style>
 #t { width: 10px; min-width: min-content }
+.k { display: inline-block; height: 10px; vertical-align: top }
+.fit { display: inline-block; vertical-align: top }
 </style>
 <script type="text/x-rustyprint-expect">
 #t { min-width: min-content; layout-width: 10px }
+#a { layout-width: 130px }
+#b { layout-width: 100px }
+#bc { layout-width: 100px }
+#c { layout-width: 130px }
+#d { layout-width: 70px }
+#e { layout-width: 130px }
 </script>
 </head>
 <body>
 <div id=t></div>
+<div><div id=a class=fit><div style="min-width: 130px"><b class=k style="width: 10px"></b></div></div></div>
+<div><div id=b class=fit><div id=bc style="min-width: 50%"><b class=k style="width: 100px"></b></div></div></div>
+<div style="display: flex"><div id=c><div style="display: table; min-width: 130px"><b class=k style="width: 10px"></b></div></div></div>
+<div><div id=d class=fit><div style="width: 20px; min-width: 70px"><b class=k style="width: 10px"></b></div></div></div>
+<div><div id=e class=fit><div style="width: 50%; min-width: 130px"><b class=k style="width: 10px"></b></div></div></div>
 </body>
 </html>
