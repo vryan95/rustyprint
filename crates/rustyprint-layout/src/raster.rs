@@ -71,6 +71,9 @@ impl Raster {
             },
             orientation: 1,
             resolution: None,
+            natural: None,
+            shape_only: false,
+            fit: None,
         }
     }
 

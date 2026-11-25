@@ -1,4 +1,4 @@
-//! Raster images: decoding, and loading the images a document refers to.
+//! Images: decoding, and loading the images a document refers to.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -7,6 +7,8 @@ use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
 use rustyprint_css::properties::types::ImageOrientation;
+
+use crate::display::Rect;
 
 /// A decoded raster image, as stored in the file: one image pixel is one CSS pixel unless
 /// `image-resolution` says otherwise.
@@ -18,6 +20,47 @@ pub struct Image {
     pub orientation: u8,
     /// The resolution the file declares, in image pixels per CSS pixel.
     pub resolution: Option<f32>,
+    /// The size in CSS pixels of an image whose size is not its number of pixels: an SVG
+    /// image, which is drawn with more pixels than its size. `image-resolution` does not
+    /// scale it.
+    pub natural: Option<(f32, f32)>,
+    /// Whether the image has a shape and no size of its own: an SVG image with a `viewBox`
+    /// and neither a `width` nor a `height`. `natural` is then the size of its `viewBox`.
+    pub shape_only: bool,
+    /// How the image keeps its shape in a box of another shape, rather than stretching to
+    /// fill it: an SVG image with a `viewBox`.
+    pub fit: Option<Fit>,
+}
+
+/// How an image that keeps its shape is placed in a box of another shape: the SVG
+/// `preserveAspectRatio` attribute.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Fit {
+    /// Where the image sits along each axis of the room it leaves, or of what is cut off:
+    /// 0 at the start, 0.5 in the middle and 1 at the end.
+    pub align: (f32, f32),
+    /// Whether the image covers the box, with what falls outside cut off (`slice`), rather
+    /// than fitting inside it (`meet`).
+    pub slice: bool,
+}
+
+impl Fit {
+    /// The rectangle an image of `size` is drawn in so as to keep its shape in `rect`.
+    pub fn place(&self, size: (f32, f32), rect: Rect) -> Rect {
+        let (sx, sy) = (rect.width / size.0, rect.height / size.1);
+        // The width fills the box when it is the tighter side, or the looser one of `slice`.
+        let (width, height) = if (sx < sy) != self.slice {
+            (rect.width, rect.width * size.1 / size.0)
+        } else {
+            (rect.height * size.0 / size.1, rect.height)
+        };
+        Rect::new(
+            rect.x + (rect.width - width) * self.align.0,
+            rect.y + (rect.height - height) * self.align.1,
+            width,
+            height,
+        )
+    }
 }
 
 /// How an image's pixels are stored.
@@ -34,8 +77,17 @@ pub enum ImageData {
 }
 
 impl Image {
-    /// Decodes a PNG, JPEG, GIF, WebP or BMP file.
+    /// Decodes a PNG, JPEG, GIF, WebP, BMP or SVG file.
     pub fn decode(bytes: &[u8]) -> Result<Image, String> {
+        Self::decode_within(bytes, u64::MAX)
+    }
+
+    /// Decodes an image file. An SVG file, which has no pixels of its own, is drawn with at
+    /// most `max_pixels` pixels.
+    fn decode_within(bytes: &[u8], max_pixels: u64) -> Result<Image, String> {
+        if crate::svg::is_svg(bytes) {
+            return crate::svg::rasterize(bytes, max_pixels);
+        }
         let orientation = exif_orientation(bytes);
         if let Some((width, height, components)) = jpeg_header(bytes)
             && matches!(components, 1 | 3)
@@ -49,6 +101,9 @@ impl Image {
                 },
                 orientation,
                 resolution: jfif_resolution(bytes),
+                natural: None,
+                shape_only: false,
+                fit: None,
             });
         }
         let decoded = image::load_from_memory(bytes).map_err(|e| e.to_string())?;
@@ -78,6 +133,9 @@ impl Image {
             },
             orientation,
             resolution: png_resolution(bytes),
+            natural: None,
+            shape_only: false,
+            fit: None,
         })
     }
 
@@ -90,6 +148,9 @@ impl Image {
 /// An image's natural size in CSS pixels as it displays: turned by its orientation and
 /// scaled by `image-resolution`.
 pub fn natural_size(image: &Image, style: &ComputedValues) -> (f32, f32) {
+    if let Some(natural) = image.natural {
+        return natural;
+    }
     let dppx = style.image_resolution.dppx(image.resolution);
     let (w, h) = (image.width as f32 / dppx, image.height as f32 / dppx);
     if Image::turned(orientation(image, style.image_orientation)) {
@@ -299,7 +360,7 @@ impl<'a> Images<'a> {
                 None
             }
             Some(bytes) if self.too_large(url, &bytes) => None,
-            Some(bytes) => match Image::decode(&bytes) {
+            Some(bytes) => match Image::decode_within(&bytes, self.max_pixels) {
                 Ok(image) => Some(Arc::new(image)),
                 Err(error) => {
                     self.warn(format!("could not decode image `{url}`: {error}"));
@@ -468,5 +529,196 @@ mod tests {
             warnings[0].contains("`big.png` is 4×3 pixels"),
             "{warnings:?}"
         );
+    }
+    const SHAPE: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<!-- A drawing program's export: a style sheet, and a view box without a size. -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" xml:space="preserve">
+<style type="text/css">.a{fill:#FF0000;}</style>
+<path class="a" d="M0,0h100v50H0V0z"/>
+</svg>"#;
+
+    fn rgba(image: &Image, x: u32, y: u32) -> [u8; 4] {
+        let ImageData::Pixels {
+            samples,
+            gray: false,
+            alpha,
+        } = &image.data
+        else {
+            panic!("expected color pixels");
+        };
+        let at = (y * image.width + x) as usize;
+        let alpha = alpha.as_ref().map_or(255, |alpha| alpha[at]);
+        [
+            samples[at * 3],
+            samples[at * 3 + 1],
+            samples[at * 3 + 2],
+            alpha,
+        ]
+    }
+
+    #[test]
+    fn svg_is_drawn_with_more_pixels_than_its_size() {
+        let image = Image::decode(SHAPE.as_bytes()).unwrap();
+        assert_eq!(image.natural, Some((200.0, 50.0)));
+        assert_eq!((image.width, image.height), (1024, 256));
+        // The left half is the red path, and the right half is empty.
+        assert_eq!(rgba(&image, 100, 128), [255, 0, 0, 255]);
+        assert_eq!(rgba(&image, 900, 128)[3], 0);
+        let style = ComputedValues::initial();
+        assert_eq!(natural_size(&image, &style), (200.0, 50.0));
+    }
+
+    #[test]
+    fn large_svg_is_drawn_at_four_pixels_per_css_pixel() {
+        let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="400" height="100"><rect width="400" height="100"/></svg>"#;
+        let image = Image::decode(svg.as_bytes()).unwrap();
+        assert_eq!((image.width, image.height), (1600, 400));
+        assert_eq!(image.natural, Some((400.0, 100.0)));
+        // Opaque everywhere: no alpha channel.
+        assert!(matches!(image.data, ImageData::Pixels { alpha: None, .. }));
+    }
+
+    #[test]
+    fn svg_with_a_view_box_and_no_size_has_a_shape_only() {
+        let picture = |attributes: &str| {
+            let svg = format!(
+                r#"<svg xmlns="http://www.w3.org/2000/svg" {attributes}><rect width="9" height="9"/></svg>"#
+            );
+            crate::picture::Picture::raster(Arc::new(Image::decode(svg.as_bytes()).unwrap()))
+        };
+        let style = ComputedValues::initial();
+        // The largest of its shape that fits in the area, whichever side is the tighter.
+        for attributes in [
+            r#"viewBox="0 0 200 50""#,
+            r#"viewBox="0 0 200 50" width="100%" height="100%""#,
+        ] {
+            let shape = picture(attributes);
+            assert_eq!(shape.shape(), Some(4.0), "{attributes}");
+            assert_eq!(shape.size_in(&style, (300.0, 80.0)), Some((300.0, 75.0)));
+            assert_eq!(shape.size_in(&style, (300.0, 60.0)), Some((240.0, 60.0)));
+        }
+        // A width or a height is a size, with the other side from the `viewBox`.
+        for (attributes, size) in [
+            (r#"width="200" height="50""#, (200.0, 50.0)),
+            (r#"viewBox="0 0 200 50" width="100""#, (100.0, 25.0)),
+            (r#"viewBox="0 0 200 50" height="25""#, (100.0, 25.0)),
+        ] {
+            let sized = picture(attributes);
+            assert_eq!(sized.shape(), None, "{attributes}");
+            assert_eq!(sized.size_in(&style, (300.0, 80.0)), Some(size));
+        }
+    }
+
+    #[test]
+    fn svg_is_drawn_within_the_pixel_limit() {
+        let load = |_: &str| Some(SHAPE.as_bytes().to_vec());
+        let images = Images::new(&load).with_max_pixels(10_000);
+        let image = images.get("shape.svg").expect("drawn smaller");
+        assert!(u64::from(image.width) * u64::from(image.height) <= 10_000);
+        assert!(image.width >= 196, "{image:?}");
+        assert_eq!(image.natural, Some((200.0, 50.0)));
+        assert!(images.warnings().is_empty());
+    }
+
+    #[test]
+    fn svg_that_cannot_be_drawn_within_the_pixel_limit_is_not_drawn() {
+        // A whole pixel on each side is already more than the limit allows.
+        let thin = r#"<svg xmlns="http://www.w3.org/2000/svg" width="1000000" height="1"/>"#;
+        for (svg, limit) in [(SHAPE, 0), (thin, 100)] {
+            let load = |_: &str| Some(svg.as_bytes().to_vec());
+            let images = Images::new(&load).with_max_pixels(limit);
+            assert!(images.get("big.svg").is_none(), "{limit}");
+            assert_eq!(images.warnings().len(), 1, "{:?}", images.warnings());
+        }
+    }
+
+    #[test]
+    fn svg_keeps_its_shape_as_preserve_aspect_ratio_says() {
+        let fit = |attributes: &str| {
+            let svg = format!(
+                r#"<svg xmlns="http://www.w3.org/2000/svg" {attributes}><rect width="9" height="9"/></svg>"#
+            );
+            Image::decode(svg.as_bytes()).unwrap().fit
+        };
+        let middle = Fit {
+            align: (0.5, 0.5),
+            slice: false,
+        };
+        assert_eq!(fit(r#"viewBox="0 0 200 50""#), Some(middle));
+        assert_eq!(
+            fit(r#"viewBox="0 0 200 50" preserveAspectRatio="xMinYMax slice""#),
+            Some(Fit {
+                align: (0.0, 1.0),
+                slice: true,
+            })
+        );
+        // Stretched to its box: `none`, or no view box to keep the shape of.
+        assert_eq!(
+            fit(r#"viewBox="0 0 200 50" preserveAspectRatio="none""#),
+            None
+        );
+        assert_eq!(fit(r#"width="200" height="50""#), None);
+
+        let rect = Rect::new(10.0, 20.0, 120.0, 120.0);
+        assert_eq!(
+            middle.place((200.0, 50.0), rect),
+            Rect::new(10.0, 65.0, 120.0, 30.0)
+        );
+        let slice = Fit {
+            align: (0.0, 0.5),
+            slice: true,
+        };
+        assert_eq!(
+            slice.place((200.0, 50.0), rect),
+            Rect::new(10.0, 20.0, 480.0, 120.0)
+        );
+    }
+
+    fn base64(bytes: &[u8]) -> String {
+        const DIGITS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut out = String::new();
+        for chunk in bytes.chunks(3) {
+            let n = chunk.iter().fold(0u32, |n, &byte| n << 8 | u32::from(byte))
+                << (8 * (3 - chunk.len()));
+            for i in 0..4 {
+                if i <= chunk.len() {
+                    out.push(DIGITS[(n >> (18 - 6 * i) & 63) as usize] as char);
+                } else {
+                    out.push('=');
+                }
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn svg_draws_images_it_holds_but_loads_no_files() {
+        let photo = png(image::RgbImage::from_pixel(2, 2, image::Rgb([0, 0, 255])).into());
+        let holding = |href: &str| {
+            let svg = format!(
+                r#"<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><image href="{href}" width="20" height="20"/></svg>"#
+            );
+            Image::decode(svg.as_bytes()).unwrap()
+        };
+        let inside = holding(&format!("data:image/png;base64,{}", base64(&photo)));
+        assert_eq!(rgba(&inside, 500, 500), [0, 0, 255, 255]);
+
+        let path = std::env::temp_dir().join(format!("rustyprint-svg-{}.png", std::process::id()));
+        std::fs::write(&path, &photo).unwrap();
+        let outside = holding(path.to_str().unwrap());
+        let linked = holding(&format!("file://{}", path.display()));
+        std::fs::remove_file(&path).ok();
+        assert_eq!(rgba(&outside, 500, 500)[3], 0);
+        assert_eq!(rgba(&linked, 500, 500)[3], 0);
+    }
+
+    #[test]
+    fn markup_that_is_not_svg_warns() {
+        let load = |_: &str| Some(b"<!DOCTYPE html><html><body>Not found</body></html>".to_vec());
+        let images = Images::new(&load);
+        assert!(images.get("logo.svg").is_none());
+        let warnings = images.warnings();
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("could not decode image `logo.svg`"));
     }
 }

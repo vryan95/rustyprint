@@ -180,6 +180,9 @@ pub(crate) fn soft_mask(
         },
         orientation: 1,
         resolution: None,
+        natural: None,
+        shape_only: false,
+        fit: None,
     };
     Some(SoftMask {
         rect: Rect::new(
@@ -205,7 +208,7 @@ fn layer_items(
     let painting = clip.unwrap_or_else(|| positioning.inflate(1.0e4));
     let size = nth(&style.mask_size, index);
     let auto = BackgroundSize::Explicit(None, None);
-    let (natural, size) = match picture.natural_size(style) {
+    let (natural, size) = match picture.size_in(style, (positioning.width, positioning.height)) {
         Some(natural) => (natural, size),
         None => {
             let natural = match size {

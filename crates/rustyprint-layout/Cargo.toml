@@ -19,6 +19,7 @@ thiserror.workspace = true
 harfrust.workspace = true
 hyphenation.workspace = true
 image.workspace = true
+resvg.workspace = true
 skrifa.workspace = true
 tiny-skia.workspace = true
 rustyprint-css.workspace = true

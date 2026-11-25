@@ -592,8 +592,14 @@ fn paint_replaced(
         }
         return;
     }
-    // Without a natural size, the image fills the content box.
-    let Some((natural_w, natural_h)) = replaced.size else {
+    // An image with a shape and no size of its own is fitted as the largest of its shape
+    // that fits the content box (CSS Images 3 § 5.3.1); without either, it fills the box.
+    let natural = replaced.size.or_else(|| {
+        picture
+            .shape()
+            .and_then(|_| picture.size_in(style, (content.width, content.height)))
+    });
+    let Some((natural_w, natural_h)) = natural else {
         picture.paint(style, content, items);
         return;
     };

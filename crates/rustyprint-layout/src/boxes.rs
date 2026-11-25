@@ -96,7 +96,8 @@ pub struct Replaced {
     /// The image, or `None` for content that paints nothing, such as a video without a
     /// poster.
     pub picture: Option<Picture>,
-    /// The natural size in CSS pixels, if the content has one.
+    /// The natural size in CSS pixels, if the content has one. An image with a shape and no
+    /// size of its own, such as an SVG with only a `viewBox`, has none.
     pub size: Option<(f32, f32)>,
     /// A control drawn in the content box, such as a checkbox or a media control bar.
     pub widget: Option<Widget>,
@@ -1338,7 +1339,7 @@ impl Builder<'_> {
         let image = |url: Option<&str>| url.and_then(|url| self.images.get(url));
         let replaced = |image: Arc<Image>| {
             Embedding::Replaced(Replaced {
-                size: Some(natural_size(&image, style)),
+                size: (!image.shape_only).then(|| natural_size(&image, style)),
                 picture: Some(Picture::raster(image)),
                 widget: None,
             })
@@ -1359,7 +1360,7 @@ impl Builder<'_> {
                 if let Some(image) = image(src) {
                     let (w, h) = natural_size(&image, style);
                     return Embedding::Replaced(Replaced {
-                        size: Some((w / density, h / density)),
+                        size: (!image.shape_only).then_some((w / density, h / density)),
                         picture: Some(Picture::raster(image)),
                         widget: None,
                     });

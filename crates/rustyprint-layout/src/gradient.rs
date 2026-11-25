@@ -429,5 +429,8 @@ fn conic(gradient: &Gradient, from: f32, cx: f32, cy: f32, w: f32, h: f32) -> Op
         },
         orientation: 1,
         resolution: None,
+        natural: None,
+        shape_only: false,
+        fit: None,
     })
 }
