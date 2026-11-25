@@ -21,7 +21,7 @@ use std::time::{Duration, Instant};
 use rustyprint_css::StyleOptions;
 use rustyprint_dom::Document;
 use rustyprint_dom::budget::{self, Budget, Exceeded};
-use rustyprint_layout::{Images, PageOptions, layout};
+use rustyprint_layout::{Images, PageOptions};
 
 pub use assets::Assets;
 pub use options::{page_size, parse_length, parse_margin};
@@ -39,6 +39,17 @@ pub struct RenderOptions {
     pub page_size: Size,
     /// Page margins in CSS pixels.
     pub margin: Sides,
+    /// The scale of the document on the page, from [`MIN_SCALE`] to [`MAX_SCALE`], as the
+    /// scale of a browser's print: at 0.5 everything is half the size and the document is
+    /// laid out on a page area twice as wide, which is also the width its media queries
+    /// see. Page sizes, page margins and margin boxes are not scaled.
+    pub scale: f32,
+    /// Shrinks a document whose content is laid out wider than the page area, as a
+    /// browser's print does, instead of letting it run off the right edge: the document is
+    /// laid out on a page area as wide as the content, up to [`MAX_SHRINK_TO_FIT`] times as
+    /// wide, and scaled down to the page. Content that is wider still is cut off at the
+    /// right of the page area. Never enlarges.
+    pub shrink_to_fit: bool,
     /// Files the document can refer to, such as linked stylesheets and images.
     pub assets: Assets,
     /// Bounds on the work a render may do.
@@ -52,6 +63,8 @@ impl Default for RenderOptions {
             title: None,
             page_size: Size::A4,
             margin: Sides::all(2.0 * options::CM),
+            scale: 1.0,
+            shrink_to_fit: false,
             assets: Assets::default(),
             limits: Limits::default(),
         }
@@ -155,6 +168,21 @@ pub enum Error {
     Internal(String),
 }
 
+/// The smallest [`RenderOptions::scale`], as in Chrome's print.
+pub const MIN_SCALE: f32 = 0.1;
+
+/// The largest [`RenderOptions::scale`], as in Chrome's print.
+pub const MAX_SCALE: f32 = 2.0;
+
+/// How many times wider than the page area [`RenderOptions::shrink_to_fit`] lays a document
+/// out at the most, as in Chrome's print (Blink's `printingMaximumShrinkFactor`), so that a
+/// document far wider than the page stays readable.
+pub const MAX_SHRINK_TO_FIT: f32 = 1.5;
+
+/// The overflow [`RenderOptions::shrink_to_fit`] leaves alone: Blink's layout unit, the
+/// smallest overflow its print can see.
+const SHRINK_TO_FIT_TOLERANCE: f32 = 1.0 / 64.0;
+
 /// The stack of the thread each render runs on. Layout recurses for every level of nesting,
 /// using tens of kilobytes of stack per level, which would overflow the 1 MB stacks of the
 /// Windows main thread and of Ruby and .NET threads. The stack is reserved rather than
@@ -167,6 +195,37 @@ const STACK_SIZE: usize = 256 * 1024 * 1024;
 /// leaves anything behind on the caller's thread. A panic inside it is returned as
 /// [`Error::Internal`].
 pub fn render(html: &str, options: &RenderOptions) -> Result<Output, Error> {
+    within_limits(html, options, || render_on_this_thread(html, options))
+}
+
+/// The width of a document's content in a browser window of the size `window`, in CSS
+/// pixels: the document's scroll width, which is the window's width, or more when content
+/// reaches past its right edge. The document is laid out for the screen, so `screen` media
+/// queries match and `print` ones do not, on one continuous page that `@page` rules do not
+/// size.
+///
+/// A caller that prints at a fixed page size can fit a wide document on it with the
+/// [`RenderOptions::scale`] of the page area's width divided by this width. Of `options`,
+/// the stylesheet, the assets and the limits apply.
+pub fn content_width(html: &str, window: Size, options: &RenderOptions) -> Result<f32, Error> {
+    let positive = |length: f32| length > 0.0 && length.is_finite();
+    if !(positive(window.width) && positive(window.height)) {
+        return Err(Error::InvalidOptions(format!(
+            "the window must be wider and taller than 0, and finite, not {} by {}",
+            window.width, window.height
+        )));
+    }
+    within_limits(html, options, || {
+        Ok(content_width_on_this_thread(html, window, options))
+    })
+}
+
+/// Runs `work` on `html` on a thread of its own, within the limits of `options`.
+fn within_limits<T: Send>(
+    html: &str,
+    options: &RenderOptions,
+    work: impl FnOnce() -> Result<T, Error> + Send,
+) -> Result<T, Error> {
     let limits = &options.limits;
     if html.len() > limits.max_input_bytes {
         return Err(Error::LimitExceeded {
@@ -184,9 +243,7 @@ pub fn render(html: &str, options: &RenderOptions) -> Result<Output, Error> {
         thread::Builder::new()
             .name("rustyprint".into())
             .stack_size(STACK_SIZE)
-            .spawn_scoped(scope, || {
-                budget::run(budget, || render_on_this_thread(html, options))
-            })
+            .spawn_scoped(scope, || budget::run(budget, work))
             .map(|thread| thread.join())
     });
     let exceeded = |limit, max: usize| Error::LimitExceeded {
@@ -221,6 +278,55 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     if html.contains("<!--rustyprint:panic-->") {
         panic!("rustyprint:panic comment in the document");
     }
+    let (laid_out, warnings) = lay_out(html, options)?;
+    let pdf = rustyprint_pdf::write(&laid_out).map_err(|e| Error::Internal(e.to_string()))?;
+    Ok(Output { pdf, warnings })
+}
+
+/// The scroll width of a document laid out for the screen in a window, within the budget
+/// [`budget::run`] has set for this thread.
+fn content_width_on_this_thread(html: &str, window: Size, options: &RenderOptions) -> f32 {
+    let document = Document::parse(html);
+    budget::check_document(&document);
+    let page = PageOptions {
+        size: window,
+        margin: Sides::all(0.0),
+    };
+    let loader = assets::Loader::new(&options.assets);
+    let base = document.base_url().map(str::to_owned);
+    let get = |url: &str| match &base {
+        Some(base) => loader.get(&rustyprint_dom::resolve_url(base, url)),
+        None => loader.get(url),
+    };
+    let load = |url: &str| get(url).and_then(|bytes| String::from_utf8(bytes).ok());
+    let load_font = |url: &str| get(url);
+    let load_file = |url: &str| get(url);
+    let images = Images::new(&load_file).with_max_pixels(options.limits.max_image_pixels);
+    let styles = rustyprint_layout::style(
+        &document,
+        &StyleOptions {
+            page_size: (window.width, window.height),
+            media_size: (window.width, window.height),
+            zoom: 1.0,
+            stylesheet: options.stylesheet.as_deref(),
+            load: &load,
+            font_metrics: Some(&rustyprint_layout::font_metrics),
+            load_font: Some(&load_font),
+            screen: true,
+        },
+        &page,
+        &images,
+    );
+    let root = rustyprint_layout::layout_tree(&document, &styles, &page, &images);
+    let right = root.map_or(0.0, |root| root.scroll_right());
+    right.max(window.width)
+}
+
+/// Lays a document out into what its pages paint, with the warnings of doing so.
+fn lay_out(
+    html: &str,
+    options: &RenderOptions,
+) -> Result<(rustyprint_layout::display::Document, Vec<String>), Error> {
     let document = Document::parse(html);
     budget::check_document(&document);
     let page = PageOptions {
@@ -239,31 +345,59 @@ fn render_on_this_thread(html: &str, options: &RenderOptions) -> Result<Output, 
     let load_font = |url: &str| get(url);
     let load_file = |url: &str| get(url);
     let images = Images::new(&load_file).with_max_pixels(options.limits.max_image_pixels);
-    let styles = rustyprint_layout::style(
-        &document,
-        &StyleOptions {
-            page_size: (area.width, area.height),
-            stylesheet: options.stylesheet.as_deref(),
-            load: &load,
-            font_metrics: Some(&rustyprint_layout::font_metrics),
-            load_font: Some(&load_font),
-        },
-        &page,
-        &images,
-    );
+    let scale = options.scale;
+    if !(MIN_SCALE..=MAX_SCALE).contains(&scale) {
+        return Err(Error::InvalidOptions(format!(
+            "scale: {scale} is not from {MIN_SCALE} to {MAX_SCALE}"
+        )));
+    }
+    // A zoom on the root scales every length of the document, so lines and tables reflow
+    // to the page area as the document measures it, rather than being scaled as an image.
+    let lay_out_at = |zoom: f32| {
+        let styles = rustyprint_layout::style(
+            &document,
+            &StyleOptions {
+                page_size: (area.width, area.height),
+                media_size: (area.width / scale, area.height / scale),
+                zoom,
+                stylesheet: options.stylesheet.as_deref(),
+                load: &load,
+                font_metrics: Some(&rustyprint_layout::font_metrics),
+                load_font: Some(&load_font),
+                screen: false,
+            },
+            &page,
+            &images,
+        );
+        let pages = rustyprint_layout::layout_pages(&document, &styles, &page, &images);
+        (styles, pages)
+    };
+    let (mut styles, mut pages) = lay_out_at(scale);
+    let overflows = |pages: &[rustyprint_layout::LaidPage]| {
+        let overflow = rustyprint_layout::overflow(pages);
+        ((overflow - 1.0) * area.width > SHRINK_TO_FIT_TOLERANCE).then_some(overflow)
+    };
+    let mut clip = false;
+    if options.shrink_to_fit
+        && let Some(overflow) = overflows(&pages)
+    {
+        (styles, pages) = lay_out_at(scale / overflow.min(MAX_SHRINK_TO_FIT));
+        // What is still too wide once laid out again, whether because it was wider than
+        // the most the document shrinks or because it grows with the page area, is cut off.
+        clip = overflows(&pages).is_some();
+    }
+    let mut laid_out = rustyprint_layout::paint_pages(&document, &styles, &pages, &images, clip);
     let mut warnings: Vec<String> = styles
         .warnings
         .iter()
         .map(|w| format!("{}:{}: {}", w.source, w.warning.line, w.warning.message))
         .collect();
-    let mut laid_out = layout(&document, &styles, &page, &images);
     warnings.extend(loader.warnings());
     warnings.extend(images.warnings());
     if options.title.is_some() {
         laid_out.title = options.title.clone();
     }
-    let pdf = rustyprint_pdf::write(&laid_out).map_err(|e| Error::Internal(e.to_string()))?;
-    Ok(Output { pdf, warnings })
+    Ok((laid_out, warnings))
 }
 
 #[cfg(test)]
@@ -287,6 +421,736 @@ mod tests {
         assert!(text.contains("Title"), "{text:?}");
         assert!(text.contains("bold"), "{text:?}");
         assert!(output.warnings.is_empty());
+    }
+
+    /// A piece of text a page paints: its text, left and right edges, baseline and font
+    /// size, in CSS pixels on its page.
+    #[derive(Debug, Clone, PartialEq)]
+    struct Painted {
+        text: String,
+        left: f32,
+        right: f32,
+        baseline: f32,
+        size: f32,
+    }
+
+    /// The text every page of a document paints, in painting order.
+    fn painted(html: &str, options: &RenderOptions) -> Vec<Painted> {
+        use rustyprint_layout::display::DisplayItem;
+        let (document, _) = lay_out(html, options).unwrap();
+        let runs = document.pages.iter().flat_map(|page| &page.items);
+        runs.filter_map(|item| match item {
+            DisplayItem::Text(run) => Some(Painted {
+                text: run
+                    .glyphs
+                    .iter()
+                    .map(|g| &run.text[g.text.clone()])
+                    .collect(),
+                left: run.origin.x,
+                right: run.origin.x + run.width(),
+                baseline: run.origin.y,
+                size: run.size,
+            }),
+            _ => None,
+        })
+        .collect()
+    }
+
+    /// The painted text that reads `text`.
+    fn find(painted: &[Painted], text: &str) -> Painted {
+        let found = painted.iter().find(|p| p.text.trim() == text);
+        found
+            .unwrap_or_else(|| panic!("no {text:?} in {painted:?}"))
+            .clone()
+    }
+
+    /// A4 with 20px margins: a page area 753.7px wide.
+    fn narrow_margins() -> RenderOptions {
+        RenderOptions {
+            margin: Sides::all(20.0),
+            ..RenderOptions::default()
+        }
+    }
+
+    const AREA: f32 = 793.700_8 - 40.0;
+
+    const PLAIN: &str = "<style>body { margin: 0; font: 16px sans-serif }</style>";
+
+    /// A 700px box with `END` at its right: where `END` ends tells the scale of the page.
+    const RULER: &str = "<div style='width: 700px; text-align: right'>END</div>";
+
+    /// The scale a document with [`RULER`] is painted at.
+    fn scale_of(html: &str, options: &RenderOptions) -> f32 {
+        (find(&painted(html, options), "END").right - 20.0) / 700.0
+    }
+
+    fn shrunk() -> RenderOptions {
+        RenderOptions {
+            shrink_to_fit: true,
+            ..narrow_margins()
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_scales_content_wider_than_the_page_down_to_fit_it() {
+        // 1.4 times the printable width of A4 with 2cm margins, and taller than one page:
+        // it takes two pages as it is, and fits on one when laid out on a page area 1.4
+        // times as wide and as tall.
+        let printable = Size::A4.width - 4.0 * options::CM;
+        let html = format!(
+            "<style>body {{ margin: 0 }}</style><div style='width: {}px; height: 1300px; background: #eee'></div>",
+            printable * 1.4
+        );
+        let pages = |shrink_to_fit| {
+            let options = RenderOptions {
+                shrink_to_fit,
+                ..RenderOptions::default()
+            };
+            parse(&render(&html, &options).unwrap().pdf)
+                .get_pages()
+                .len()
+        };
+        assert_eq!(pages(false), 2);
+        assert_eq!(pages(true), 1);
+    }
+
+    #[test]
+    fn shrink_to_fit_lays_the_document_out_as_wide_as_its_widest_content() {
+        // The 1000px box makes the page area 1000px wide to the document, so everything is
+        // 753.7/1000 of its size and the box ends at the right of the page area.
+        let html =
+            format!("{PLAIN}<div style='width: 1000px; text-align: right'>WIDE</div>{RULER}");
+        assert_eq!(scale_of(&html, &narrow_margins()), 1.0);
+        let scale = scale_of(&html, &shrunk());
+        assert!((scale - AREA / 1000.0).abs() < 0.001, "{scale}");
+        let wide = find(&painted(&html, &shrunk()), "WIDE");
+        assert!((wide.right - (20.0 + AREA)).abs() < 0.01, "{wide:?}");
+        assert!((wide.size - 16.0 * AREA / 1000.0).abs() < 0.01, "{wide:?}");
+    }
+
+    #[test]
+    fn shrink_to_fit_reflows_text_to_the_wider_page_area() {
+        // A paragraph takes fewer lines on the page area the 1000px box makes.
+        let html = format!(
+            "{PLAIN}<div style='width: 1000px; height: 10px'></div><p>{}</p>",
+            "word ".repeat(60)
+        );
+        let lines = |options: &RenderOptions| painted(&html, options).len();
+        assert!(lines(&shrunk()) < lines(&narrow_margins()));
+    }
+
+    #[test]
+    fn shrink_to_fit_shrinks_to_two_thirds_at_the_most() {
+        // Text that cannot wrap, a table of cells that cannot, a box, an image and an
+        // absolutely positioned box, all more than 1.5 times as wide as the page area.
+        let cells = "<td>unbreakable</td>".repeat(40);
+        let pixel =
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        for wide in [
+            format!("<p style='white-space: nowrap'>{}</p>", "word ".repeat(80)),
+            format!("<table><tr>{cells}</tr></table>"),
+            "<div style='width: 3000px; height: 10px'></div>".to_owned(),
+            format!("<img src='{pixel}' style='width: 3000px; height: 10px'>"),
+            "<div style='position: absolute; left: 2000px; width: 100px; height: 10px'></div>"
+                .to_owned(),
+        ] {
+            let scale = scale_of(&format!("{PLAIN}{wide}{RULER}"), &shrunk());
+            assert!((scale - 1.0 / 1.5).abs() < 0.001, "{scale} for {wide}");
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_shrinks_every_page_by_the_widest() {
+        let html = format!(
+            "{PLAIN}{RULER}<div style='break-before: page; width: 1000px; height: 10px'></div>"
+        );
+        let scale = scale_of(&html, &shrunk());
+        assert!((scale - AREA / 1000.0).abs() < 0.001, "{scale}");
+    }
+
+    #[test]
+    fn shrink_to_fit_cuts_off_what_is_wider_than_one_and_a_half_pages() {
+        // 300 words on one line: the page shows the ones that start in 1.5 times its width,
+        // and the rest are not in the document at all.
+        let words: String = (0..300).map(|i| format!("w{i:03} ")).collect();
+        let html = format!("{PLAIN}<p style='white-space: nowrap; margin: 0'>{words}</p>");
+        let line = find_line(&painted(&html, &shrunk()));
+        assert!(line.text.starts_with("w000 "), "{line:?}");
+        assert!(!line.text.contains("w299"), "{line:?}");
+        // The last glyph starts before the right of the page area, and the next would not.
+        let edge = 20.0 + AREA;
+        assert!(line.right > edge && line.right < edge + 16.0, "{line:?}");
+        // Without it every word is painted, most of them off the page.
+        let line = find_line(&painted(&html, &narrow_margins()));
+        assert!(line.text.contains("w299"), "{line:?}");
+    }
+
+    /// The one line a document paints.
+    fn find_line(painted: &[Painted]) -> Painted {
+        assert_eq!(painted.len(), 1, "{painted:?}");
+        painted[0].clone()
+    }
+
+    #[test]
+    fn shrink_to_fit_cuts_off_boxes_past_the_page_area() {
+        use rustyprint_layout::display::DisplayItem;
+        let html = format!(
+            "{PLAIN}<div style='width: 3000px; height: 10px; background: red'></div>\
+             <div style='margin-left: 2000px; width: 50px; height: 10px; background: blue'></div>"
+        );
+        let (document, _) = lay_out(&html, &shrunk()).unwrap();
+        let rects: Vec<_> = document.pages[0]
+            .items
+            .iter()
+            .filter(|item| matches!(item, DisplayItem::Rect { .. }))
+            .collect();
+        // The red box is clipped; the blue one starts past the edge and is left out.
+        assert_eq!(rects.len(), 1, "{rects:?}");
+        let clipped = document.pages[0].items.iter().any(|item| {
+            matches!(item, DisplayItem::PushClip(clip) if (clip.right() - (20.0 + AREA)).abs() < 0.01)
+        });
+        assert!(clipped, "{:?}", document.pages[0].items);
+    }
+
+    #[test]
+    fn shrink_to_fit_does_not_count_what_a_box_clips() {
+        for clipping in ["overflow: hidden", "overflow-x: auto", "contain: paint"] {
+            let html = format!(
+                "{PLAIN}<div style='{clipping}; width: 700px'><div style='width: 1500px'>clipped</div></div>{RULER}"
+            );
+            assert_eq!(scale_of(&html, &shrunk()), 1.0, "{clipping}");
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_does_not_count_spaces_at_the_end_of_a_line() {
+        // The line is full to the last word: the space after it hangs past the edge.
+        let html = format!("{PLAIN}<p>{}</p>{RULER}", "word ".repeat(200));
+        assert_eq!(scale_of(&html, &shrunk()), 1.0);
+    }
+
+    #[test]
+    fn scale_lays_the_document_out_on_a_wider_page_area() {
+        // At 0.5 the 753.7px page area is 1507.4px to the document: a 1400px box fits,
+        // media queries see 1507.4px, and everything is half the size.
+        let html = format!(
+            "{PLAIN}<style>.query {{ display: none }}\
+             @media (min-width: 1507px) {{ .met {{ display: block }} }}\
+             @media (min-width: 1508px) {{ .unmet {{ display: block }} }}</style>\
+             <div style='width: 1400px; text-align: right'>WIDE</div>{RULER}\
+             <div class='query met'>MET</div><div class='query unmet'>UNMET</div>"
+        );
+        let options = RenderOptions {
+            scale: 0.5,
+            ..narrow_margins()
+        };
+        let painted = painted(&html, &options);
+        assert!(painted.iter().any(|p| p.text == "MET"), "{painted:?}");
+        assert!(!painted.iter().any(|p| p.text == "UNMET"), "{painted:?}");
+        let wide = find(&painted, "WIDE");
+        assert!((wide.right - (20.0 + 700.0)).abs() < 0.01, "{wide:?}");
+        assert!((wide.size - 8.0).abs() < 0.01, "{wide:?}");
+        assert!((scale_of(&html, &options) - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn scale_leaves_the_page_and_its_margin_boxes_alone() {
+        let html = format!(
+            "{PLAIN}<style>@page {{ margin: 100px; @bottom-left {{ content: 'FOOT'; font: 20px sans-serif }} }}</style>\
+             <div style='height: 100px'></div><div>BODY</div>"
+        );
+        let at = |scale: f32| {
+            let options = RenderOptions {
+                scale,
+                ..RenderOptions::default()
+            };
+            let painted = painted(&html, &options);
+            (find(&painted, "FOOT"), find(&painted, "BODY"))
+        };
+        let ((foot, body), (half_foot, half_body)) = (at(1.0), at(0.5));
+        assert_eq!(foot, half_foot);
+        // The body starts at the 100px margin either way; its second box is 100px or 50px
+        // further down, in text half the size.
+        assert_eq!(body.left, 100.0);
+        assert_eq!(half_body.left, 100.0);
+        assert!(
+            (body.baseline - half_body.baseline - 50.0 - 0.5 * (body.baseline - 200.0)).abs()
+                < 0.01
+        );
+        assert_eq!(half_body.size, 8.0);
+    }
+
+    #[test]
+    fn scale_scales_borders_after_they_snap_to_whole_pixels() {
+        // A 1px border is 0.9px at 0.9, not the 1px that 0.9px would snap to.
+        let html = "<div style='border-top: 1px solid; margin-top: 50px'></div>";
+        let options = RenderOptions {
+            scale: 0.9,
+            ..RenderOptions::default()
+        };
+        let (document, _) = lay_out(html, &options).unwrap();
+        let heights: Vec<f32> = document.pages[0]
+            .items
+            .iter()
+            .filter_map(|item| item.bounds())
+            .map(|bounds| bounds.height)
+            .collect();
+        assert_eq!(heights.len(), 1, "{heights:?}");
+        assert!((heights[0] - 0.9).abs() < 0.001, "{heights:?}");
+    }
+
+    #[test]
+    fn scale_must_be_one_a_print_can_have() {
+        for scale in [0.0, 0.05, 2.5, f32::NAN] {
+            let options = RenderOptions {
+                scale,
+                ..RenderOptions::default()
+            };
+            assert!(
+                matches!(render("<p>x</p>", &options), Err(Error::InvalidOptions(_))),
+                "{scale}"
+            );
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_shrinks_a_scaled_document_from_its_scale() {
+        // At 0.9 the page area is 837px to the document: a 600px box fits, a 1000px box
+        // makes it 1000px, and a 2000px box 1.5 times 837px.
+        let options = RenderOptions {
+            scale: 0.9,
+            ..shrunk()
+        };
+        for (width, expected) in [(600, 0.9), (1000, AREA / 1000.0), (2000, 0.9 / 1.5)] {
+            let html = format!("{PLAIN}<div style='width: {width}px; height: 10px'></div>{RULER}");
+            let scale = scale_of(&html, &options);
+            assert!((scale - expected).abs() < 0.001, "{width}: {scale}");
+        }
+    }
+
+    const WINDOW: Size = Size::new(800.0, 600.0);
+
+    fn width_of(html: &str) -> f32 {
+        content_width(html, WINDOW, &RenderOptions::default()).unwrap()
+    }
+
+    #[test]
+    fn content_width_is_the_window_width_when_the_content_fits() {
+        assert_eq!(width_of("<p>Hello</p>"), 800.0);
+        assert_eq!(width_of(""), 800.0);
+    }
+
+    #[test]
+    fn content_width_reaches_to_the_right_edge_of_the_widest_content() {
+        let body = "<body style='margin: 0 0 0 10px'>";
+        let wide = format!("{body}<div style='width: 1000px'>Wide</div>");
+        assert_eq!(width_of(&wide), 1010.0);
+        let table = format!("{body}<table style='width: 1200px; border-spacing: 0'><tr><td>Cell");
+        assert_eq!(width_of(&table), 1210.0);
+        let word = format!(
+            "{body}<div style='width: 100px; font: 16px monospace'>{}",
+            "W".repeat(200)
+        );
+        assert!(width_of(&word) > 1500.0, "{}", width_of(&word));
+    }
+
+    #[test]
+    fn content_width_does_not_count_what_a_box_clips() {
+        let clipped = "<div style='overflow: hidden; width: 300px'><div style='width: 2000px'>Wide</div></div>";
+        assert_eq!(width_of(clipped), 800.0);
+    }
+
+    #[test]
+    fn content_width_is_measured_for_the_screen() {
+        let html = |medium: &str| {
+            format!(
+                "<style>body {{ margin: 0 }} @media {medium} {{ div {{ width: 1000px }} }}</style>\
+                 <div>Wide</div>"
+            )
+        };
+        assert_eq!(width_of(&html("screen")), 1000.0);
+        assert_eq!(width_of(&html("print")), 800.0);
+        assert_eq!(
+            width_of(&html("(min-width: 800px) and (max-width: 800px)")),
+            1000.0
+        );
+    }
+
+    #[test]
+    fn content_width_is_measured_on_one_page_that_page_rules_do_not_size() {
+        let html = "<style>@page { size: 300px 300px; margin: 50px } body { margin: 0 }</style>\
+                    <div style='width: 100%; height: 5000px'>Tall</div>";
+        assert_eq!(width_of(html), 800.0);
+    }
+
+    #[test]
+    fn content_width_does_not_depend_on_the_page_or_the_scale() {
+        let options = RenderOptions {
+            page_size: Size::new(300.0, 300.0),
+            scale: 0.5,
+            shrink_to_fit: true,
+            stylesheet: Some("div { width: 900px }".into()),
+            ..RenderOptions::default()
+        };
+        let html = "<body style='margin: 0'><div>Wide</div>";
+        assert_eq!(content_width(html, WINDOW, &options).unwrap(), 900.0);
+    }
+
+    #[test]
+    fn content_width_counts_boxes_where_their_transforms_take_them() {
+        let html = "<body style='margin: 0'>\
+                    <div style='width: 100px; height: 10px; transform: translateX(1000px)'></div>";
+        assert_eq!(width_of(html), 1100.0);
+    }
+
+    #[test]
+    fn content_width_does_not_count_boxes_fixed_to_the_window() {
+        let fixed = "<div style='position: fixed; left: 2000px; width: 100px; height: 10px'></div>";
+        assert_eq!(width_of(fixed), 800.0);
+        // Inside a transform, a fixed box scrolls with the transformed box.
+        let transformed =
+            format!("<body style='margin: 0'><div style='transform: translateX(0)'>{fixed}</div>");
+        assert_eq!(width_of(&transformed), 2100.0);
+    }
+
+    #[test]
+    fn content_width_lays_out_past_forced_breaks() {
+        let html = "<body style='margin: 0'><div style='break-after: page'>First</div>\
+                    <div style='width: 2000px'>Wide</div>";
+        assert_eq!(width_of(html), 2000.0);
+        let in_cell = "<body style='margin: 0'><table style='border-spacing: 0'><tr><td style='padding: 0'>\
+                       <div style='break-after: page'>First</div><div style='width: 2000px'>Wide</div>";
+        assert_eq!(width_of(in_cell), 2000.0);
+    }
+
+    #[test]
+    fn content_width_does_not_paginate_for_page_numbers() {
+        // `target-counter()` page numbers come from pages, which a window does not have.
+        let html = format!(
+            "<style>a::after {{ content: target-counter(attr(href url), page) }}</style>\
+             <a href='#end'>to the end</a>{}<p id='end'>End</p>",
+            "<p>Line</p>".repeat(200)
+        );
+        let options = RenderOptions {
+            limits: Limits {
+                max_pages: 1,
+                ..Limits::default()
+            },
+            ..RenderOptions::default()
+        };
+        let width = content_width(&html, WINDOW, &options);
+        assert_eq!(width.ok(), Some(800.0));
+    }
+
+    #[test]
+    fn content_width_sees_the_media_features_of_a_screen() {
+        let html = "<style>body { margin: 0 } @media (overflow-block: scroll) { div { width: 1000px } }</style>\
+                    <div>Wide</div>";
+        assert_eq!(width_of(html), 1000.0);
+    }
+
+    #[test]
+    fn content_width_keeps_to_the_limits_and_refuses_an_empty_window() {
+        let limits = Limits {
+            max_input_bytes: 4,
+            ..Limits::default()
+        };
+        let options = RenderOptions {
+            limits,
+            ..RenderOptions::default()
+        };
+        let exceeded = content_width("<p>Hello</p>", WINDOW, &options);
+        assert!(
+            matches!(exceeded, Err(Error::LimitExceeded { .. })),
+            "{exceeded:?}"
+        );
+        for (width, height) in [
+            (0.0, 600.0),
+            (f32::INFINITY, 600.0),
+            (800.0, f32::INFINITY),
+            (f32::NAN, 600.0),
+        ] {
+            let window = Size::new(width, height);
+            let refused = content_width("<p>Hello</p>", window, &RenderOptions::default());
+            assert!(
+                matches!(refused, Err(Error::InvalidOptions(_))),
+                "{window:?}: {refused:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_leaves_content_that_fits_alone() {
+        let html = "<p>Fits.</p>".repeat(80);
+        let pages = |shrink_to_fit| {
+            let options = RenderOptions {
+                shrink_to_fit,
+                ..RenderOptions::default()
+            };
+            render(&html, &options).unwrap().pdf
+        };
+        assert_eq!(pages(false), pages(true));
+    }
+
+    fn at_scale(scale: f32) -> RenderOptions {
+        RenderOptions {
+            scale,
+            ..narrow_margins()
+        }
+    }
+
+    /// The heights of the boxes the first page paints.
+    fn painted_heights(html: &str, options: &RenderOptions) -> Vec<f32> {
+        let (document, _) = lay_out(html, options).unwrap();
+        document.pages[0]
+            .items
+            .iter()
+            .filter_map(|item| item.bounds())
+            .map(|bounds| bounds.height)
+            .collect()
+    }
+
+    #[test]
+    fn scale_leaves_root_relative_and_inherited_lengths_of_the_page_alone() {
+        // `rem` in `@page` is the root's font size as written, and the margin box inherits
+        // the root's letter spacing as written.
+        let html = "<style>html { font: 20px sans-serif; letter-spacing: 3px }\
+             @page { margin: 2rem; @bottom-left { content: 'FOOT' } }\
+             body { margin: 0 }</style><div>BODY</div>";
+        let at = |scale: f32| {
+            let options = RenderOptions {
+                scale,
+                ..RenderOptions::default()
+            };
+            let painted = painted(html, &options);
+            (find(&painted, "FOOT"), find(&painted, "BODY"))
+        };
+        let ((foot, body), (half_foot, half_body)) = (at(1.0), at(0.5));
+        assert_eq!(foot, half_foot);
+        assert_eq!(body.left, 40.0);
+        assert_eq!(half_body.left, 40.0);
+    }
+
+    #[test]
+    fn scale_scales_initial_lengths() {
+        // A border without a width is `medium`, 3px; `font-size: initial` is 16px.
+        let html = "<div style='border-top-style: solid; margin-top: 50px'></div>";
+        assert_eq!(painted_heights(html, &at_scale(0.5)), [1.5]);
+        let html =
+            "<div style='border-top: solid; border-top-width: initial; margin-top: 50px'></div>";
+        assert_eq!(painted_heights(html, &at_scale(0.5)), [1.5]);
+        let html = format!("{PLAIN}<p style='font-size: initial'>INITIAL</p>");
+        assert_eq!(find(&painted(&html, &at_scale(0.5)), "INITIAL").size, 8.0);
+    }
+
+    #[test]
+    fn scale_snaps_borders_that_are_whole_pixels_as_written() {
+        let html = "<div style='border-top: 3px solid; margin-top: 50px'></div>";
+        let heights = painted_heights(html, &at_scale(0.9));
+        assert_eq!(heights.len(), 1, "{heights:?}");
+        assert!((heights[0] - 2.7).abs() < 0.001, "{heights:?}");
+    }
+
+    #[test]
+    fn scale_scales_what_a_frame_shows() {
+        // The frame is 400px to the document: its media queries see 400px, and its text is
+        // half the size too.
+        let frame = "<style>body { margin: 0; font: 16px sans-serif } .w { display: none }\
+             @media (min-width: 400px) { .w { display: block } }</style>\
+             <div>FRAME</div><div class=w>WIDE</div>";
+        let html = format!(
+            "{PLAIN}<iframe style='width: 400px; height: 200px; border: 0' srcdoc='{frame}'></iframe>"
+        );
+        let painted = painted(&html, &at_scale(0.5));
+        assert_eq!(find(&painted, "FRAME").size, 8.0, "{painted:?}");
+        assert_eq!(find(&painted, "WIDE").size, 8.0, "{painted:?}");
+    }
+
+    #[test]
+    fn scale_scales_the_default_size_of_videos_and_frames() {
+        // A video without a poster and a frame without a size are 300px wide.
+        for element in [
+            "<video></video>",
+            "<iframe style='border: 0' srcdoc=''></iframe>",
+        ] {
+            let html = format!("{PLAIN}{element}<span>AFTER</span>");
+            let after = find(&painted(&html, &at_scale(0.5)), "AFTER");
+            assert!(
+                (after.left - (20.0 + 150.0)).abs() < 0.01,
+                "{element}: {after:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_counts_spaces_that_do_not_hang() {
+        // Preserved spaces and no-break spaces take room at the end of a line.
+        for wide in [
+            format!("<p style='white-space: pre'>x{}</p>", " ".repeat(300)),
+            format!("<p>x{}</p>", "&nbsp;".repeat(300)),
+        ] {
+            let scale = scale_of(&format!("{PLAIN}{wide}{RULER}"), &shrunk());
+            assert!(scale < 1.0, "{scale} for {wide}");
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_cuts_off_what_is_still_too_wide_when_laid_out_again() {
+        // 100px wider than any page area: shrinking does not make it fit.
+        let html = format!(
+            "{PLAIN}<div style='width: calc(100% + 100px); height: 10px; background: red'></div>"
+        );
+        let (document, _) = lay_out(&html, &shrunk()).unwrap();
+        let clipped = document.pages[0].items.iter().any(|item| {
+            matches!(item, rustyprint_layout::display::DisplayItem::PushClip(clip) if (clip.right() - (20.0 + AREA)).abs() < 0.01)
+        });
+        assert!(clipped, "{:?}", document.pages[0].items);
+    }
+
+    #[test]
+    fn shrink_to_fit_counts_boxes_where_their_transforms_take_them() {
+        let html = format!(
+            "{PLAIN}<div style='width: 100px; height: 10px; transform: translateX(900px)'></div>{RULER}"
+        );
+        let scale = scale_of(&html, &shrunk());
+        assert!((scale - AREA / 1000.0).abs() < 0.001, "{scale}");
+    }
+
+    #[test]
+    fn shrink_to_fit_cuts_off_transformed_text_on_the_page() {
+        let words: String = (0..300).map(|i| format!("w{i:03} ")).collect();
+        let html = format!(
+            "{PLAIN}<p style='white-space: nowrap; margin: 0; transform: translateX(10px)'>{words}</p>"
+        );
+        let line = find_line(&painted(&html, &shrunk()));
+        assert!(line.text.starts_with("w000 "), "{line:?}");
+        assert!(!line.text.contains("w299"), "{line:?}");
+        // The run is moved 10px by the transform: it ends past the edge by less than a glyph.
+        let edge = 20.0 + AREA - 10.0 * AREA / 1500.0;
+        assert!(line.right > edge && line.right < edge + 16.0, "{line:?}");
+    }
+
+    #[test]
+    fn shrink_to_fit_cuts_off_links_at_the_page_area() {
+        let words: String = (0..300).map(|i| format!("w{i:03} ")).collect();
+        let html = format!(
+            "{PLAIN}<p style='white-space: nowrap; margin: 0'><a href='https://a.example/'>{words}</a></p>\
+             <div style='margin-left: 2000px; width: 50px'><a href='https://b.example/'>B</a></div>"
+        );
+        let (document, _) = lay_out(&html, &shrunk()).unwrap();
+        let links = &document.pages[0].links;
+        assert_eq!(links.len(), 1, "{links:?}");
+        assert!(
+            (links[0].rect.right() - (20.0 + AREA)).abs() < 0.01,
+            "{links:?}"
+        );
+    }
+
+    #[test]
+    fn shrink_to_fit_counts_the_nodes_of_a_frame_once() {
+        // Laying the document out again does not parse the frame again.
+        let frame = "<p>x</p>".repeat(50);
+        let html = format!(
+            "{PLAIN}<iframe srcdoc='{frame}'></iframe><div style='width: 1000px; height: 10px'></div>"
+        );
+        let nodes = Document::parse(&html).node_count() + Document::parse(&frame).node_count();
+        let options = RenderOptions {
+            limits: Limits {
+                max_nodes: nodes,
+                ..Limits::default()
+            },
+            ..shrunk()
+        };
+        let rendered = render(&html, &options);
+        assert!(rendered.is_ok(), "{:?}", rendered.err());
+    }
+
+    /// The pages `html` takes on A4 with 2cm margins, with or without `shrink_to_fit`.
+    fn pages_shrunk(html: &str, shrink_to_fit: bool) -> usize {
+        let options = RenderOptions {
+            shrink_to_fit,
+            ..RenderOptions::default()
+        };
+        parse(&render(html, &options).unwrap().pdf)
+            .get_pages()
+            .len()
+    }
+
+    /// The width and height of A4's page area with 2cm margins.
+    fn printable() -> (f32, f32) {
+        (
+            Size::A4.width - 4.0 * options::CM,
+            Size::A4.height - 4.0 * options::CM,
+        )
+    }
+
+    #[test]
+    fn shrink_to_fit_multiplies_the_documents_own_zoom() {
+        // 2.8 printable widths at the document's zoom of 0.5 paint 1.4: shrunk by that much
+        // more, within the most the document shrinks, its 2400px fit on one page. Neither a
+        // rule nor an inline style for the root replaces the shrink.
+        let (width, _) = printable();
+        for zoom in [
+            "<style>html { zoom: 0.5 }</style><html>",
+            "<html style='zoom: 0.5'>",
+        ] {
+            let html = format!(
+                "{zoom}<style>body {{ margin: 0 }}</style><div style='width: {}px; height: 2400px; background: #eee'></div>",
+                width * 2.8
+            );
+            assert_eq!(pages_shrunk(&html, false), 2, "{zoom}");
+            assert_eq!(pages_shrunk(&html, true), 1, "{zoom}");
+        }
+    }
+
+    #[test]
+    fn shrink_to_fit_measures_the_page_area_page_rules_set() {
+        // 500px is wider than the 360px area of a 400px page with 20px margins, though not
+        // than A4's: shrunk to fit, the 1000px block fits in that area's 760px height.
+        let html = "<style>@page { size: 400px 800px; margin: 20px } body { margin: 0 }</style>\
+            <div style='width: 500px; height: 1000px; background: #eee'></div>";
+        assert_eq!(pages_shrunk(html, false), 2);
+        assert_eq!(pages_shrunk(html, true), 1);
+    }
+
+    #[test]
+    fn shrink_to_fit_ignores_page_backgrounds_and_margin_boxes() {
+        // The content fits across the page, so it is not shrunk onto one page though the
+        // page's background and margin boxes reach the sheet's edge.
+        let (_, height) = printable();
+        let html = format!(
+            "<style>@page {{ background: white; @top-right {{ content: 'x'; width: 100% }} }} body {{ margin: 0 }}</style>\
+            <div style='width: 100px; height: {}px; background: #eee'></div>",
+            height + 20.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 2);
+    }
+
+    #[test]
+    fn shrink_to_fit_ignores_what_overflow_clips() {
+        let (_, height) = printable();
+        let html = format!(
+            "<style>body {{ margin: 0 }}</style><div style='width: 100px; overflow: hidden'>\
+            <div style='width: 2000px; height: {}px; background: #eee'></div></div>",
+            height + 20.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 2);
+    }
+
+    #[test]
+    fn shrink_to_fit_fits_content_a_few_pixels_too_wide() {
+        // 5px too wide shrinks by about 0.8%, which takes the 3px too tall block onto one
+        // page.
+        let (width, height) = printable();
+        let html = format!(
+            "<style>body {{ margin: 0 }}</style><div style='width: {}px; height: {}px; background: #eee'></div>",
+            width + 5.0,
+            height + 3.0
+        );
+        assert_eq!(pages_shrunk(&html, false), 2);
+        assert_eq!(pages_shrunk(&html, true), 1);
     }
 
     #[test]

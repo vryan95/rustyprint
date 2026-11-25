@@ -1,4 +1,5 @@
-//! Media queries, evaluated for paged print output (see `css-at-rules.md`).
+//! Media queries, evaluated for paged print output, or for a screen when the width of a
+//! document in a browser window is measured (see `css-at-rules.md`).
 
 use std::collections::HashMap;
 
@@ -34,7 +35,7 @@ pub enum MediaQuery {
 pub enum MediaType {
     All,
     Print,
-    /// Any other type, including `screen`; none of them match.
+    /// Any other type. `screen` matches a screen; the rest match nothing.
     Other(String),
 }
 
@@ -130,6 +131,8 @@ pub struct MediaEnvironment<'a> {
     /// The page area, in CSS pixels.
     pub width: f32,
     pub height: f32,
+    /// Whether the medium is a screen rather than print.
+    pub screen: bool,
     pub custom_media: &'a HashMap<String, CustomMedia>,
 }
 
@@ -382,7 +385,11 @@ impl MediaQuery {
                 media_type,
                 condition,
             } => {
-                let type_matches = matches!(media_type, MediaType::All | MediaType::Print);
+                let type_matches = match media_type {
+                    MediaType::All => true,
+                    MediaType::Print => !env.screen,
+                    MediaType::Other(name) => env.screen && name == "screen",
+                };
                 let result = type_matches
                     && condition
                         .as_ref()
@@ -457,10 +464,13 @@ impl MediaCondition {
     }
 }
 
-/// The value of a discrete media feature in print output, or `None` if the feature is
-/// unknown. `scan` has no value: it applies only to TV displays.
-fn discrete_value(name: &str) -> Option<Option<&'static str>> {
+/// The value of a discrete media feature in print output, or on a screen, or `None` if the
+/// feature is unknown. `scan` has no value: it applies only to TV displays. A screen
+/// scrolls the content that overflows it and updates it as it changes.
+fn discrete_value(name: &str, screen: bool) -> Option<Option<&'static str>> {
     Some(Some(match name {
+        "overflow-block" | "overflow-inline" if screen => "scroll",
+        "update" if screen => "fast",
         "any-hover" | "hover" | "any-pointer" | "pointer" | "forced-colors" | "inverted-colors"
         | "overflow-inline" | "scripting" | "update" => "none",
         "color-gamut" => "srgb",
@@ -490,7 +500,7 @@ impl MediaFeature {
     fn evaluate(&self, env: &MediaEnvironment) -> Option<bool> {
         match self {
             MediaFeature::Boolean(name) => {
-                if let Some(value) = discrete_value(name) {
+                if let Some(value) = discrete_value(name, env.screen) {
                     return Some(value.is_some_and(|v| v != "none" && v != "no-preference"));
                 }
                 if name == "orientation" {
@@ -509,7 +519,7 @@ impl MediaFeature {
                 value,
             } => {
                 if prefix.is_none() {
-                    if let Some(actual) = discrete_value(name) {
+                    if let Some(actual) = discrete_value(name, env.screen) {
                         let MediaValue::Ident(wanted) = value else {
                             return None;
                         };
@@ -594,6 +604,10 @@ mod tests {
     use super::*;
 
     fn matches(query: &str) -> bool {
+        matches_on(query, false)
+    }
+
+    fn matches_on(query: &str, screen: bool) -> bool {
         let custom = HashMap::from([
             (
                 "--narrow".to_owned(),
@@ -605,6 +619,7 @@ mod tests {
         let env = MediaEnvironment {
             width: 643.0,
             height: 971.0,
+            screen,
             custom_media: &custom,
         };
         parse(query).matches(&env)
@@ -613,6 +628,31 @@ mod tests {
     fn parse(query: &str) -> MediaQueryList {
         let mut input = Parser::new(query);
         MediaQueryList::parse(&mut input)
+    }
+
+    #[test]
+    fn media_types_on_a_screen() {
+        assert!(matches_on("", true));
+        assert!(matches_on("all", true));
+        assert!(matches_on("screen", true));
+        assert!(matches_on("only screen and (min-width: 600px)", true));
+        assert!(!matches_on("print", true));
+        assert!(matches_on("not print", true));
+        assert!(!matches_on("not screen", true));
+        assert!(matches_on("screen, print", true));
+        assert!(!matches_on("tv", true));
+    }
+
+    #[test]
+    fn media_features_of_a_screen() {
+        assert!(matches_on("(overflow-block: scroll)", true));
+        assert!(!matches_on("(overflow-block: paged)", true));
+        assert!(matches_on("(overflow-inline: scroll)", true));
+        assert!(matches_on("(update: fast)", true));
+        assert!(matches_on("(update)", true));
+        assert!(!matches_on("(overflow-block: scroll)", false));
+        assert!(matches_on("(overflow-block: paged)", false));
+        assert!(!matches_on("(update)", false));
     }
 
     #[test]

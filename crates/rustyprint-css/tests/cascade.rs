@@ -24,10 +24,13 @@ fn style_with(html: &str, extra: Option<&str>, files: &[(&str, &str)]) -> (Docum
         &document,
         &StyleOptions {
             page_size: PAGE,
+            media_size: PAGE,
+            zoom: 1.0,
             stylesheet: extra,
             load: &load,
             font_metrics: None,
             load_font: None,
+            screen: false,
         },
     );
     (document, styles)

@@ -863,6 +863,7 @@ fn layout_flow(
                 } else {
                     None
                 };
+                // A layout that is one continuous flow has no page or column to break to.
                 if paged
                     && index > start
                     && let Some(side) = forced_between(&blocks[index - 1], child, columns)
@@ -1690,14 +1691,22 @@ fn replaced_size_in(
         given.or(natural_ratio)
     };
     let (width, height) = (width_of(&style.width), height_of(&style.height));
+    // The default size of replaced content, 300 by 150 CSS pixels, takes the element's zoom.
+    let (default_w, default_h) = (300.0 * style.effective_zoom, 150.0 * style.effective_zoom);
     let (mut w, mut h) = match (width, height) {
         (Some(w), Some(h)) => (w, h),
-        (Some(w), None) => (w, ratio.map_or(natural.map_or(150.0, |n| n.1), |r| w / r)),
-        (None, Some(h)) => (ratio.map_or(natural.map_or(300.0, |n| n.0), |r| h * r), h),
+        (Some(w), None) => (
+            w,
+            ratio.map_or(natural.map_or(default_h, |n| n.1), |r| w / r),
+        ),
+        (None, Some(h)) => (
+            ratio.map_or(natural.map_or(default_w, |n| n.0), |r| h * r),
+            h,
+        ),
         (None, None) => match (natural, ratio) {
             (Some(n), _) => n,
-            (None, Some(r)) => (300.0, 300.0 / r),
-            (None, None) => (300.0, 150.0),
+            (None, Some(r)) => (default_w, default_w / r),
+            (None, None) => (default_w, default_h),
         },
     };
     let min_w = width_of(&style.min_width).unwrap_or(0.0);

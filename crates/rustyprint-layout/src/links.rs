@@ -9,18 +9,38 @@ use crate::display::{Bookmark, Destination, Link, LinkTarget, Rect};
 use crate::fragment::ElementBox;
 use crate::paginate::LaidPage;
 
-/// The links of each page, and the bookmarks of the document.
-pub(crate) fn collect(document: &Document, pages: &[LaidPage]) -> (Vec<Vec<Link>>, Vec<Bookmark>) {
+/// The part of `rect` left of `edge`, if any.
+fn left_of(rect: Rect, edge: Option<f32>) -> Option<Rect> {
+    match edge {
+        None => Some(rect),
+        Some(edge) if rect.x < edge => Some(Rect::new(
+            rect.x,
+            rect.y,
+            rect.width.min(edge - rect.x),
+            rect.height,
+        )),
+        Some(_) => None,
+    }
+}
+
+/// The links of each page, and the bookmarks of the document. With `cut`, the content of
+/// each page is cut off at the right of its page area, and so are its links.
+pub(crate) fn collect(
+    document: &Document,
+    pages: &[LaidPage],
+    cut: bool,
+) -> (Vec<Vec<Link>>, Vec<Bookmark>) {
     // Every box on every page, in page coordinates. Margin boxes can hold links too, but
     // only the page area holds destinations.
     let mut boxes: Vec<Vec<(NodeId, Rect)>> = Vec::with_capacity(pages.len());
-    // The content boxes of images with an image map, on each page.
-    let mut mapped: Vec<Vec<(NodeId, Rect)>> = Vec::with_capacity(pages.len());
+    // The content boxes of images with an image map, on each page, and where their areas
+    // are cut off.
+    let mut mapped: Vec<Vec<(NodeId, Rect, Option<f32>)>> = Vec::with_capacity(pages.len());
     let mut first: HashMap<NodeId, Destination> = HashMap::new();
     for (index, page) in pages.iter().enumerate() {
         let mut on_page = Vec::new();
         let mut images = Vec::new();
-        let mut add = |node: NodeId, rect: Rect, element: ElementBox<'_>| {
+        let mut add = |node: NodeId, rect: Rect, element: ElementBox<'_>, edge: Option<f32>| {
             if let ElementBox::Block(block) = element
                 && document
                     .element(node)
@@ -31,23 +51,27 @@ pub(crate) fn collect(document: &Document, pages: &[LaidPage]) -> (Vec<Vec<Link>
                 images.push((
                     node,
                     Rect::new(rect.x + dx, rect.y + dy, content.width, content.height),
+                    edge,
                 ));
             }
-            on_page.push((node, rect));
+            if let Some(rect) = left_of(rect, edge) {
+                on_page.push((node, rect));
+            }
         };
         if let Some(root) = &page.root {
+            let edge = cut.then(|| page.area.right());
             for (node, rect, element) in root.element_boxes() {
                 let rect = rect.translated(page.area.x, page.area.y);
                 first.entry(node).or_insert(Destination {
                     page: index,
                     y: rect.y,
                 });
-                add(node, rect, element);
+                add(node, rect, element, edge);
             }
         }
         for margin_box in &page.margin_boxes {
             for (node, rect, element) in margin_box.fragment.element_boxes() {
-                add(node, rect, element);
+                add(node, rect, element, None);
             }
         }
         boxes.push(on_page);
@@ -126,8 +150,11 @@ pub(crate) fn collect(document: &Document, pages: &[LaidPage]) -> (Vec<Vec<Link>
             // Image map areas come last, over the image's own link. The first area in tree
             // order wins where areas overlap, and viewers pick the last annotation, so the
             // areas go in reverse.
-            for &(image, content) in images {
+            for &(image, content, edge) in images {
                 for (href, rect) in map_areas(document, image, content).into_iter().rev() {
+                    let Some(rect) = left_of(rect, edge) else {
+                        continue;
+                    };
                     if let Some(target) = target(&href) {
                         links.push(Link { rect, target });
                     }

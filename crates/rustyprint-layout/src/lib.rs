@@ -82,8 +82,8 @@ pub fn layout_tree(
 ) -> Option<fragment::BoxFragment> {
     let area = page.area();
     let built = boxes::build_with_targets(document, styles, images, &boxes::Targets::default())?;
-    // Page numbers of link targets come from the paginated layout.
-    let root = if built.uses_targets {
+    // Page numbers of link targets come from the paginated layout. A screen has no pages.
+    let root = if built.uses_targets && !styles.screen {
         paginated(document, styles, page, images).0.root
     } else {
         built.root
@@ -214,7 +214,7 @@ pub fn links_and_bookmarks(
     document: &Document,
     pages: &[LaidPage],
 ) -> (Vec<Vec<Link>>, Vec<Bookmark>) {
-    links::collect(document, pages)
+    links::collect(document, pages, false)
 }
 
 /// The display items a box and its descendants paint, relative to the box's parent. Fixed
@@ -245,10 +245,83 @@ pub fn layout(
     page: &PageOptions,
     images: &Images,
 ) -> display::Document {
-    let title = document_title(document);
     let laid_pages = layout_pages(document, styles, page, images);
-    let (mut links, bookmarks) = links_and_bookmarks(document, &laid_pages);
-    picture::register_elements(document, &laid_pages, images);
+    paint_pages(document, styles, &laid_pages, images, false)
+}
+
+/// How many times wider than its page area a page's content is laid out, for the page
+/// where that is the most: 1 when every page's content fits. This is what a browser's print
+/// shrinks a document by.
+pub fn overflow(pages: &[LaidPage]) -> f32 {
+    let factor = |page: &LaidPage| {
+        let root = page.root.as_ref()?;
+        (page.area.width > 0.0).then(|| root.overflow_right() / page.area.width)
+    };
+    pages.iter().filter_map(factor).fold(1.0, f32::max)
+}
+
+/// Leaves out the items, and the glyphs at the end of a text run, that start at or past
+/// `edge` on the page, where their transforms take them: a clip there hides them, and text
+/// that is not on the page should not be in the document either.
+fn cut_right(items: impl Iterator<Item = DisplayItem>, edge: f32) -> Vec<DisplayItem> {
+    // The transformation onto the page inside each open clip or transform.
+    let mut open: Vec<display::Matrix> = Vec::new();
+    let mut out = Vec::new();
+    for mut item in items {
+        let m = open.last().copied().unwrap_or(display::IDENTITY);
+        match &mut item {
+            DisplayItem::PushTransform(transform) => open.push(display::multiply(m, *transform)),
+            DisplayItem::PushClip(_)
+            | DisplayItem::PushClipPath { .. }
+            | DisplayItem::PushClipText(_) => open.push(m),
+            DisplayItem::PopClip => {
+                open.pop();
+            }
+            DisplayItem::Text(run) => {
+                // The glyphs up to the last that starts left of the edge: in a transform,
+                // the ones before it need not be.
+                let (y, mut x) = (run.origin.y, run.origin.x);
+                let mut visible = 0;
+                for (index, glyph) in run.glyphs.iter().enumerate() {
+                    let start = display::apply(m, Point::new(x, y)).x;
+                    x += glyph.x_advance;
+                    let end = display::apply(m, Point::new(x, y)).x;
+                    if start.min(end) < edge {
+                        visible = index + 1;
+                    }
+                }
+                if visible == 0 {
+                    continue;
+                }
+                run.glyphs.truncate(visible);
+            }
+            other => {
+                let bounds = other
+                    .bounds()
+                    .map(|bounds| display::transform_rect(m, bounds));
+                if bounds.is_some_and(|bounds| bounds.x >= edge) {
+                    continue;
+                }
+            }
+        }
+        out.push(item);
+    }
+    out
+}
+
+/// Paints laid-out pages. `clip` cuts off what the content paints to the right of its page
+/// area, as a browser's print does with content that is still too wide when shrunk as far
+/// as it goes.
+pub fn paint_pages(
+    document: &Document,
+    styles: &Styles,
+    laid_pages: &[LaidPage],
+    images: &Images,
+    clip: bool,
+) -> display::Document {
+    let title = document_title(document);
+    let (mut links, bookmarks) = links::collect(document, laid_pages, clip);
+    picture::register_elements(document, laid_pages, images);
     let pages = laid_pages
         .iter()
         .zip(links.iter_mut())
@@ -259,12 +332,24 @@ pub fn layout(
             if let Some(root) = &laid.root {
                 let area = laid.area;
                 let viewport = Rect::new(0.0, 0.0, area.width, area.height);
-                items.extend(
-                    paint::paint(root, images, viewport)
-                        .items
-                        .iter()
-                        .map(|item| item.translated(area.x, area.y)),
-                );
+                let painted = paint::paint(root, images, viewport);
+                let content = painted
+                    .items
+                    .iter()
+                    .map(|item| item.translated(area.x, area.y));
+                if clip {
+                    let Size { width, height } = laid.size;
+                    items.push(DisplayItem::PushClip(Rect::new(
+                        -width,
+                        -height,
+                        width + area.right(),
+                        3.0 * height,
+                    )));
+                    items.extend(cut_right(content, area.right()));
+                    items.push(DisplayItem::PopClip);
+                } else {
+                    items.extend(content);
+                }
             }
             let sheet = Rect::new(0.0, 0.0, laid.size.width, laid.size.height);
             for margin_box in &laid.margin_boxes {

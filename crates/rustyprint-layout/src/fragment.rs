@@ -11,7 +11,7 @@
 use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
-use rustyprint_css::properties::types::TextDecorationStyle;
+use rustyprint_css::properties::types::{Overflow, Position, TextDecorationStyle};
 use rustyprint_dom::NodeId;
 
 use crate::display::{Color, Rect, Size, TextRun};
@@ -387,6 +387,62 @@ impl BoxFragment {
         out
     }
 
+    /// How far right the box and what it lays out reach, relative to the parent's border
+    /// box: the right edge of its border box and, unless the box clips them, of the boxes
+    /// and text inside it, where their transforms take them.
+    pub fn overflow_right(&self) -> f32 {
+        self.reach_right(true)
+    }
+
+    /// How far right a window scrolls to show what this root box lays out: its
+    /// [`overflow_right`](Self::overflow_right) without the boxes fixed to the viewport,
+    /// which do not scroll. Boxes fixed inside a transform scroll with it, and count.
+    pub fn scroll_right(&self) -> f32 {
+        self.reach_right(false)
+    }
+
+    fn reach_right(&self, viewport_fixed: bool) -> f32 {
+        let right = self.untransformed_overflow_right(viewport_fixed);
+        if !crate::transform::has_transform(&self.style) {
+            return right;
+        }
+        // The box's overflow to the right, as tall as the box, where its transform takes
+        // it. Its containing block, for a motion path, is taken to be the box itself.
+        let reach = Rect::new(
+            self.rect.x,
+            self.rect.y,
+            right - self.rect.x,
+            self.rect.height,
+        );
+        let m = crate::transform::box_matrix(self, self.rect, self.rect);
+        crate::transform::flatten(&m, self.rect)
+            .map_or(right, |m| crate::display::transform_rect(m, reach).right())
+    }
+
+    /// The root box holds the boxes fixed to the viewport: `viewport_fixed` is whether its
+    /// fixed children count.
+    fn untransformed_overflow_right(&self, viewport_fixed: bool) -> f32 {
+        let own = self.rect.right();
+        if self.style.overflow_x != Overflow::Visible || self.style.used_contain().paint {
+            return own;
+        }
+        let counted = |child: &&Fragment| match child {
+            Fragment::Box(child) => viewport_fixed || child.style.position != Position::Fixed,
+            Fragment::Line(_) => true,
+        };
+        let inside = self
+            .children
+            .iter()
+            .filter(counted)
+            .map(|child| match child {
+                Fragment::Box(child) => child.overflow_right(),
+                // A turned line's items are in axes of their own: the line's box stands for them.
+                Fragment::Line(line) if line.turned().is_some() => line.rect.right(),
+                Fragment::Line(line) => line.rect.x + items_right(&line.items),
+            });
+        inside.fold(own, |right, child| right.max(self.rect.x + child))
+    }
+
     /// The number of line boxes in this box, including nested block boxes.
     pub fn line_count(&self) -> usize {
         self.children
@@ -414,6 +470,17 @@ impl BoxFragment {
             self.padding.left,
         )
     }
+}
+
+/// How far right line items reach, relative to their line. The spaces that hang at the end
+/// of a line are not among them: the line breaker leaves them out of its runs.
+fn items_right(items: &[LineItem]) -> f32 {
+    let right = |item: &LineItem| match item {
+        LineItem::Text(text) => text.run.origin.x + text.run.width(),
+        LineItem::Box(atomic) => atomic.overflow_right(),
+        LineItem::Inline(inline) => inline.rect.right().max(items_right(&inline.children)),
+    };
+    items.iter().map(right).fold(f32::MIN, f32::max)
 }
 
 fn collect_lines(fragment: &BoxFragment, out: &mut Vec<String>) {

@@ -160,7 +160,7 @@ Media queries are evaluated once, against the default page size from the request
 | --- | --- | --- | --- |
 | `all` | 2 | done | Matches. |
 | `print` | 2 | done | Matches. |
-| `screen` | 2 | done | Does not match. |
+| `screen` | 2 | done | Does not match in a render. Matches when `content_width` measures a document for the screen. |
 
 ### Features
 

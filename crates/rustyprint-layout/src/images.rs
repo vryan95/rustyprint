@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
 use rustyprint_css::properties::types::ImageOrientation;
+use rustyprint_dom::{Document, Element};
 
 /// A decoded raster image, as stored in the file: one image pixel is one CSS pixel unless
 /// `image-resolution` says otherwise.
@@ -88,9 +89,9 @@ impl Image {
 }
 
 /// An image's natural size in CSS pixels as it displays: turned by its orientation and
-/// scaled by `image-resolution`.
+/// scaled by `image-resolution` and by `zoom`.
 pub fn natural_size(image: &Image, style: &ComputedValues) -> (f32, f32) {
-    let dppx = style.image_resolution.dppx(image.resolution);
+    let dppx = style.image_resolution.dppx(image.resolution) / style.effective_zoom;
     let (w, h) = (image.width as f32 / dppx, image.height as f32 / dppx);
     if Image::turned(orientation(image, style.image_orientation)) {
         (h, w)
@@ -250,6 +251,8 @@ pub struct Images<'a> {
     elements: RefCell<HashMap<String, ElementImage>>,
     /// How many `iframe` documents are being built inside each other.
     frames: Cell<usize>,
+    /// The documents `iframe` elements show, by the address of the element.
+    frame_documents: RefCell<HashMap<usize, Option<Arc<Document>>>>,
     /// The most pixels an image may have; larger ones are not decoded.
     max_pixels: u64,
     warnings: RefCell<Vec<String>>,
@@ -270,6 +273,7 @@ impl<'a> Images<'a> {
             cache: RefCell::new(HashMap::new()),
             elements: RefCell::new(HashMap::new()),
             frames: Cell::new(0),
+            frame_documents: RefCell::new(HashMap::new()),
             max_pixels: u64::MAX,
             warnings: RefCell::new(Vec::new()),
         }
@@ -353,6 +357,27 @@ impl<'a> Images<'a> {
     /// How many framed documents are being built inside each other.
     pub(crate) fn frame_depth(&self) -> usize {
         self.frames.get()
+    }
+
+    /// The document a frame shows, from `load` the first time it is asked for. A document
+    /// can be laid out more than once, as for container queries or to shrink it to fit, and
+    /// its frames are loaded, parsed and counted against the limits once. The parsed
+    /// documents are kept, so the frames inside them are the same elements every time, and
+    /// one `Images` serves one document.
+    pub(crate) fn frame_document(
+        &self,
+        frame: &Element,
+        load: impl FnOnce() -> Option<Document>,
+    ) -> Option<Arc<Document>> {
+        let key = std::ptr::from_ref(frame) as usize;
+        if let Some(document) = self.frame_documents.borrow().get(&key) {
+            return document.clone();
+        }
+        let document = load().map(Arc::new);
+        self.frame_documents
+            .borrow_mut()
+            .insert(key, document.clone());
+        document
     }
 
     /// Builds a framed document one level deeper.

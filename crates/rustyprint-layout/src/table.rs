@@ -2243,10 +2243,13 @@ mod tests {
             &document,
             &StyleOptions {
                 page_size: (800.0, 1000.0),
+                media_size: (800.0, 1000.0),
+                zoom: 1.0,
                 stylesheet: None,
                 load: &load,
                 font_metrics: None,
                 load_font: None,
+                screen: false,
             },
         );
         let root = crate::boxes::build(&document, &styles, &Images::none()).unwrap();

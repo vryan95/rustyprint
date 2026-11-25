@@ -192,6 +192,49 @@ describe('signals and closing', () => {
   })
 })
 
+describe('contentWidth', () => {
+  const WINDOW = { width: 800, height: 600 }
+  const WIDE = '<body style="margin: 0"><div style="width: 1000px">Wide</div>'
+  const BOTH_WAYS = {
+    contentWidth: (html, window, options) => rustyprint.contentWidth(html, window, options),
+    contentWidthSync: async (html, window, options) => rustyprint.contentWidthSync(html, window, options)
+  }
+
+  for (const [name, measure] of Object.entries(BOTH_WAYS)) {
+    it(`${name} gives the window's width when the content fits, and the content's when it does not`, async () => {
+      assert.equal(await measure('<p>Hello</p>', WINDOW), 800)
+      assert.equal(await measure(WIDE, WINDOW), 1000)
+      assert.equal(await measure(Buffer.from(WIDE), { width: 1200, height: 600 }), 1200)
+    })
+
+    it(`${name} uses the stylesheet and the assets, for the screen`, async () => {
+      const html = '<link rel="stylesheet" href="wide.css"><body style="margin: 0"><div>Wide</div><p>Wider</p>'
+      const options = {
+        assets: { 'wide.css': '@media screen { div { width: 1100px } } @media print { div { width: 5000px } }' }
+      }
+      assert.equal(await measure(html, WINDOW, options), 1100)
+      assert.equal(await measure(html, WINDOW, { ...options, stylesheet: 'p { width: 1300px }' }), 1300)
+    })
+
+    it(`${name} fails as a render does`, async () => {
+      await assert.rejects(measure('<p>x</p>', WINDOW, { pageSize: 'B99' }), rustyprint.InvalidOptionsError)
+      await assert.rejects(measure('<p>x</p>', WINDOW, { limits: { maxInputBytes: 2 } }), rustyprint.LimitExceededError)
+      await assert.rejects(measure('<p>x</p>', { width: 0, height: 600 }), rustyprint.InvalidOptionsError)
+      await assert.rejects(measure('<p>x</p>', { width: '800px' }), TypeError)
+      await assert.rejects(measure('<p>x</p>'), TypeError)
+    })
+  }
+
+  it('measures on the workers of a renderer, between its renders', async () => {
+    const renderer = createRenderer({ concurrency: 1 })
+    const [output, width] = await Promise.all([renderer.render('<p>x</p>'), renderer.contentWidth(WIDE, WINDOW)])
+    assert.equal(output.pdf.subarray(0, 5).toString('latin1'), '%PDF-')
+    assert.equal(width, 1000)
+    await renderer.close()
+    await assert.rejects(renderer.contentWidth(WIDE, WINDOW), /closed/)
+  })
+})
+
 describe('errors', () => {
   it('makes every error a RustyprintError', () => {
     for (const Class of [rustyprint.InvalidOptionsError, rustyprint.LimitExceededError,

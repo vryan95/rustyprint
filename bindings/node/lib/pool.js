@@ -24,14 +24,15 @@ class Pool {
     this.closed = false
   }
 
-  // Renders a document on a worker. A signal stops a render that has not started; one that has
-  // started runs to the end, bounded by the deadline in its options.
-  run (html, options, signal) {
+  // Renders a document on a worker, or with a `window` measures the width of its content in a
+  // window of that size. A signal stops a render that has not started; one that has started
+  // runs to the end, bounded by the deadline in its options.
+  run (html, options, signal, window) {
     return new Promise((resolve, reject) => {
       if (this.closed) return reject(closedError())
       if (signal?.aborted) return reject(signal.reason)
 
-      const task = { message: { html, options }, resolve, reject, signal, onAbort: null }
+      const task = { message: { html, options, window }, resolve, reject, signal, onAbort: null }
       if (signal) {
         task.onAbort = () => {
           const index = this.queue.indexOf(task)
@@ -106,6 +107,7 @@ class Pool {
     this.idle.push(worker)
 
     if (reply.error) task.reject(errorFor(reply.error.kind, reply.error.message))
+    else if (reply.width !== undefined) task.resolve(reply.width)
     else task.resolve({ pdf: Buffer.from(reply.pdf), warnings: reply.warnings })
     this.drain()
   }

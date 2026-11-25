@@ -20,6 +20,7 @@ public class OptionsSchemaTests
     [
         new(),
         new() { PageSize = PageSize.A4, Margin = "15mm", Title = "Invoice 42" },
+        new() { PageSize = PageSize.A4, Landscape = true, Scale = 0.8, ShrinkToFit = true },
         new()
         {
             PageSize = PageSize.Letter,
@@ -60,6 +61,8 @@ public class OptionsSchemaTests
             PageSize = new PageSize("210mm", "297mm"),
             Landscape = false,
             Margin = "1cm",
+            Scale = 0.9,
+            ShrinkToFit = true,
             Title = "Title",
             Stylesheet = "p { color: red }",
             Remote = new RemoteOptions("cdn.example.com")

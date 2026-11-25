@@ -36,7 +36,7 @@ use std::ffi::{CString, c_char};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::{ptr, slice};
 
-use rustyprint::{Error, Output, RenderOptions};
+use rustyprint::{Error, Output, RenderOptions, Size};
 
 /// What a call did. A render's status is also its result's.
 #[repr(i32)]
@@ -63,11 +63,13 @@ pub struct Request {
     options: Result<RenderOptions, String>,
 }
 
-/// What a render gave: a PDF and its warnings, or an error. Made by `rp_render` and freed by
-/// `rp_result_free`.
+/// What a render gave: a PDF and its warnings, or an error. Made by `rp_render`, or by
+/// `rp_content_width` with a width in place of the PDF, and freed by `rp_result_free`.
 pub struct RenderResult {
     status: Status,
     pdf: Vec<u8>,
+    /// The width `rp_content_width` measured, in CSS pixels.
+    content_width: f64,
     /// A JSON array of strings.
     warnings: CString,
     error: Option<CString>,
@@ -79,7 +81,18 @@ impl RenderResult {
         Self {
             status: Status::Ok,
             pdf: output.pdf,
+            content_width: 0.0,
             warnings: c_string(warnings),
+            error: None,
+        }
+    }
+
+    fn content_width(width: f32) -> Self {
+        Self {
+            status: Status::Ok,
+            pdf: Vec::new(),
+            content_width: f64::from(width),
+            warnings: c"[]".to_owned(),
             error: None,
         }
     }
@@ -88,6 +101,7 @@ impl RenderResult {
         Self {
             status,
             pdf: Vec::new(),
+            content_width: 0.0,
             warnings: c"[]".to_owned(),
             error: Some(c_string(message.into())),
         }
@@ -255,6 +269,72 @@ pub unsafe extern "C" fn rp_render(
 ///
 /// As for [`rp_render`].
 unsafe fn render(request: *const Request, html: *const c_char, len: usize) -> RenderResult {
+    // SAFETY: the caller's guarantees are those `with_document` needs.
+    unsafe {
+        with_document(request, html, len, |html, options| {
+            rustyprint::render(html, options).map(RenderResult::output)
+        })
+    }
+}
+
+/// Measures the width, in CSS pixels, of the content of `len` bytes of UTF-8 HTML at `html` in
+/// a browser window `window_width` by `window_height` CSS pixels in size: the window's width,
+/// or more when content reaches past its right edge. The document is laid out for the screen,
+/// on one continuous page. Of the request's options, the stylesheet, the limits and the
+/// assets apply.
+///
+/// Stores the result in `*out`, which the caller frees with `rp_result_free`, and returns its
+/// status: `RP_STATUS_OK` with a width that `rp_result_content_width` gives, or an error with
+/// a message. A null `out` returns `RP_STATUS_INVALID_ARGUMENT`.
+///
+/// # Safety
+///
+/// As for [`rp_render`].
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rp_content_width(
+    request: *const Request,
+    html: *const c_char,
+    len: usize,
+    window_width: f64,
+    window_height: f64,
+    out: *mut *mut RenderResult,
+) -> Status {
+    if out.is_null() {
+        return Status::InvalidArgument;
+    }
+    let window = Size::new(window_width as f32, window_height as f32);
+    let result = guard(
+        || {
+            RenderResult::error(
+                Status::Internal,
+                "internal error: rp_content_width panicked",
+            )
+        },
+        // SAFETY: the caller's guarantees are those `with_document` needs.
+        || unsafe {
+            with_document(request, html, len, |html, options| {
+                rustyprint::content_width(html, window, options).map(RenderResult::content_width)
+            })
+        },
+    );
+    let status = result.status;
+    // SAFETY: `out` is not null, and the caller guarantees it is writable.
+    unsafe { *out = Box::into_raw(Box::new(result)) };
+    status
+}
+
+/// The result of `work` on the document and the request's options, or of what is wrong with
+/// either.
+///
+/// # Safety
+///
+/// As for [`rp_render`].
+unsafe fn with_document(
+    request: *const Request,
+    html: *const c_char,
+    len: usize,
+    work: impl FnOnce(&str, &RenderOptions) -> Result<RenderResult, Error>,
+) -> RenderResult {
     // SAFETY: the caller guarantees the request is null or live.
     let Some(request) = (unsafe { request.as_ref() }) else {
         return RenderResult::error(Status::InvalidArgument, "request is null");
@@ -276,10 +356,23 @@ unsafe fn render(request: *const Request, html: *const c_char, len: usize) -> Re
         Ok(options) => options,
         Err(message) => return RenderResult::error(Status::InvalidOptions, message.clone()),
     };
-    match rustyprint::render(html, options) {
-        Ok(output) => RenderResult::output(output),
-        Err(error) => RenderResult::error(status(&error), error.to_string()),
-    }
+    work(html, options)
+        .unwrap_or_else(|error| RenderResult::error(status(&error), error.to_string()))
+}
+
+/// The width `rp_content_width` measured, in CSS pixels. Zero if it failed, for a result of
+/// `rp_render` and for a null result.
+///
+/// # Safety
+///
+/// `result` is null or a live result.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn rp_result_content_width(result: *const RenderResult) -> f64 {
+    // SAFETY: the caller guarantees the result is null or live.
+    guard(
+        || 0.0,
+        || unsafe { result.as_ref() }.map_or(0.0, |r| r.content_width),
+    )
 }
 
 /// The result's status, the one `rp_render` returned. `RP_STATUS_INVALID_ARGUMENT` for a null
@@ -381,7 +474,8 @@ pub unsafe extern "C" fn rp_request_free(request: *mut Request) {
 ///
 /// # Safety
 ///
-/// `result` is null or a live result from `rp_render`, which is not used again.
+/// `result` is null or a live result from `rp_render` or `rp_content_width`, which is not used
+/// again.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn rp_result_free(result: *mut RenderResult) {
     if !result.is_null() {
