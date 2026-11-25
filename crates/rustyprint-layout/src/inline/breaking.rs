@@ -42,7 +42,8 @@ const EPSILON: f32 = 0.01;
 pub(crate) fn opportunities(p: &Paragraph) -> Vec<Opportunity> {
     let text = &*p.text;
     let mut out: Vec<Opportunity> = Vec::new();
-    for (pos, kind) in linebreaks(text) {
+    let after_hyphens = hyphen_digit_breaks(text).map(|pos| (pos, BreakOpportunity::Allowed));
+    for (pos, kind) in linebreaks(text).chain(after_hyphens) {
         if pos == 0 {
             continue;
         }
@@ -85,6 +86,19 @@ pub(crate) fn opportunities(p: &Paragraph) -> Vec<Opportunity> {
         true
     });
     out
+}
+
+/// The places after a hyphen-minus that has a letter or digit before it and a digit after
+/// it, as in `555-0100` and `AB-12`. UAX #14 keeps a hyphen and a number after it together,
+/// for negative numbers; browsers do so only when the hyphen can be a minus sign, so that
+/// long phone numbers, part numbers and URLs wrap.
+fn hyphen_digit_breaks(text: &str) -> impl Iterator<Item = usize> + '_ {
+    let bytes = text.as_bytes();
+    (2..bytes.len()).filter(move |&pos| {
+        bytes[pos].is_ascii_digit()
+            && bytes[pos - 1] == b'-'
+            && bytes[pos - 2].is_ascii_alphanumeric()
+    })
 }
 
 fn char_before(text: &str, pos: usize) -> Option<char> {
@@ -573,6 +587,29 @@ mod tests {
             .iter()
             .map(|l| p.text[l.start..breaker.trim_end(l.start, l.end)].to_owned())
             .collect()
+    }
+
+    #[test]
+    fn breaks_after_a_hyphen_between_a_letter_or_digit_and_a_digit() {
+        let narrow = |text: &str| lines(text, ComputedValues::initial(), 1.0);
+        // Phone numbers, part numbers and ranges wrap after their hyphens, as in browsers.
+        assert_eq!(narrow("555-0100"), ["555-", "0100"]);
+        assert_eq!(narrow("AB-12"), ["AB-", "12"]);
+        assert_eq!(
+            narrow("(555-0100/555-0101),555-0102"),
+            ["(555-", "0100/555-", "0101),555-", "0102"]
+        );
+        // A hyphen that can be a minus sign stays with its number.
+        assert_eq!(narrow("(-5"), ["(-5"]);
+        assert_eq!(narrow("x -5"), ["x", "-5"]);
+        assert_eq!(narrow("RD,-34.08"), ["RD,-34.08"]);
+    }
+
+    #[test]
+    fn a_hyphen_before_a_digit_does_not_break_text_that_does_not_wrap() {
+        let mut style = ComputedValues::initial();
+        style.text_wrap_mode = TextWrapMode::Nowrap;
+        assert_eq!(lines("555-0100", style, 1.0), ["555-0100"]);
     }
 
     #[test]

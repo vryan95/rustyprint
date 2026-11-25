@@ -8,9 +8,10 @@ license.workspace = true
 publish.workspace = true
 
 [features]
-default = ["cjk"]
+default = ["cjk", "emoji"]
 # Bundles Noto Sans SC (7.8 MB as WOFF2) for Chinese, Japanese and Korean text.
 cjk = ["rustyprint-layout/cjk"]
+emoji = ["rustyprint-layout/emoji"]
 # `RenderOptions::from_json`, for front ends that take options as JSON.
 serde = ["dep:serde", "dep:serde_json", "dep:serde_path_to_error"]
 # Makes `render` panic on a `<!--rustyprint:panic-->` comment, to test that panics are caught.

@@ -1,7 +1,6 @@
 //! Block layout: widths, heights and margin collapsing (CSS 2.1 §§ 8.3, 10.3–10.7), and
 //! breaking block and inline content across pages (CSS Fragmentation 3).
 
-use std::cell::Cell;
 use std::sync::Arc;
 
 use rustyprint_css::ComputedValues;
@@ -60,6 +59,22 @@ pub(crate) struct Fragmentainer {
     /// Whether the fragmentainer is a column of a multi-column container, where column
     /// breaks apply.
     pub columns: bool,
+}
+
+impl Fragmentainer {
+    /// The fragmentainer inside a box that avoids breaking inside it: below other content,
+    /// it has no end, so only forced breaks still break the box and its descendants.
+    pub(crate) fn avoiding(self, avoid: bool) -> Self {
+        if avoid && !self.at_top {
+            Fragmentainer {
+                available: f32::INFINITY,
+                at_top: true,
+                ..self
+            }
+        } else {
+            self
+        }
+    }
 }
 
 /// Where a box broke across pages, to continue its layout on the next page.
@@ -293,6 +308,19 @@ pub(crate) fn forced_between(
     }
 }
 
+/// Whether a forced page break separates two boxes anywhere in `block`'s block flow.
+pub(crate) fn has_forced_break(block: &BlockBox) -> bool {
+    match &block.contents {
+        BlockContents::Blocks(children) => {
+            children
+                .windows(2)
+                .any(|pair| forced_between(&pair[0], &pair[1], false).is_some())
+                || children.iter().any(has_forced_break)
+        }
+        _ => false,
+    }
+}
+
 /// The used page name where a box's content starts.
 fn start_page(block: &BlockBox) -> Option<&Arc<str>> {
     match &block.contents {
@@ -347,34 +375,16 @@ pub(crate) fn breaks_page(block: &BlockBox, token: &BreakToken) -> bool {
                     })
             }
         },
+        (BlockContents::Table(table), Resume::RowPart { index, cells }) => {
+            crate::table::breaks_page(table, *index, cells)
+        }
         _ => false,
     }
-}
-
-thread_local! {
-    // Whether the root being laid out is fragmented into pages. A box inside it can lay
-    // out without a fragmentainer, as when `break-inside: avoid` keeps it whole, and still
-    // breaks where a break is forced. A window, the layout that measures size containers
-    // and a frame's document are one continuous flow, in which forced breaks do nothing.
-    static FRAGMENTED: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Lays out the root element in a page area, from `resume` if earlier pages broke it.
 /// Without a fragmentainer, everything goes on one page area as tall as it needs.
 pub(crate) fn layout_root(
-    root: &BlockBox,
-    page_width: f32,
-    page_height: f32,
-    fragmentainer: Option<Fragmentainer>,
-    resume: Option<&BreakToken>,
-) -> (BoxFragment, Option<BreakToken>) {
-    let outer = FRAGMENTED.with(|f| f.replace(fragmentainer.is_some()));
-    let laid = layout_root_in(root, page_width, page_height, fragmentainer, resume);
-    FRAGMENTED.with(|f| f.set(outer));
-    laid
-}
-
-fn layout_root_in(
     root: &BlockBox,
     page_width: f32,
     page_height: f32,
@@ -745,12 +755,15 @@ fn layout_flow(
     // Breaking across pages. `break-inside: avoid` keeps the box whole unless it starts a
     // page, where it has to break.
     let columns = fragmentainer.is_some_and(|f| f.columns);
+    // Laid out without pages (a table cell measured before its row is placed), a forced
+    // break has nowhere to go: the content after it stays in this box.
+    let paged = fragmentainer.is_some();
     let avoid_inside = if columns {
         style.break_inside.avoids_column()
     } else {
         style.break_inside.avoids_page()
     };
-    let fragmentainer = fragmentainer.filter(|f| f.at_top || !avoid_inside);
+    let fragmentainer = fragmentainer.map(|f| f.avoiding(avoid_inside));
     let resumed = resume.is_some();
     let consumed = resume.map_or(0.0, |token| token.consumed);
     let clone = style.box_decoration_break == BoxDecorationBreak::Clone;
@@ -851,8 +864,8 @@ fn layout_flow(
                     None
                 };
                 // A layout that is one continuous flow has no page or column to break to.
-                if index > start
-                    && (fragmentainer.is_some() || FRAGMENTED.with(Cell::get))
+                if paged
+                    && index > start
                     && let Some(side) = forced_between(&blocks[index - 1], child, columns)
                 {
                     break_token = Some(BreakToken {
@@ -1624,20 +1637,31 @@ fn first_line(children: &mut [Fragment], dx: f32) -> Option<(&mut LineFragment, 
 /// The content-box size of a replaced element: its natural size and aspect ratio, fitted to
 /// `width`, `height` and their limits (CSS 2.1 § 10.3.2, § 10.4, § 10.6.2, § 10.7).
 fn replaced_size(block: &BlockBox, replaced: &Replaced, cb: ContainingBlock) -> (f32, f32) {
+    replaced_size_in(block, replaced, cb, Some(cb.width))
+}
+
+/// The used size of a replaced element whose percentage widths are of `basis`, or with
+/// `None` behave as `auto` and as no limit, as they do while the width of its containing
+/// block is not known yet.
+fn replaced_size_in(
+    block: &BlockBox,
+    replaced: &Replaced,
+    cb: ContainingBlock,
+    basis: Option<f32>,
+) -> (f32, f32) {
     let style = &block.style;
     let (padding, border) = padding_and_border(style, cb.width);
     let extra_w = padding.horizontal() + border.horizontal();
     let extra_h = padding.vertical() + border.vertical();
     let border_box = style.box_sizing == BoxSizing::BorderBox;
     let width_of = |size: &Size<LengthPercentage>| match size {
-        Size::Value(v) => {
-            let w = resolve(v, cb.width);
-            Some(if border_box {
+        Size::Value(v) => resolve_definite(v, basis).map(|w| {
+            if border_box {
                 (w - extra_w).max(0.0)
             } else {
                 w
-            })
-        }
+            }
+        }),
         _ => None,
     };
     let height_of = |size: &Size<LengthPercentage>| match size {
@@ -1987,8 +2011,12 @@ fn intrinsic_contents(block: &BlockBox) -> (f32, f32) {
             height: None,
             rtl: false,
         };
-        let (width, _) = replaced_size(block, replaced, cb);
-        return (width, width);
+        // A percentage width or `max-width` lets the element shrink with its container:
+        // it counts as zero towards the narrowest the container can be, and as not set
+        // towards the widest (CSS Sizing 3 §§ 5.2.1, 5.2.2).
+        let (min, _) = replaced_size_in(block, replaced, cb, Some(0.0));
+        let (max, _) = replaced_size_in(block, replaced, cb, None);
+        return (min.min(max), max);
     }
     match &block.contents {
         BlockContents::Inline(items) => inline::intrinsic(items, &block.style),
@@ -2029,7 +2057,8 @@ pub(crate) fn intrinsic_outer(block: &BlockBox) -> (f32, f32) {
         + fixed(&style.margin_left)
         + fixed(&style.margin_right);
     let (min, max) = match &style.width {
-        Size::Value(LengthPercentage::Length(px)) => {
+        // A replaced element's `max-width` and `min-width` apply to its width too.
+        Size::Value(LengthPercentage::Length(px)) if block.replaced.is_none() => {
             let content = if style.box_sizing == BoxSizing::BorderBox {
                 (px - padding.horizontal() - border.horizontal()).max(0.0)
             } else {

@@ -238,3 +238,19 @@ fn anonymous_blocks_have_no_borders() {
     let r = rect("<div><span id=a>t</span><div>x</div></div>", "a");
     assert!(close(r.x, 0.0) && close(r.y, 0.0), "{r:?}");
 }
+
+#[test]
+fn atomic_inlines_in_a_later_inline_box_keep_their_alignment() {
+    // The tall box makes the line 60px high and sits at its top, whichever inline box of the
+    // line it is in.
+    let tall = "<span id=t style='display: inline-block; width: 10px; height: 60px; \
+                vertical-align: top'></span>";
+    for before in ["", "<span></span>", "<span>a</span> <span>b</span> "] {
+        let body =
+            format!("<div id=d style='font: 10px/20px serif'>{before}<span>{tall}</span></div>");
+        let boxes = boxes(&body);
+        let of = |id: &str| boxes.iter().find(|(i, ..)| i == id).unwrap().1;
+        assert!(close(of("d").height, 60.0), "{before:?}: {:?}", of("d"));
+        assert!(close(of("t").y, 0.0), "{before:?}: {:?}", of("t"));
+    }
+}
