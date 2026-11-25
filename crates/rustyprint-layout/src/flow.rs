@@ -61,6 +61,22 @@ pub(crate) struct Fragmentainer {
     pub columns: bool,
 }
 
+impl Fragmentainer {
+    /// The fragmentainer inside a box that avoids breaking inside it: below other content,
+    /// it has no end, so only forced breaks still break the box and its descendants.
+    pub(crate) fn avoiding(self, avoid: bool) -> Self {
+        if avoid && !self.at_top {
+            Fragmentainer {
+                available: f32::INFINITY,
+                at_top: true,
+                ..self
+            }
+        } else {
+            self
+        }
+    }
+}
+
 /// Where a box broke across pages, to continue its layout on the next page.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct BreakToken {
@@ -308,6 +324,19 @@ pub(crate) fn forced_between(
     }
 }
 
+/// Whether a forced page break separates two boxes anywhere in `block`'s block flow.
+pub(crate) fn has_forced_break(block: &BlockBox) -> bool {
+    match &block.contents {
+        BlockContents::Blocks(children) => {
+            children
+                .windows(2)
+                .any(|pair| forced_between(&pair[0], &pair[1], false).is_some())
+                || children.iter().any(has_forced_break)
+        }
+        _ => false,
+    }
+}
+
 /// The used page name where a box's content starts.
 fn start_page(block: &BlockBox) -> Option<&Arc<str>> {
     match &block.contents {
@@ -362,6 +391,9 @@ pub(crate) fn breaks_page(block: &BlockBox, token: &BreakToken) -> bool {
                     })
             }
         },
+        (BlockContents::Table(table), Resume::RowPart { index, cells }) => {
+            crate::table::breaks_page(table, *index, cells)
+        }
         _ => false,
     }
 }
@@ -806,12 +838,15 @@ fn layout_box(
     // Breaking across pages. `break-inside: avoid` keeps the box whole unless it starts a
     // page, where it has to break.
     let columns = fragmentainer.is_some_and(|f| f.columns);
+    // Laid out without pages (a table cell measured before its row is placed), a forced
+    // break has nowhere to go: the content after it stays in this box.
+    let paged = fragmentainer.is_some();
     let avoid_inside = if columns {
         style.break_inside.avoids_column()
     } else {
         style.break_inside.avoids_page()
     };
-    let fragmentainer = fragmentainer.filter(|f| f.at_top || !avoid_inside);
+    let fragmentainer = fragmentainer.map(|f| f.avoiding(avoid_inside));
     let resumed = resume.is_some();
     let consumed = resume.map_or(0.0, |token| token.consumed);
     let clone = style.box_decoration_break == BoxDecorationBreak::Clone;
@@ -911,7 +946,8 @@ fn layout_box(
                 } else {
                     None
                 };
-                if index > start
+                if paged
+                    && index > start
                     && let Some(side) = forced_between(&blocks[index - 1], child, columns)
                 {
                     break_token = Some(BreakToken {

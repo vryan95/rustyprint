@@ -1120,7 +1120,9 @@ fn push_run(run: TextRun, items: &mut Vec<DisplayItem>) {
         upright.origin = Point::new(0.0, 0.0);
         upright.glyphs = glyphs;
         upright.upright = None;
-        items.push(DisplayItem::Text(upright));
+        if !crate::color_glyphs::paint_run(&upright, items) {
+            items.push(DisplayItem::Text(upright));
+        }
         items.push(DisplayItem::PopClip);
     };
     match upright {

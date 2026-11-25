@@ -290,6 +290,27 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "emoji")]
+    fn emoji_fall_back_to_the_bundled_color_emoji_font() {
+        // No font in the document draws the emoji: it comes from Noto Color Emoji, in color.
+        let output = render("<p>Bag 42 \u{1F381}</p>", &RenderOptions::default()).unwrap();
+        let doc = parse(&output.pdf);
+        let fonts: Vec<String> = doc
+            .objects
+            .values()
+            .filter_map(|o| o.as_dict().ok())
+            .filter_map(|d| d.get(b"BaseFont").ok())
+            .filter_map(|n| n.as_name().ok())
+            .map(|n| String::from_utf8_lossy(n).into_owned())
+            .collect();
+        assert!(
+            fonts.iter().any(|f| f.contains("NotoColorEmoji")),
+            "{fonts:?}"
+        );
+        assert!(output.warnings.is_empty(), "{:?}", output.warnings);
+    }
+
+    #[test]
     fn long_documents_get_more_pages() {
         let html = "<p>Line of text.</p>".repeat(200);
         let output = render(&html, &RenderOptions::default()).unwrap();

@@ -276,6 +276,8 @@ pub(crate) fn layout(
         rtl,
         paged: fragmentainer.is_some(),
     };
+    // A page with no end, inside a box that avoids breaks, gives the columns no height.
+    let fragmentainer = fragmentainer.filter(|f| f.available.is_finite());
     // The height the content may take: a definite height or `max-height`, less what
     // earlier pages took.
     let consumed = resume.map_or(0.0, |token| token.consumed);
