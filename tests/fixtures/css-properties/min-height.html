@@ -5,12 +5,37 @@
 <style>
 #p { height: 200px }
 #t { min-height: 10% }
+.k { display: inline-block; width: 10px; height: 10px; vertical-align: top }
+.t { display: table; line-height: 20px }
+table { border-spacing: 2px; line-height: 20px }
+td, th { padding: 0 }
 </style>
 <script type="text/x-rustyprint-expect">
 #t { min-height: 10%; layout-height: 20px }
+#a { layout-height: 55px }
+#b { layout-height: 80px }
+#b1 { layout-height: 76px }
+#c { layout-height: 55px }
+#d { layout-height: 100px }
+#e { layout-height: 20px }
+#f { layout-height: 60px }
+#g { layout-height: 50px }
+#h { layout-height: 55px }
+#i { layout-height: 90px }
+#i1 { layout-height: 10px }
+#i2 { layout-height: 76px }
 </script>
 </head>
 <body>
 <div id=p><div id=t></div></div>
+<div id=a class=t style="min-height: 55px"><b class=k></b></div>
+<table id=b style="min-height: 80px"><tr id=b1><td><b class=k></b></td></tr></table>
+<div id=c class=t style="min-height: 55px; box-sizing: border-box; border: 1px solid; padding: 4px"><b class=k></b></div>
+<div style="height: 200px"><div id=d class=t style="min-height: 50%"><b class=k></b></div></div>
+<div><div id=e class=t style="min-height: 50%"><b class=k></b></div></div>
+<div id=f class=t style="height: 20px; min-height: 60px"><b class=k></b></div>
+<div id=g class=t style="min-height: 50px; width: 30px"></div>
+<div><span id=h class=t style="display: inline-table; min-height: 55px"><b class=k></b></span></div>
+<table id=i style="min-height: 80px"><caption id=i1><div style="height: 10px"></div></caption><tr id=i2><td><div style="height: 10px"></div></td></tr></table>
 </body>
 </html>

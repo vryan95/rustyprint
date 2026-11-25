@@ -1190,7 +1190,10 @@ pub(crate) struct Prepared {
     /// Cells in grid order, and the range of them starting in each row.
     cells: Vec<LaidCell>,
     row_cells: Vec<Range<usize>>,
+    /// The height each row needs, before the table's own height gives it more.
     heights: Vec<f32>,
+    /// The rows a height constrains: their own, or that of a cell in them alone.
+    constrained: Vec<bool>,
     baselines: Vec<f32>,
     top_captions: Vec<(BoxFragment, Sides)>,
     bottom_captions: Vec<(BoxFragment, Sides)>,
@@ -1430,29 +1433,6 @@ fn prepare(
             heights[r] = 0.0;
         }
     }
-    // A taller table gives its body rows the extra height, in proportion.
-    if let Size::Value(LengthPercentage::Length(h)) = &outer.height {
-        let content = if outer.box_sizing == BoxSizing::BorderBox {
-            h - padding.vertical() - border.vertical()
-        } else {
-            *h
-        };
-        let have = heights.iter().sum::<f32>() + vs * (rows + 1) as f32;
-        let body: Vec<usize> = (0..rows)
-            .filter(|&r| grid[r].kind == GroupKind::Body && !grid[r].collapsed)
-            .collect();
-        if content > have && !body.is_empty() {
-            let total: f32 = body.iter().map(|&r| heights[r]).sum();
-            for &r in &body {
-                heights[r] += if total > 0.0 {
-                    (content - have) * heights[r] / total
-                } else {
-                    (content - have) / body.len() as f32
-                };
-            }
-        }
-    }
-
     // Captions, at the table's width.
     let caption_cb = ContainingBlock {
         width,
@@ -1488,6 +1468,7 @@ fn prepare(
         cells,
         row_cells,
         heights,
+        constrained,
         baselines,
         top_captions,
         bottom_captions,
@@ -1526,6 +1507,129 @@ fn grow_spanned_rows(heights: &mut [f32], extra: f32, constrained: &[bool], star
     if growing.is_empty() {
         heights[rows - 1] += extra;
         return;
+    }
+    let total: f32 = growing.iter().map(|&r| heights[r]).sum();
+    for &r in &growing {
+        heights[r] += extra * heights[r] / total;
+    }
+}
+
+/// The least height of a table's content box: the height its flex or grid container gave
+/// it, or its `height` within `max-height`, or `min-height` when that is more. Its rows may
+/// need more (CSS 2.1 § 17.5.3). A percentage needs a containing block with a height.
+/// `padding` and `border` are the table's own, top and bottom together.
+fn least_height(
+    outer: &ComputedValues,
+    cb: ContainingBlock,
+    kind: BlockKind,
+    (padding, border): (f32, f32),
+) -> Option<f32> {
+    if let BlockKind::Item {
+        height: Some(height),
+        ..
+    } = kind
+    {
+        return Some(height);
+    }
+    let content_box = |size: &Size<LengthPercentage>| {
+        let Size::Value(value) = size else {
+            return None;
+        };
+        let height = flow::resolve_definite(value, cb.height)?;
+        Some(if outer.box_sizing == BoxSizing::BorderBox {
+            (height - padding - border).max(0.0)
+        } else {
+            height
+        })
+    };
+    let height = content_box(&outer.height)
+        .map(|height| content_box(&outer.max_height).map_or(height, |most| height.min(most)));
+    match (height, content_box(&outer.min_height)) {
+        (Some(height), Some(least)) => Some(height.max(least)),
+        (height, least) => height.or(least),
+    }
+}
+
+/// The grid rows of each row group that takes the extra height of a table taller than its
+/// rows: the body groups, or the header and footer of a table without one.
+fn growing_groups(table: &Table) -> Vec<Range<usize>> {
+    let has_body = table.groups.iter().any(|g| g.kind == GroupKind::Body);
+    let mut first = 0;
+    let mut out = Vec::new();
+    for group in &table.groups {
+        let rows = first..first + group.rows.len();
+        first = rows.end;
+        if group.kind == GroupKind::Body || !has_body {
+            out.push(rows);
+        }
+    }
+    out
+}
+
+/// The row heights of a table whose content box is `least` tall, when its rows need less.
+/// CSS 2.1 § 17.5.3 leaves the sharing of the extra height open; these are the steps
+/// Chromium takes. The groups that grow share it in proportion to their heights, and in a
+/// group [`grow_rows`] shares it between the rows. Rows that `visibility: collapse` removes
+/// take none. `None` when no row grows.
+fn grown_heights(table: &Table, p: &Prepared, least: f32, vs: f32) -> Option<Vec<f32>> {
+    let rows = p.heights.len();
+    let have = p.heights.iter().sum::<f32>() + vs * (rows + 1) as f32;
+    if least <= have {
+        return None;
+    }
+    let extra = least - have;
+    // The rows of each group that grow, and the group's height.
+    let groups: Vec<(Vec<usize>, f32)> = growing_groups(table)
+        .into_iter()
+        .filter_map(|group| {
+            let growing: Vec<usize> = group.clone().filter(|&r| !p.grid[r].collapsed).collect();
+            let height = p.heights[group.clone()].iter().sum::<f32>()
+                + vs * group.len().saturating_sub(1) as f32;
+            (!growing.is_empty()).then_some((growing, height))
+        })
+        .collect();
+    if groups.is_empty() {
+        return None;
+    }
+    let total: f32 = groups.iter().map(|(_, height)| height).sum();
+    let mut heights = p.heights.clone();
+    for (growing, height) in &groups {
+        let share = if total > 0.0 {
+            extra * (height / total)
+        } else {
+            extra / groups.len() as f32
+        };
+        grow_rows(&mut heights, growing, share, &p.constrained);
+    }
+    Some(heights)
+}
+
+/// Gives the `rows` of a row group the `extra` height the table has for them, the way
+/// Chromium shares it out:
+///
+/// 1. rows with content and no height of their own grow in proportion to their heights;
+/// 2. otherwise rows without content share it equally;
+/// 3. otherwise every row has a height of its own, and they grow in proportion to it.
+fn grow_rows(heights: &mut [f32], rows: &[usize], extra: f32, constrained: &[bool]) {
+    let filled = |heights: &[f32], r: usize| heights[r] > 0.0;
+    let mut growing: Vec<usize> = rows
+        .iter()
+        .copied()
+        .filter(|&r| filled(heights, r) && !constrained[r])
+        .collect();
+    if growing.is_empty() {
+        let empty: Vec<usize> = rows
+            .iter()
+            .copied()
+            .filter(|&r| !filled(heights, r))
+            .collect();
+        if !empty.is_empty() {
+            for &r in &empty {
+                heights[r] += extra / empty.len() as f32;
+            }
+            return;
+        }
+        growing = rows.to_vec();
     }
     let total: f32 = growing.iter().map(|&r| heights[r]).sum();
     for &r in &growing {
@@ -1635,7 +1739,10 @@ pub(crate) fn layout(
     let resumed = resume.is_some();
     let p = prepared(block, table, cb, kind, decorators);
     let width = p.width;
-    let heights = &p.heights;
+    // A table with a height is at least that tall: its rows grow to fill it.
+    let least = least_height(outer, cb, kind, (padding.vertical(), border.vertical()));
+    let grown = least.and_then(|least| grown_heights(table, &p, least, vs));
+    let heights = grown.as_ref().unwrap_or(&p.heights);
     let grid = &p.grid;
     let rows = grid.len();
 
@@ -1875,7 +1982,15 @@ pub(crate) fn layout(
         row_y[r] = Some(y);
         y += heights[r] + vs;
     }
-    let grid_height = y + padding.bottom + border.bottom;
+    let mut grid_height = y + padding.bottom + border.bottom;
+    // A table whose growing groups have no rows is as tall as its height all the same.
+    if let Some(least) = least
+        && !resumed
+        && !broke
+        && growing_groups(table).iter().all(|group| group.is_empty())
+    {
+        grid_height = grid_height.max(least + padding.vertical() + border.vertical());
+    }
 
     // Cell fragments, aligned in their rows.
     let column_x = &p.column_x;
