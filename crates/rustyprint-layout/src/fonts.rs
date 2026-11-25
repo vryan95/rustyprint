@@ -91,6 +91,14 @@ const CJK: &[(u32, u32)] = &[
     (0x20000, 0x3FFFF),
 ];
 
+#[cfg(feature = "emoji")]
+const EMOJI: &[(u32, u32)] = &[
+    (0x2300, 0x23FF),
+    (0x2600, 0x27BF),
+    (0x2B00, 0x2BFF),
+    (0x1F000, 0x1FAFF),
+];
+
 static SCRIPT_FONTS: &[ScriptFont] = &[
     ScriptFont {
         name: "Noto Naskh Arabic",
@@ -111,6 +119,15 @@ static SCRIPT_FONTS: &[ScriptFont] = &[
         name: "Noto Sans SC",
         data: include_bytes!("../../../fonts/NotoSansSC.woff2"),
         ranges: CJK,
+        sans: true,
+    },
+    // Emoji and pictographs, drawn in color from the font's COLR table, for text typed with
+    // them that no other font covers.
+    #[cfg(feature = "emoji")]
+    ScriptFont {
+        name: "Noto Color Emoji",
+        data: include_bytes!("../../../fonts/NotoColorEmoji-COLRv1.ttf"),
+        ranges: EMOJI,
         sans: true,
     },
 ];
