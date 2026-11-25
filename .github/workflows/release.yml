@@ -292,6 +292,26 @@ jobs:
           aarch64-pc-windows-msvc aarch64-mingw-ucrt rustyprint_ffi.dll
           TARGETS
           ls -l pkg
+      # The gem for the ruby platform, with no native library. Bundler keeps ruby in an app's
+      # lockfile only if every gem has one, and installs it where no platform gem fits.
+      - name: Build the source gem
+        run: bundle exec rake source
+      # Installed on its own, it fails to load with the message about platforms, and renders with
+      # RUSTYPRINT_LIBRARY.
+      - name: Try the source gem
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          export GEM_HOME="$RUNNER_TEMP/source-gem" GEM_PATH="$RUNNER_TEMP/source-gem"
+          gem install "pkg/rustyprint-$VERSION.gem"
+          if ruby -e 'require "rustyprint"' 2> "$RUNNER_TEMP/error"; then
+            echo "::error::The source gem loaded without a native library"
+            exit 1
+          fi
+          grep -q "no prebuilt native library" "$RUNNER_TEMP/error" || { cat "$RUNNER_TEMP/error"; exit 1; }
+          target=x86_64-unknown-linux-gnu
+          export RUSTYPRINT_LIBRARY="$RUNNER_TEMP/$target/rustyprint-native-$VERSION-$target/librustyprint_ffi.so"
+          ruby -e 'require "rustyprint"; abort "not the source gem" unless Gem.loaded_specs["rustyprint"].platform == "ruby"; pdf = Rustyprint.render("<h1>Hello</h1>").pdf; abort "no PDF" unless pdf.start_with?("%PDF-")'
       # The x86_64 Linux gem, installed and used as an app would.
       - name: Try the Linux gem
         run: |
