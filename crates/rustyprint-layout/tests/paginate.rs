@@ -181,6 +181,61 @@ fn fixed_backgrounds_repeat_on_every_page() {
 }
 
 #[test]
+fn a_sliced_table_has_no_border_or_padding_where_pages_break_it() {
+    // 15px of border and padding above and below six rows of 100px, on pages of 300px.
+    let row =
+        |id: usize| format!("<tr><td style='--id: r{id}; height: 100px; padding: 0'></td></tr>");
+    let table = |decoration: &str| {
+        pages(&format!(
+            "<table style='border-spacing: 0; border: 10px solid; padding: 5px; \
+             box-decoration-break: {decoration}'>{}</table>",
+            (1..=6).map(row).collect::<String>()
+        ))
+    };
+    // Sliced, the page it starts on has room for two rows under its top edge, the next for
+    // three rows and nothing else, and the last row brings the bottom edge.
+    let sliced = table("slice");
+    assert_eq!(sliced.len(), 3);
+    assert_eq!(y_of(&sliced[0], "r1"), 15.0);
+    assert_eq!(y_of(&sliced[1], "r3"), 0.0);
+    assert_eq!(y_of(&sliced[1], "r5"), 200.0);
+    assert_eq!(y_of(&sliced[2], "r6"), 0.0);
+    // Cloned, every page has both edges, which leaves room for two rows.
+    let cloned = table("clone");
+    assert_eq!(cloned.len(), 3);
+    assert_eq!(y_of(&cloned[1], "r3"), 15.0);
+    assert_eq!(y_of(&cloned[2], "r5"), 15.0);
+}
+
+#[test]
+fn a_sliced_table_breaking_inside_its_last_row_leaves_no_room_for_its_bottom_edge() {
+    // 15px of border and padding above and below one row of unbreakable 70px blocks, on pages
+    // of 300px.
+    let table = |blocks: usize| {
+        pages(&format!(
+            "<table style='border-spacing: 0; border: 10px solid; padding: 5px'><tr>\
+             <td style='padding: 0'>{}</td></tr></table>",
+            (1..=blocks)
+                .map(|id| format!(
+                    "<div style='--id: d{id}; height: 70px; break-inside: avoid'></div>"
+                ))
+                .collect::<String>()
+        ))
+    };
+    // The row continues, so the first page ends without the bottom edge and has room for
+    // four blocks under the top edge.
+    let continued = table(6);
+    assert_eq!(continued.len(), 2);
+    assert_eq!(y_of(&continued[1], "d5"), 0.0);
+    assert_eq!(y_of(&continued[0], "d4"), 225.0);
+    // Four blocks would end the row on the first page, but not with the bottom edge under
+    // them, so the fourth goes to the next page with it.
+    let finished = table(4);
+    assert_eq!(finished.len(), 2);
+    assert_eq!(y_of(&finished[1], "d4"), 0.0);
+}
+
+#[test]
 #[cfg(feature = "emoji")]
 fn emoji_set_upright_in_vertical_text_are_painted_in_color() {
     // The color emoji font draws its glyphs from color layers, not from outlines, so text
