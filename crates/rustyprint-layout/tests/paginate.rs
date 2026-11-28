@@ -208,6 +208,55 @@ fn fixed_backgrounds_repeat_on_every_page() {
 }
 
 #[test]
+fn a_float_inside_a_paragraph_counts_towards_its_table_cells_width() {
+    // The cell holds only a 300px float in a paragraph; the other cell has a long text that
+    // would take all the room. The float's cell must still be wide enough for it.
+    let pages = pages(
+        "<table style='width: 100%; border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>&nbsp; \
+         <span style='float: left; width: 300px; max-width: 100%; height: 10px; --id: f'></span></p></td>\
+         <td style='padding: 0'>A long title that would take the whole width of the table \
+         if it could, and more besides, so that the other column is squeezed</td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(cell >= 300.0, "the float's cell is {cell} wide");
+    // Like a logo with `max-width: 100%`, the float is not squeezed by its cell.
+    let float = find(&pages[0], "f").rect.width;
+    assert!(float >= 300.0, "the float is {float} wide");
+}
+
+#[test]
+fn a_floats_max_width_limits_what_it_asks_of_its_table_cell() {
+    let pages = pages(
+        "<table style='width: 100%; border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>&nbsp; \
+         <span style='float: left; width: 300px; max-width: 50px; height: 10px'></span></p></td>\
+         <td style='padding: 0'>A long title that would take the whole width of the table \
+         if it could, and more besides, so that the other column is squeezed</td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(cell < 150.0, "the float's cell is {cell} wide");
+}
+
+#[test]
+fn floats_that_clear_each_other_stack_instead_of_adding_up() {
+    let pages = pages(
+        "<table style='border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>x\
+         <span style='float: left; width: 150px; height: 10px'></span>\
+         <span style='float: left; clear: both; width: 150px; height: 10px'></span></p></td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(
+        (150.0..200.0).contains(&cell),
+        "the floats' cell is {cell} wide"
+    );
+}
+
+#[test]
 fn without_a_doctype_a_line_whose_text_is_all_nested_does_not_get_the_blocks_line_height() {
     // The line height calculation quirk: the block has no text of its own on these lines, so
     // its 40px line height does not count; the spans' own 10px line height does.
