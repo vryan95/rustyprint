@@ -228,6 +228,18 @@ fn family_index(name: &FamilyName) -> Option<usize> {
     }
 }
 
+/// The keyword of a generic family that an `@font-face` rule may stand in for. A document
+/// that declares `@font-face { font-family: "sans-serif"; … }` chooses the font its
+/// `sans-serif` text is drawn in, as a browser's font settings do, instead of the bundled one.
+fn generic_keyword(generic: GenericFamily) -> Option<&'static str> {
+    match generic {
+        GenericFamily::Serif => Some("serif"),
+        GenericFamily::SansSerif => Some("sans-serif"),
+        GenericFamily::Monospace => Some("monospace"),
+        _ => None,
+    }
+}
+
 /// Whether a style asks for an italic or oblique face.
 fn wants_italic(style: FontStyle) -> bool {
     match style {
@@ -279,7 +291,17 @@ pub fn select(style: &ComputedValues) -> FontChoice {
                 fonts.push(instance(style, &font, None, SCRIPT_FONTS[index].name));
             }
             other => {
-                if let Some(index) = family_index(other) {
+                // A rule standing in for a generic family that loads no font leaves it alone.
+                let replaced = match other {
+                    FamilyName::Generic(generic) => generic_keyword(*generic)
+                        .filter(|keyword| style.font_rules.defines(keyword))
+                        .map(|keyword| web_fonts(style, keyword))
+                        .unwrap_or_default(),
+                    FamilyName::Named(_) => Vec::new(),
+                };
+                if !replaced.is_empty() {
+                    fonts.extend(replaced);
+                } else if let Some(index) = family_index(other) {
                     let font = bundled_face(index, style.font_weight, style.font_style);
                     fonts.push(instance(style, &font, None, family_name(other)));
                 }
