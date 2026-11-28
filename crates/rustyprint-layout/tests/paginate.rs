@@ -244,20 +244,85 @@ fn without_a_doctype_a_preserved_tab_is_the_blocks_own_text() {
     assert!(height >= 40.0, "{height}");
 }
 
+/// The height of a block tagged `--id: p` in a document without a doctype, in 10px text.
+fn quirks_height(body: &str) -> f32 {
+    let html = format!("<style>body {{ margin: 0; font: 10px serif }}</style>{body}");
+    find(&pages_of(&html)[0], "p").rect.height
+}
+
 #[test]
-fn without_a_doctype_percentage_padding_keeps_an_inline_boxs_line_height() {
-    let body = |padding: &str| {
-        format!(
-            "<style>body {{ margin: 0; font-size: 20px; line-height: 10px }}\
-             b {{ font-size: 8px; line-height: 10px }}</style>\
-             <p style='--id: p; margin: 0'><span style='line-height: 40px; \
-             padding-top: {padding}'><b>x</b></span></p>"
-        )
+fn without_a_doctype_an_inline_box_keeps_its_line_height_for_edges_at_its_sides() {
+    // Measured in Chromium 155: an inline box without text of its own keeps its line height
+    // when it has padding or a border at its left or right, and not for those above or
+    // below it, nor for margins.
+    let outer = |edge: &str| {
+        quirks_height(&format!(
+            "<div style='--id: p; width: 400px'><span style='line-height: 40px; {edge}'>\
+             <span style='line-height: 10px'>x</span></span></div>"
+        ))
     };
-    let padded = find(&pages_of(&body("1%"))[0], "p").rect.height;
-    let bare = find(&pages_of(&body("0"))[0], "p").rect.height;
-    assert!(padded >= 40.0, "{padded}");
-    assert!(bare < 30.0, "{bare}");
+    for edge in [
+        "padding-left: 1px",
+        "padding-right: 1px",
+        "padding-left: 1%",
+        "border-left: 1px solid",
+        "border-right: 1px solid",
+        "padding: 2px",
+        "border: 1px solid",
+    ] {
+        assert_eq!(outer(edge), 40.0, "{edge}");
+    }
+    for edge in [
+        "",
+        "padding-top: 1px",
+        "padding-top: 1%",
+        "padding-bottom: 5px",
+        "border-top: 1px solid",
+        "border-bottom: 1px solid",
+        "margin-left: 1px",
+        "margin-right: 1px",
+    ] {
+        assert_eq!(outer(edge), 10.0, "{edge}");
+    }
+}
+
+#[test]
+fn without_a_doctype_the_lines_of_a_list_item_keep_its_line_height() {
+    // Measured in Chromium 155: the quirk leaves list items alone, on every line and with
+    // or without a marker.
+    let item = |list: &str, content: &str| {
+        quirks_height(&format!(
+            "<ul style='margin: 0; {list}'><li style='--id: p; line-height: 40px'>{content}</li></ul>"
+        ))
+    };
+    let span = "<span style='line-height: 10px'>x</span>";
+    let lines = format!("{span}<br>{span}");
+    assert_eq!(item("", span), 40.0);
+    assert_eq!(item("list-style-position: inside", span), 40.0);
+    assert_eq!(item("list-style: none", span), 40.0);
+    assert_eq!(item("", &lines), 80.0);
+    assert_eq!(item("list-style: none", &lines), 80.0);
+}
+
+#[test]
+fn without_a_doctype_an_image_is_not_text_of_the_box_it_is_in() {
+    // Measured in Chromium 155: a line that holds only an image or another atomic inline,
+    // in the block or in a span, is as tall as that, whatever the line heights around it.
+    // This is what closes the gap under an image in a table cell.
+    let atomic = "<span style='display: inline-block; width: 5px; height: 5px; \
+                  vertical-align: top'></span>";
+    let block = |content: &str| {
+        quirks_height(&format!(
+            "<p style='--id: p; margin: 0; line-height: 40px'>{content}</p>"
+        ))
+    };
+    assert_eq!(block(atomic), 5.0);
+    assert_eq!(
+        block(&format!("<span style='line-height: 10px'>{atomic}</span>")),
+        5.0
+    );
+    // Beside text of the block, the line keeps the block's line height.
+    assert_eq!(block(&format!("x{atomic}")), 40.0);
 }
 
 /// The root's fragment from `layout_tree`, the unpaginated layout container queries use.
