@@ -37,6 +37,8 @@ use crate::syntax::Syntax;
 use crate::values::{AbsoluteColor, FontMetrics};
 
 const UA_STYLESHEET: &str = concat!(include_str!("ua.css"), include_str!("counter-styles.css"));
+/// User-agent rules for documents in quirks mode (HTML § 15.3).
+const QUIRKS_STYLESHEET: &str = include_str!("quirks.css");
 
 /// `@import` chains deeper than this are ignored.
 const MAX_IMPORT_DEPTH: u32 = 16;
@@ -181,6 +183,9 @@ pub fn compute_styles_in(
 ) -> Styles {
     let mut collector = Collector::new(options);
     collector.add_ua();
+    if document.quirks_mode() == rustyprint_dom::QuirksMode::Quirks {
+        collector.add_quirks_ua();
+    }
     collector.add_document(document);
     if let Some(css) = options.stylesheet {
         collector.add(css, Origin::Author, None, "request stylesheet");
@@ -417,6 +422,19 @@ impl<'a> Collector<'a> {
             origin: Origin::UserAgent,
             owner: None,
             source: "UA".into(),
+        });
+    }
+
+    fn add_quirks_ua(&mut self) {
+        static QUIRKS: OnceLock<Stylesheet> = OnceLock::new();
+        let sheet = QUIRKS
+            .get_or_init(|| Stylesheet::parse(QUIRKS_STYLESHEET))
+            .clone();
+        self.sheets.push(ParsedSheet {
+            sheet,
+            origin: Origin::UserAgent,
+            owner: None,
+            source: "UA quirks".into(),
         });
     }
 

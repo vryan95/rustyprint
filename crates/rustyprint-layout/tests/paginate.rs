@@ -1,7 +1,9 @@
 use rustyprint_css::{StyleOptions, compute_styles};
 use rustyprint_dom::Document;
 use rustyprint_layout::fragment::{BoxFragment, Fragment};
-use rustyprint_layout::{DisplayItem, Images, PageOptions, Sides, Size, layout, layout_pages};
+use rustyprint_layout::{
+    DisplayItem, Images, PageOptions, Sides, Size, layout, layout_pages, layout_tree,
+};
 
 const PAGE: Size = Size::new(400.0, 300.0);
 
@@ -20,6 +22,31 @@ fn styled(body: &str) -> (Document, rustyprint_css::Styles) {
         },
     );
     (document, styles)
+}
+
+/// The root's fragment on each page of a document with or without a doctype.
+fn pages_of(html: &str) -> Vec<BoxFragment> {
+    let document = Document::parse(html);
+    let load = |_: &str| None;
+    let styles = compute_styles(
+        &document,
+        &StyleOptions {
+            page_size: (PAGE.width, PAGE.height),
+            stylesheet: None,
+            load: &load,
+            font_metrics: None,
+            load_font: None,
+        },
+    );
+    layout_pages(
+        &document,
+        &styles,
+        &options(),
+        &rustyprint_layout::Images::none(),
+    )
+    .into_iter()
+    .filter_map(|page| page.root)
+    .collect()
 }
 
 fn options() -> PageOptions {
@@ -219,6 +246,154 @@ fn a_fixed_box_in_an_absolute_box_of_a_split_box_repeats_on_every_page() {
         assert!(fixed.out_of_flow.is_none(), "still a placeholder");
         assert_eq!(y_of(page, "fixed"), 10.0);
     }
+}
+
+#[test]
+fn a_float_inside_a_paragraph_counts_towards_its_table_cells_width() {
+    // The cell holds only a 300px float in a paragraph; the other cell has a long text that
+    // would take all the room. The float's cell must still be wide enough for it.
+    let pages = pages(
+        "<table style='width: 100%; border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>&nbsp; \
+         <span style='float: left; width: 300px; max-width: 100%; height: 10px; --id: f'></span></p></td>\
+         <td style='padding: 0'>A long title that would take the whole width of the table \
+         if it could, and more besides, so that the other column is squeezed</td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(cell >= 300.0, "the float's cell is {cell} wide");
+    // Like a logo with `max-width: 100%`, the float is not squeezed by its cell.
+    let float = find(&pages[0], "f").rect.width;
+    assert!(float >= 300.0, "the float is {float} wide");
+}
+
+#[test]
+fn a_floats_max_width_limits_what_it_asks_of_its_table_cell() {
+    let pages = pages(
+        "<table style='width: 100%; border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>&nbsp; \
+         <span style='float: left; width: 300px; max-width: 50px; height: 10px'></span></p></td>\
+         <td style='padding: 0'>A long title that would take the whole width of the table \
+         if it could, and more besides, so that the other column is squeezed</td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(cell < 150.0, "the float's cell is {cell} wide");
+}
+
+#[test]
+fn floats_that_clear_each_other_stack_instead_of_adding_up() {
+    let pages = pages(
+        "<table style='border-spacing: 0'><tr>\
+         <td style='--id: a; padding: 0'><p style='margin: 0'>x\
+         <span style='float: left; width: 150px; height: 10px'></span>\
+         <span style='float: left; clear: both; width: 150px; height: 10px'></span></p></td>\
+         </tr></table>",
+    );
+    let cell = find(&pages[0], "a").rect.width;
+    assert!(
+        (150.0..200.0).contains(&cell),
+        "the floats' cell is {cell} wide"
+    );
+}
+
+#[test]
+fn without_a_doctype_a_line_whose_text_is_all_nested_does_not_get_the_blocks_line_height() {
+    // The line height calculation quirk: the block has no text of its own on these lines, so
+    // its 40px line height does not count; the spans' own 10px line height does.
+    let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }\
+                span { font-size: 8px; line-height: 10px }</style>\
+                <p style='--id: p; margin: 0'><span>one</span><br><span>two</span></p>";
+    let standards = pages_of(&format!("<!DOCTYPE html>{body}"));
+    let quirks = pages_of(body);
+    assert!(find(&standards[0], "p").rect.height >= 80.0);
+    let height = find(&quirks[0], "p").rect.height;
+    assert!(height < 30.0, "{height}");
+}
+
+#[test]
+fn without_a_doctype_lines_with_the_blocks_own_text_keep_its_line_height() {
+    let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }</style>\
+                <p style='--id: p; margin: 0'>own <span style='font-size: 8px'>small</span></p>";
+    assert!(find(&pages_of(body)[0], "p").rect.height >= 40.0);
+}
+
+#[test]
+fn without_a_doctype_a_line_holding_only_a_br_keeps_the_blocks_line_height() {
+    let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }</style>\
+                <p style='--id: p; margin: 0'><br><span style='font-size: 8px'></span></p>";
+    assert!(find(&pages_of(body)[0], "p").rect.height >= 40.0);
+}
+
+#[test]
+fn without_a_doctype_a_preserved_tab_is_the_blocks_own_text() {
+    let body = "<style>body { margin: 0; font-size: 20px }</style>\
+                <pre style='--id: p; margin: 0; line-height: 40px'>\t<span \
+                style='font-size: 8px; line-height: 10px'>x</span></pre>";
+    let height = find(&pages_of(body)[0], "p").rect.height;
+    assert!(height >= 40.0, "{height}");
+}
+
+#[test]
+fn without_a_doctype_percentage_padding_keeps_an_inline_boxs_line_height() {
+    let body = |padding: &str| {
+        format!(
+            "<style>body {{ margin: 0; font-size: 20px; line-height: 10px }}\
+             b {{ font-size: 8px; line-height: 10px }}</style>\
+             <p style='--id: p; margin: 0'><span style='line-height: 40px; \
+             padding-top: {padding}'><b>x</b></span></p>"
+        )
+    };
+    let padded = find(&pages_of(&body("1%"))[0], "p").rect.height;
+    let bare = find(&pages_of(&body("0"))[0], "p").rect.height;
+    assert!(padded >= 40.0, "{padded}");
+    assert!(bare < 30.0, "{bare}");
+}
+
+/// The root's fragment from `layout_tree`, the unpaginated layout container queries use.
+fn tree_of(html: &str) -> BoxFragment {
+    let document = Document::parse(html);
+    let load = |_: &str| None;
+    let styles = compute_styles(
+        &document,
+        &StyleOptions {
+            page_size: (PAGE.width, PAGE.height),
+            stylesheet: None,
+            load: &load,
+            font_metrics: None,
+            load_font: None,
+        },
+    );
+    layout_tree(&document, &styles, &options(), &Images::none()).expect("a root box")
+}
+
+#[test]
+fn the_unpaginated_layout_uses_the_documents_own_quirks_mode() {
+    let body = "<style>body { margin: 0; font-size: 20px; line-height: 40px }\
+                span { font-size: 8px; line-height: 10px }</style>\
+                <p style='--id: p; margin: 0'><span>one</span></p>";
+    let standards = format!("<!DOCTYPE html>{body}");
+    // Each layout follows its own document, whatever this thread laid out before it.
+    pages_of(&standards);
+    let quirks = find(&tree_of(body), "p").rect.height;
+    assert!(quirks < 30.0, "{quirks}");
+    pages_of(body);
+    let standards = find(&tree_of(&standards), "p").rect.height;
+    assert!(standards >= 40.0, "{standards}");
+}
+
+#[test]
+fn without_a_doctype_tables_do_not_inherit_the_pages_font_size() {
+    // Quirks mode resets a table's font size and line height (HTML § 15.3).
+    let body = "<style>body { margin: 0; font-size: 40px; line-height: 2 }\
+                td { padding: 0 }</style>\
+                <table style='border-spacing: 0'><tr><td style='--id: c'>text</td></tr></table>";
+    let standards = find(&pages_of(&format!("<!DOCTYPE html>{body}"))[0], "c")
+        .rect
+        .height;
+    let quirks = find(&pages_of(body)[0], "c").rect.height;
+    assert!(standards >= 80.0, "{standards}");
+    assert!(quirks < 30.0, "{quirks}");
 }
 
 #[test]

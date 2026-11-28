@@ -345,14 +345,41 @@ pub(crate) fn intrinsic(items: &[InlineItem], container: &Arc<ComputedValues>) -
     let has_atomics = items.iter().any(|i| matches!(i, InlineItem::Atomic(_)));
     let p = Paragraph::build(items, container, 0.0, 0.0);
     let (min, max) = Breaker::new(&p).intrinsic(indent);
-    if !has_atomics {
-        return (min, max);
+    let (min, max) = if has_atomics {
+        // Atomic inlines are as narrow as they get for the minimum and unconstrained for the
+        // maximum.
+        let wide = Paragraph::build(items, container, UNLIMITED, 0.0);
+        (min, Breaker::new(&wide).intrinsic(indent).1)
+    } else {
+        (min, max)
+    };
+    // Floats are not on the lines, but the paragraph must be wide enough for each of them,
+    // and at its widest they sit beside its lines. A float that clears a side starts below
+    // the floats on that side, so those no longer add to the ones after it.
+    let rtl = container.direction == Direction::Rtl;
+    let (mut left, mut right, mut widest, mut min) = (0.0f32, 0.0f32, 0.0f32, min);
+    for item in items {
+        let InlineItem::Atomic(block) = item else {
+            continue;
+        };
+        let crate::boxes::BlockContents::Float(float) = &block.contents else {
+            continue;
+        };
+        let (float_min, float_max) = crate::flow::intrinsic_outer(float);
+        min = min.max(float_min);
+        let (clear_left, clear_right) = float.style.clear.sides(rtl);
+        if (clear_left && left > 0.0) || (clear_right && right > 0.0) {
+            widest = widest.max(left + right);
+            left = if clear_left { 0.0 } else { left };
+            right = if clear_right { 0.0 } else { right };
+        }
+        if float.style.float.is_left(rtl).unwrap_or(true) {
+            left += float_max;
+        } else {
+            right += float_max;
+        }
     }
-    // Atomic inlines are as narrow as they get for the minimum and unconstrained for the
-    // maximum.
-    let wide = Paragraph::build(items, container, UNLIMITED, 0.0);
-    let (_, max) = Breaker::new(&wide).intrinsic(indent);
-    (min, max)
+    (min, max + widest.max(left + right))
 }
 
 /// An initial letter at the start of the paragraph (CSS Inline 3 § 6).
@@ -531,4 +558,19 @@ fn trim_text_box(
         height = bottom;
     }
     height
+}
+
+thread_local! {
+    /// Whether the document being laid out on this thread is in quirks or limited-quirks
+    /// mode, for the line height calculation quirk.
+    static QUIRKS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Records whether the document laid out next on this thread is in quirks mode.
+pub(crate) fn set_quirks(quirks: bool) {
+    QUIRKS.with(|q| q.set(quirks));
+}
+
+pub(crate) fn quirks() -> bool {
+    QUIRKS.with(std::cell::Cell::get)
 }
