@@ -39,6 +39,10 @@ pub struct BoxFragment {
     /// For the placeholder of an out-of-flow box, the box, until its containing block lays
     /// it out. The placeholder's position is the box's static position.
     pub out_of_flow: Option<OutOfFlow>,
+    /// For a fragment of a positioned box that pages split, the height the fragment takes
+    /// of the whole box: up to the end of its page, or its own height on the box's last
+    /// page. Set until the pages are laid out and the box's out-of-flow boxes are placed.
+    pub split: Option<f32>,
 }
 
 /// The box of an out-of-flow placeholder.

@@ -738,6 +738,7 @@ impl Builder {
                 replaced: None,
                 legend: None,
                 out_of_flow: None,
+                split: None,
             },
             width: 0.0,
             height: 0.0,

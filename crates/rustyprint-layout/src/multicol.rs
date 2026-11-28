@@ -548,5 +548,6 @@ fn rule_fragment(style: &Arc<ComputedValues>, center: f32, top: f32, height: f32
         replaced: None,
         legend: None,
         out_of_flow: None,
+        split: None,
     }
 }

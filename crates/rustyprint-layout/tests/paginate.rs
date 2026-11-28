@@ -208,6 +208,47 @@ fn fixed_backgrounds_repeat_on_every_page() {
 }
 
 #[test]
+fn a_positioned_box_split_by_pages_is_one_containing_block() {
+    // Two rows fit a page, leaving 60px: the box is 300 + 300 + 120 = 720px tall.
+    let row = "<div style='height: 120px; break-inside: avoid'></div>";
+    let pages = pages(&format!(
+        "<div style='position: relative'>\
+           <div style='--id: static; position: absolute; left: 50%'>s</div>\
+           <div style='--id: top; position: absolute; top: 12.5%; height: 10px'></div>\
+           <div style='--id: middle; position: absolute; top: 50%; height: 10px'></div>\
+           <div style='--id: bottom; position: absolute; bottom: 0; height: 20px'></div>\
+           {}\
+         </div>",
+        row.repeat(5)
+    ));
+    assert_eq!(pages.len(), 3);
+    assert_eq!(y_of(&pages[0], "static"), 0.0);
+    assert_eq!(y_of(&pages[0], "top"), 90.0);
+    assert_eq!(y_of(&pages[1], "middle"), 60.0);
+    assert_eq!(y_of(&pages[2], "bottom"), 100.0);
+}
+
+#[test]
+fn a_fixed_box_in_an_absolute_box_of_a_split_box_repeats_on_every_page() {
+    let row = "<div style='height: 120px; break-inside: avoid'></div>";
+    let pages = pages(&format!(
+        "<div style='position: relative'>\
+           <div style='position: absolute; top: 0'>\
+             <div style='--id: fixed; position: fixed; top: 10px; height: 5px'></div>\
+           </div>\
+           {}\
+         </div>",
+        row.repeat(5)
+    ));
+    assert_eq!(pages.len(), 3);
+    for page in &pages {
+        let fixed = find(page, "fixed");
+        assert!(fixed.out_of_flow.is_none(), "still a placeholder");
+        assert_eq!(y_of(page, "fixed"), 10.0);
+    }
+}
+
+#[test]
 fn a_float_inside_a_paragraph_counts_towards_its_table_cells_width() {
     // The cell holds only a 300px float in a paragraph; the other cell has a long text that
     // would take all the room. The float's cell must still be wide enough for it.
@@ -654,6 +695,44 @@ fn assert_widths(actual: [f32; 3], expected: [f32; 3]) {
             "{actual} is not {expected}"
         );
     }
+}
+
+#[test]
+fn anchors_placed_in_an_inner_split_box_are_where_they_are_placed() {
+    // The inner box's anchor is 400px down it, on the second page; the outer box's box is
+    // placed below that anchor, not below where the anchor's element is in the flow.
+    let row = "<div style='height: 120px; break-inside: avoid'></div>";
+    let pages = pages(&format!(
+        "<div style='position: relative'>\
+           <div style='--id: below; position: absolute; top: anchor(--x bottom); height: 10px'></div>\
+           <div style='position: relative'>\
+             <div style='position: absolute; top: 400px; height: 10px; anchor-name: --x'></div>\
+             {}\
+           </div>\
+         </div>",
+        row.repeat(5)
+    ));
+    assert_eq!(pages.len(), 3);
+    assert_eq!(y_of(&pages[1], "below"), 110.0);
+}
+
+#[test]
+fn a_split_box_that_contains_fixed_boxes_places_those_in_its_absolute_boxes() {
+    // The transformed box is the fixed box's containing block: 400px down it is the second
+    // page, 100px down.
+    let row = "<div style='height: 120px; break-inside: avoid'></div>";
+    let pages = pages(&format!(
+        "<div style='position: relative; transform: translateX(0)'>\
+           <div style='position: absolute; top: 0'>\
+             <div style='--id: fixed; position: fixed; top: 400px; height: 5px'></div>\
+           </div>\
+           {}\
+         </div>",
+        row.repeat(5)
+    ));
+    assert_eq!(pages.len(), 3);
+    assert_eq!(y_of(&pages[1], "fixed"), 100.0);
+    assert!(find(&pages[1], "fixed").out_of_flow.is_none());
 }
 
 #[test]

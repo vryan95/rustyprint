@@ -100,14 +100,13 @@ pub(crate) fn pages(root: &BlockBox, styles: &Styles, defaults: &PageOptions) ->
             at_top: true,
             columns: false,
         };
-        let (mut fragment, next) = flow::layout_root(
+        let (fragment, next) = flow::layout_root(
             root,
             area.width,
             area.height,
             Some(fragmentainer),
             token.as_ref(),
         );
-        crate::writing::root_to_page(&mut fragment, area);
         page.root = Some(fragment);
         pages.push(page);
         budget::check_pages(pages.len());
@@ -118,6 +117,21 @@ pub(crate) fn pages(root: &BlockBox, styles: &Styles, defaults: &PageOptions) ->
                 token = Some(next);
             }
             _ => break,
+        }
+    }
+    // The pages are still in the root's axes here, where a box continues down its pages.
+    let mut roots: Vec<&mut BoxFragment> =
+        pages.iter_mut().filter_map(|p| p.root.as_mut()).collect();
+    crate::position::place_in_split(&mut roots);
+    for page in &mut pages {
+        if let Some(fragment) = &mut page.root {
+            let area =
+                crate::writing::page_area(root, Size::new(page.area.width, page.area.height));
+            // Fixed boxes in the boxes placed only now go in the page area, as the root's
+            // others did.
+            let viewport = Rect::new(-fragment.rect.x, -fragment.rect.y, area.width, area.height);
+            crate::position::place_out_of_flow(fragment, viewport, crate::position::Takes::Fixed);
+            crate::writing::root_to_page(fragment, area);
         }
     }
     repeat_fixed(&mut pages);
