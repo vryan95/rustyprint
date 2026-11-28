@@ -80,6 +80,7 @@ pub fn layout_tree(
     page: &PageOptions,
     images: &Images,
 ) -> Option<fragment::BoxFragment> {
+    inline::set_quirks(document.quirks_mode() != rustyprint_dom::QuirksMode::NoQuirks);
     let area = page.area();
     let built = boxes::build_with_targets(document, styles, images, &boxes::Targets::default())?;
     // Page numbers of link targets come from the paginated layout.
@@ -198,6 +199,7 @@ pub fn layout_pages(
     page: &PageOptions,
     images: &Images,
 ) -> Vec<LaidPage> {
+    inline::set_quirks(document.quirks_mode() != rustyprint_dom::QuirksMode::NoQuirks);
     let (built, mut pages) = paginated(document, styles, page, images);
     let running = built.running;
     let order = document
